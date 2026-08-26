@@ -30,7 +30,7 @@ def test_short_pnl_and_capital():
     pm = PositionManager(initial_capital=100_000)
     pm.open_position(
         trade_id="s1",
-        asset="BTC/EUR",
+        asset="BTC/USD",
         side="short",
         entry_price=100.0,
         position_size=10.0,
@@ -96,3 +96,32 @@ def test_exit_conditions_short():
 
     assert engine.check_exit_conditions(position, candles, 106.0) == "stop_loss"
     assert engine.check_exit_conditions(position, candles, 89.0) == "take_profit"
+
+
+def test_analysis_snapshot_has_checklist_and_phase():
+    engine = PaperTradingEngine(SMCConfig())
+    # Synthetic rising market with enough candles
+    candles = []
+    price = 100.0
+    for i in range(120):
+        o = price
+        c = price + 0.2
+        candles.append(_candle(1_700_000_000 + i * 300, o, c + 0.1, o - 0.1, c))
+        price = c
+
+    snap = engine.build_analysis_snapshot(candles, candles, candles, candles[-30:], price)
+    assert snap["market"] == "BTC/USD"
+    assert "phase" in snap
+    assert isinstance(snap["checklist"], list)
+    assert len(snap["checklist"]) >= 3
+    assert "ema" in snap
+    assert "fvgs" in snap
+
+
+def test_ema_series_length():
+    engine = PaperTradingEngine(SMCConfig())
+    candles = [_candle(1_700_000_000 + i * 300, 100, 101, 99, 100 + i * 0.01) for i in range(80)]
+    series = engine._ema_series(candles, 50)
+    assert len(series) == 80 - 50 + 1
+    assert "time" in series[0] and "value" in series[0]
+

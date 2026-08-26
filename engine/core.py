@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------------
 
 DEFAULT_CONFIG = {
-    "market": "BTC/EUR",
+    "market": "BTC/USD",
     "timeframes": {
         "main": "5m",
         "trend_1h": "1h",

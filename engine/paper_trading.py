@@ -18,10 +18,14 @@ class PaperTradingEngine(SMCEngine):
         super().__init__(config)
         self.paper_mode = True
         self.simulated_fills: list[dict] = []
+        self.last_analysis: dict[str, Any] = {}
+        self.last_candles_5m: list[dict] = []
+        self.last_ema_5m: list[dict] = []
+        self.last_price: float | None = None
 
     async def fetch_all_timeframes(self) -> dict[str, list[dict]]:
         """Fetch candles including 1m for confirmation signals."""
-        market = self.config.get("market", "BTC/EUR")
+        market = self.config.get("market", "BTC/USD")
 
         tasks = [
             self.market_data.fetch_candles(market, "5m", 500),
@@ -461,12 +465,308 @@ class PaperTradingEngine(SMCEngine):
         size = risk_amount / price_risk
         return max(0, size)
 
+    def _ema_series(self, candles: list[dict], period: int) -> list[dict]:
+        """Build EMA series aligned to candle timestamps (for chart)."""
+        if len(candles) < period:
+            return []
+        closes = [c["close"] for c in candles]
+        k = 2 / (period + 1)
+        ema = sum(closes[:period]) / period
+        series = [{"time": candles[period - 1]["timestamp"], "value": ema}]
+        for i in range(period, len(candles)):
+            ema = closes[i] * k + ema * (1 - k)
+            series.append({"time": candles[i]["timestamp"], "value": ema})
+        return series
+
+    def build_analysis_snapshot(
+        self,
+        candles_5m: list[dict],
+        candles_15m: list[dict],
+        candles_1h: list[dict],
+        candles_1m: list[dict] | None,
+        current_price: float,
+    ) -> dict[str, Any]:
+        """
+        Snapshot of what the bot currently sees / waits for.
+        Used by the dashboard "bot thinking" panel.
+        """
+        market = self.config.get("market", "BTC/USD")
+        ema_period = self.config.get("trend_filter.ema_period", 50)
+        trend = self._analyze_trend_full(candles_5m, candles_15m, candles_1h)
+        fvgs = self._detect_fvg_full(candles_5m)
+        min_age = self.config.get("fvq_detection.min_candles_since_fvg", 50)
+
+        def _recent_unmitigated(fvg_type: str) -> list[dict]:
+            out = []
+            for f in fvgs:
+                if not f["unmitigated"] or f["type"] != fvg_type:
+                    continue
+                age = len(candles_5m) - f["end_candle"]
+                if age <= min_age:
+                    out.append({**f, "age_candles": age})
+            return out
+
+        bullish_fvgs = _recent_unmitigated("bullish")
+        bearish_fvgs = _recent_unmitigated("bearish")
+
+        bias = "neutral"
+        if trend.get("trend_filter_pass_long"):
+            bias = "long"
+        elif trend.get("trend_filter_pass_short"):
+            bias = "short"
+
+        side = bias if bias in ("long", "short") else None
+        candidate_fvgs = bullish_fvgs if side == "long" else bearish_fvgs if side == "short" else []
+        nearest_fvg = self._find_best_fvg(candidate_fvgs, candles_5m) if candidate_fvgs else None
+        if nearest_fvg is None and candidate_fvgs:
+            # Fall back to most recent FVG even if price is not near it yet
+            nearest_fvg = min(candidate_fvgs, key=lambda f: f.get("age_candles", 999))
+
+        price_in_fvg = False
+        if nearest_fvg:
+            price_in_fvg = nearest_fvg["bottom"] <= current_price <= nearest_fvg["top"]
+
+        confirmation = None
+        if nearest_fvg and side and price_in_fvg:
+            confirmation = self._check_smc_confirmation(
+                candles_5m, candles_1m, nearest_fvg, side=side
+            )
+
+        open_count = len(self.position_manager.open_positions)
+        max_open = self.config.get("entry.max_open_positions", 1)
+        cooldown = self.config.get("entry.cooldown_seconds", 300)
+        cooldown_remaining = max(0, cooldown - (time.time() - self.last_trade_time))
+
+        checklist = []
+        waiting: list[str] = []
+
+        # Capacity / cooldown
+        if open_count >= max_open:
+            checklist.append({
+                "id": "capacity",
+                "label": "Position capacity",
+                "status": "fail",
+                "detail": f"{open_count}/{max_open} open — managing existing trade",
+            })
+            waiting.append("Waiting for open position to close")
+        elif cooldown_remaining > 0:
+            checklist.append({
+                "id": "capacity",
+                "label": "Cooldown",
+                "status": "wait",
+                "detail": f"{int(cooldown_remaining)}s remaining after last trade",
+            })
+            waiting.append(f"Cooldown ({int(cooldown_remaining)}s)")
+        else:
+            checklist.append({
+                "id": "capacity",
+                "label": "Ready to trade",
+                "status": "pass",
+                "detail": f"{open_count}/{max_open} open positions",
+            })
+
+        # Trend / EMA
+        ema_pass_long = trend.get("trend_filter_pass_long", False)
+        ema_pass_short = trend.get("trend_filter_pass_short", False)
+        if ema_pass_long:
+            checklist.append({
+                "id": "trend",
+                "label": "Trend filter",
+                "status": "pass",
+                "detail": "Bullish — EMA + HH/HL aligned for longs",
+            })
+        elif ema_pass_short:
+            checklist.append({
+                "id": "trend",
+                "label": "Trend filter",
+                "status": "pass",
+                "detail": "Bearish — EMA + LH/LL aligned for shorts",
+            })
+        else:
+            checklist.append({
+                "id": "trend",
+                "label": "Trend filter",
+                "status": "fail",
+                "detail": f"Overall {trend.get('overall', 'neutral')} — need clear up/downtrend",
+            })
+            waiting.append("Waiting for clear trend (EMA + structure)")
+
+        for tf_key, label in [("5m", "EMA 5m"), ("15m", "EMA 15m"), ("1h", "EMA 1h")]:
+            tf_trend = trend.get(f"trend_{tf_key}", "neutral")
+            ema_val = trend.get("details", {}).get(f"ema_{tf_key}")
+            status = "pass" if tf_trend == "bullish" else ("fail" if tf_trend == "bearish" else "wait")
+            # For short bias, invert what "pass" means visually on checklist item color via detail
+            detail = f"Price {'above' if tf_trend == 'bullish' else 'below' if tf_trend == 'bearish' else '≈'} EMA"
+            if ema_val is not None:
+                detail += f" ({ema_val:.2f})"
+            checklist.append({
+                "id": f"ema_{tf_key}",
+                "label": label,
+                "status": status,
+                "detail": f"{tf_trend} · {detail}",
+            })
+
+        # FVG
+        if side == "long":
+            if not bullish_fvgs:
+                checklist.append({
+                    "id": "fvg",
+                    "label": "Bullish FVG",
+                    "status": "fail",
+                    "detail": "No recent unmitigated bullish FVG",
+                })
+                waiting.append("Waiting for a fresh bullish FVG")
+            elif not price_in_fvg:
+                checklist.append({
+                    "id": "fvg",
+                    "label": "Pullback into FVG",
+                    "status": "wait",
+                    "detail": (
+                        f"FVG {nearest_fvg['bottom']:.2f}–{nearest_fvg['top']:.2f} "
+                        f"(age {nearest_fvg.get('age_candles', '?')} candles)"
+                        if nearest_fvg else "FVG found but price not near it"
+                    ),
+                })
+                waiting.append("Waiting for pullback into bullish FVG")
+            else:
+                checklist.append({
+                    "id": "fvg",
+                    "label": "Price in bullish FVG",
+                    "status": "pass",
+                    "detail": f"{nearest_fvg['bottom']:.2f}–{nearest_fvg['top']:.2f}",
+                })
+        elif side == "short":
+            if not bearish_fvgs:
+                checklist.append({
+                    "id": "fvg",
+                    "label": "Bearish FVG",
+                    "status": "fail",
+                    "detail": "No recent unmitigated bearish FVG",
+                })
+                waiting.append("Waiting for a fresh bearish FVG")
+            elif not price_in_fvg:
+                checklist.append({
+                    "id": "fvg",
+                    "label": "Rally into FVG",
+                    "status": "wait",
+                    "detail": (
+                        f"FVG {nearest_fvg['bottom']:.2f}–{nearest_fvg['top']:.2f} "
+                        f"(age {nearest_fvg.get('age_candles', '?')} candles)"
+                        if nearest_fvg else "FVG found but price not near it"
+                    ),
+                })
+                waiting.append("Waiting for rally into bearish FVG")
+            else:
+                checklist.append({
+                    "id": "fvg",
+                    "label": "Price in bearish FVG",
+                    "status": "pass",
+                    "detail": f"{nearest_fvg['bottom']:.2f}–{nearest_fvg['top']:.2f}",
+                })
+        else:
+            checklist.append({
+                "id": "fvg",
+                "label": "FVG setup",
+                "status": "wait",
+                "detail": (
+                    f"{len(bullish_fvgs)} bullish / {len(bearish_fvgs)} bearish "
+                    "unmitigated (need trend first)"
+                ),
+            })
+
+        # Confirmation
+        if side and price_in_fvg:
+            if confirmation:
+                checklist.append({
+                    "id": "confirmation",
+                    "label": "Entry confirmation",
+                    "status": "pass",
+                    "detail": confirmation,
+                })
+            else:
+                checklist.append({
+                    "id": "confirmation",
+                    "label": "Entry confirmation",
+                    "status": "wait",
+                    "detail": "Need engulfing (5m) or IFVG (1m)",
+                })
+                waiting.append("Waiting for engulfing / IFVG confirmation")
+        else:
+            checklist.append({
+                "id": "confirmation",
+                "label": "Entry confirmation",
+                "status": "wait",
+                "detail": "Armed after price enters FVG",
+            })
+
+        if open_count > 0:
+            phase = "Managing open position"
+        elif confirmation and side and open_count < max_open and cooldown_remaining <= 0:
+            phase = f"Entry ready — {side.upper()}"
+            waiting = [f"Ready to open {side}"]
+        elif waiting:
+            phase = waiting[0]
+        else:
+            phase = "Scanning market"
+
+        def _fvg_public(f: dict | None) -> dict | None:
+            if not f:
+                return None
+            return {
+                "type": f["type"],
+                "top": f["top"],
+                "bottom": f["bottom"],
+                "mid": f["mid"],
+                "age_candles": f.get("age_candles"),
+                "price_inside": f["bottom"] <= current_price <= f["top"],
+            }
+
+        chart_fvgs = []
+        for f in (bullish_fvgs + bearish_fvgs)[:8]:
+            chart_fvgs.append(_fvg_public(f))
+
+        return {
+            "market": market,
+            "price": current_price,
+            "bias": bias,
+            "phase": phase,
+            "waiting_for": waiting,
+            "checklist": checklist,
+            "ema": {
+                "period": ema_period,
+                "trend_5m": trend.get("trend_5m"),
+                "trend_15m": trend.get("trend_15m"),
+                "trend_1h": trend.get("trend_1h"),
+                "overall": trend.get("overall"),
+                "ema_5m": trend.get("details", {}).get("ema_5m"),
+                "ema_15m": trend.get("details", {}).get("ema_15m"),
+                "ema_1h": trend.get("details", {}).get("ema_1h"),
+                "pass_long": ema_pass_long,
+                "pass_short": ema_pass_short,
+            },
+            "structure": {
+                "confirmed_uptrend": trend.get("details", {}).get("confirmed_uptrend"),
+                "confirmed_downtrend": trend.get("details", {}).get("confirmed_downtrend"),
+            },
+            "fvgs": {
+                "bullish_unmitigated": len(bullish_fvgs),
+                "bearish_unmitigated": len(bearish_fvgs),
+                "nearest": _fvg_public(nearest_fvg),
+                "recent": chart_fvgs,
+                "price_in_fvg": price_in_fvg,
+            },
+            "confirmation": confirmation,
+            "open_positions": open_count,
+            "cooldown_remaining": round(cooldown_remaining, 1),
+            "updated_at": time.time(),
+        }
+
     async def run_tick(self):
         """Paper trading tick with simulated fills."""
         if self._stopped:
             return
 
-        market = self.config.get("market", "BTC/EUR")
+        market = self.config.get("market", "BTC/USD")
 
         try:
             data = await self.fetch_all_timeframes()
@@ -480,6 +780,13 @@ class PaperTradingEngine(SMCEngine):
         candles_1m = data.get("confirmation_1m", [])
 
         if len(candles_5m) < 100:
+            self.last_analysis = {
+                "market": market,
+                "phase": "Warming up — need more candle history",
+                "waiting_for": ["Waiting for enough 5m candles"],
+                "checklist": [],
+                "updated_at": time.time(),
+            }
             return
 
         try:
@@ -487,6 +794,15 @@ class PaperTradingEngine(SMCEngine):
         except Exception as e:
             logger.error(f"Price fetch failed: {e}")
             return
+
+        self.last_price = current_price
+        self.last_candles_5m = candles_5m[-150:]
+        self.last_ema_5m = self._ema_series(
+            candles_5m, self.config.get("trend_filter.ema_period", 50)
+        )[-150:]
+        self.last_analysis = self.build_analysis_snapshot(
+            candles_5m, candles_15m, candles_1h, candles_1m, current_price
+        )
 
         for trade_id, position in list(self.position_manager.open_positions.items()):
             self.position_manager.update_position_price(trade_id, current_price)
@@ -504,59 +820,65 @@ class PaperTradingEngine(SMCEngine):
                     "timestamp": time.time(),
                 })
 
-        if len(self.position_manager.open_positions) < self.config.get("entry.max_open_positions", 1):
-            if time.time() - self.last_trade_time < self.config.get("entry.cooldown_seconds", 300):
-                return
+        if len(self.position_manager.open_positions) >= self.config.get("entry.max_open_positions", 1):
+            return
 
-            signal = self.detect_entry_signal(candles_5m, candles_15m, candles_1h, candles_1m)
-            if signal and signal["position_size"] > 0:
-                trade_id = str(uuid.uuid4())
-                side = signal.get("side", "long")
-                fill_price = current_price
-                fill_size = signal["position_size"]
+        if time.time() - self.last_trade_time < self.config.get("entry.cooldown_seconds", 300):
+            return
 
-                self.position_manager.open_position(
-                    trade_id=trade_id,
-                    asset=market,
-                    side=side,
-                    entry_price=fill_price,
-                    position_size=fill_size,
-                    sl_price=signal["sl_price"],
-                    tp_price=signal["tp_price"],
-                    strategy_info={
-                        "fvg_bottom": signal["fvg"]["bottom"],
-                        "fvg_top": signal["fvg"]["top"],
-                        "confirmation": signal["confirmation"],
-                        "trend": signal["trend_info"]["overall"],
-                        "side": side,
-                        "paper_trade": True,
-                    },
-                )
+        signal = self.detect_entry_signal(candles_5m, candles_15m, candles_1h, candles_1m)
+        if signal and signal["position_size"] > 0:
+            trade_id = str(uuid.uuid4())
+            side = signal.get("side", "long")
+            fill_price = current_price
+            fill_size = signal["position_size"]
 
-                self.last_trade_time = time.time()
-                self.simulated_fills.append({
-                    "id": trade_id,
-                    "side": side,
-                    "fill_price": fill_price,
-                    "fill_size": fill_size,
-                    "timestamp": time.time(),
-                })
-
-                self.trades.append({
-                    "id": trade_id,
-                    "type": "open",
-                    "side": side,
-                    "entry_price": fill_price,
-                    "position_size": fill_size,
-                    "sl_price": signal["sl_price"],
-                    "tp_price": signal["tp_price"],
+            self.position_manager.open_position(
+                trade_id=trade_id,
+                asset=market,
+                side=side,
+                entry_price=fill_price,
+                position_size=fill_size,
+                sl_price=signal["sl_price"],
+                tp_price=signal["tp_price"],
+                strategy_info={
+                    "fvg_bottom": signal["fvg"]["bottom"],
+                    "fvg_top": signal["fvg"]["top"],
                     "confirmation": signal["confirmation"],
-                    "timestamp": time.time(),
-                })
+                    "trend": signal["trend_info"]["overall"],
+                    "side": side,
+                    "paper_trade": True,
+                },
+            )
 
-                logger.info(
-                    f"PAPER TRADE OPEN: {trade_id[:8]}... | "
-                    f"{side.upper()} {fill_size:.6f} BTC @ {fill_price:.2f} EUR | "
-                    f"SL: {signal['sl_price']:.2f} | TP: {signal['tp_price']:.2f} | "
-                    f"Risk: 0.5% | Confirmation: {signal['confirmation']}"
-                )
+            self.last_trade_time = time.time()
+            self.simulated_fills.append({
+                "id": trade_id,
+                "side": side,
+                "fill_price": fill_price,
+                "fill_size": fill_size,
+                "timestamp": time.time(),
+            })
+
+            self.trades.append({
+                "id": trade_id,
+                "type": "open",
+                "side": side,
+                "entry_price": fill_price,
+                "position_size": fill_size,
+                "sl_price": signal["sl_price"],
+                "tp_price": signal["tp_price"],
+                "confirmation": signal["confirmation"],
+                "timestamp": time.time(),
+            })
+
+            self.last_analysis = self.build_analysis_snapshot(
+                candles_5m, candles_15m, candles_1h, candles_1m, current_price
+            )
+
+            logger.info(
+                f"PAPER TRADE OPEN: {trade_id[:8]}... | "
+                f"{side.upper()} {fill_size:.6f} BTC @ {fill_price:.2f} USD | "
+                f"SL: {signal['sl_price']:.2f} | TP: {signal['tp_price']:.2f} | "
+                f"Risk: 0.5% | Confirmation: {signal['confirmation']}"
+            )

@@ -1,7 +1,7 @@
 [project]
 name = "hermes-smc"
 version = "0.1.0"
-description = "ICT/SMC trading bot for BTC/EUR"
+description = "ICT/SMC trading bot for BTC/USD"
 requires-python = ">=3.11"
 dependencies = [
     "ccxt>=4.5.75",

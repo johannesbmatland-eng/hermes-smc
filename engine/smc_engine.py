@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------------
 
 DEFAULT_STRATEGY = {
-    "market": "BTC/EUR",
+    "market": "BTC/USD",
     "paper_trading": {
         "initial_capital": 100000,
         "currency": "USD",
@@ -262,7 +262,7 @@ class SMCEngine:
 
     async def fetch_all_timeframes(self) -> dict[str, list[dict]]:
         """Fetch candles for all required timeframes."""
-        market = self.config.get("market", "BTC/EUR")
+        market = self.config.get("market", "BTC/USD")
         timeframes = self.config.get("timeframes", {})
 
         tasks = []
@@ -474,7 +474,7 @@ class SMCEngine:
         if self._stopped:
             return
 
-        market = self.config.get("market", "BTC/EUR")
+        market = self.config.get("market", "BTC/USD")
 
         # Fetch all timeframe data
         try:
@@ -556,7 +556,7 @@ class SMCEngine:
 
                 logger.info(
                     f"Opened {side} position {trade_id}: {signal['position_size']:.6f} BTC @ "
-                    f"{signal['entry_price']:.2f} EUR | SL: {signal['sl_price']:.2f} | "
+                    f"{signal['entry_price']:.2f} USD | SL: {signal['sl_price']:.2f} | "
                     f"TP: {signal['tp_price']:.2f} | Size: {signal['position_size']:.6f}"
                 )
 
