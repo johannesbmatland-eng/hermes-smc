@@ -124,4 +124,3 @@ def test_ema_series_length():
     series = engine._ema_series(candles, 50)
     assert len(series) == 80 - 50 + 1
     assert "time" in series[0] and "value" in series[0]
-
