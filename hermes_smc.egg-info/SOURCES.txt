@@ -1,7 +1,0 @@
-README.md
-pyproject.toml
-hermes_smc.egg-info/PKG-INFO
-hermes_smc.egg-info/SOURCES.txt
-hermes_smc.egg-info/dependency_links.txt
-hermes_smc.egg-info/requires.txt
-hermes_smc.egg-info/top_level.txt

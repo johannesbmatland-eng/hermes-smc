@@ -3,6 +3,7 @@
 import asyncio
 import argparse
 import logging
+import os
 import signal
 import sys
 from pathlib import Path
@@ -57,32 +58,10 @@ async def run_dashboard(config_path: Path | None = None, port: int = 8080):
 
 
 async def run_combined(config_path: Path | None = None, port: int = 8080):
-    """Run both engine and dashboard."""
-    config = SMCConfig(config_path)
-    engine = PaperTradingEngine(config)
-
-    logger.info(f"Starting SMC engine + dashboard with {engine.position_manager.capital:.2f} USD capital")
-
-    # Start engine loop
-    engine._running = True
-    engine_task = asyncio.create_task(_engine_loop(engine))
-
-    # Start dashboard
+    """Run both engine and dashboard (dashboard manages the engine loop)."""
     dashboard = DashboardServer(port=port)
-    dashboard.engine = engine
-
-    try:
-        await dashboard.start()
-    except KeyboardInterrupt:
-        logger.info("Interrupted, stopping...")
-    finally:
-        engine._running = False
-        engine._stopped = True
-        engine_task.cancel()
-        try:
-            await engine_task
-        except asyncio.CancelledError:
-            pass
+    logger.info("Starting SMC engine + dashboard")
+    await dashboard.start()
 
 
 async def _engine_loop(engine: PaperTradingEngine):

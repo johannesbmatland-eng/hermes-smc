@@ -1,8 +1,8 @@
 """Unit tests for long/short SMC entry mirroring."""
 
-from engine.smc_engine import PositionManager, SMCConfig, SMCEngine
-from engine.paper_trading import PaperTradingEngine
-from engine.core import MarketStructureDetector, TrendAnalyzer
+from hermes_smc.engine.smc_engine import PositionManager, SMCConfig, SMCEngine
+from hermes_smc.engine.paper_trading import PaperTradingEngine
+from hermes_smc.engine.core import MarketStructureDetector, TrendAnalyzer
 
 
 def _candle(ts, o, h, l, c, v=1.0):
@@ -124,4 +124,3 @@ def test_ema_series_length():
     series = engine._ema_series(candles, 50)
     assert len(series) == 80 - 50 + 1
     assert "time" in series[0] and "value" in series[0]
-
