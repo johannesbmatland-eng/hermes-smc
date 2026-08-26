@@ -4,11 +4,13 @@ import asyncio
 import json
 import logging
 import os
+import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
+from threading import Thread
 from typing import Any
 
-from .engine.paper_trading import PaperTradingEngine, SMCConfig
+from ..engine.paper_trading import PaperTradingEngine, SMCConfig
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +91,10 @@ class DashboardServer:
         DashboardHandler.engine_server = self
         logger.info(f"Dashboard server starting on port {self.port}")
         await self.start_engine()
-        self._server.serve_forever()
+        # serve_forever blocks — run it in a thread so the asyncio engine loop keeps ticking
+        Thread(target=self._server.serve_forever, daemon=True).start()
+        while True:
+            await asyncio.sleep(3600)
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -360,7 +365,7 @@ def main():
     """Main entry point."""
     import argparse
     parser = argparse.ArgumentParser(description="SMC Trading Dashboard")
-    parser.add_argument("--port", type=int, default=8080, help="Port to listen on")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8080)), help="Port to listen on")
     parser.add_argument("--config", type=str, default=None, help="Path to config file")
     args = parser.parse_args()
 
