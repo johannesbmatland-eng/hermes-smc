@@ -1,12 +1,56 @@
-# hermes-smc
-ICT/SMC trading bot for BTC/EUR. Strategy:
-- 5m chart main, with 1h/15m trend filter
-- Unmitigated FVGs, pullback + confirmation entry
-- 0.5% risk per trade, RR 1/2 to 1/3
-- Paper trading with 100k USD starting capital
+# Hermes SMC Trading Bot
 
-## Structure
-- engine/: core logic (data, detection, execution)
-- config/: strategy config YAML
-- dashboard/: web dashboard
-- state_defaults/: default state files
+ICT/SMC (Smart Money Concepts) trading-bot for BTC/EUR pa Kraken.
+Koyrer 24/7 pa Railway med paper trading (100 000 USD demo-kapital).
+
+## Live dashboard (funkar pa mobil)
+
+**https://hermes-smc-production.up.railway.app**
+
+| Endpoint | Kva du far |
+|---|---|
+| `/` | Dashboard med saldo, winrate, posisjonar, trades |
+| `/api/stats` | Rå tal (JSON) |
+| `/api/trades` | Siste trades (JSON) |
+| `/api/config` | Gjeldande strategi-config (JSON) |
+
+## Strategi (kort forklart)
+
+Boten handlar berre **long** BTC/EUR, og berre nar "smart money"-monsteret stemmer:
+
+1. **Trend-filter**: 1t og 15m ma vise opptrend (EMA50 + marknadsstruktur HH/HL).
+2. **FVG (Fair Value Gap)**: ser etter prisgap pa 5m-charten der prisen bevega seg
+   sa fort at det oppsto ein ubalanse — dit kjem prisen ofte tilbake.
+3. **Pullback**: ventar pa at prisen trekkjer seg tilbake inn i gapet.
+4. **Bekreftelse**: krev engulfing-candle eller invertert FVG for entry.
+5. **Risk**: 0.5 % av kapitalen per trade. Stop-loss under FVG-botn,
+   take-profit pa 1:2 / 1:3 risk-reward.
+6. Maks 1 open posisjon, 5 min cooldown mellom trades.
+
+Detaljar/parametre: [`hermes_smc/config/strategy.yaml`](hermes_smc/config/strategy.yaml)
+
+## Status og historikk
+
+- **Saldoen overlever redeploys**: all state (kapital, posisjonar, historikk)
+  vert lagra fortlopande til eit Railway-volum (`/app/state/state.json`).
+- Endringslogg for prosjektet: [JOURNAL.md](JOURNAL.md)
+- All kode-historikk: [commits](../../commits/master)
+
+## Drift
+
+- **Hosting**: Railway, prosjekt `hermes-trading`, service `hermes-smc`.
+  Push til `master` -> automatisk deploy.
+- **Arkitektur**: ein prosess koyrer bade trading-engine (tick kvart 10. sekund
+  mot Kraken sine offentlege data) og dashboard-webserver.
+- Den gamle live-boten (hermes-trading, v10 RSI-strategi) er **stoppa** 2026-08-26.
+  Data ligg bevart pa sitt eige volum.
+
+## Lokal koyring
+
+```bash
+uv sync
+uv run python -m hermes_smc --mode combined --port 8080
+# opne http://localhost:8080
+```
+
+`STATE_DIR=<mappe>` aktiverer persistent lagring (utan den er state kun i minnet).

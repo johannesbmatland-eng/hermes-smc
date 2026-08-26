@@ -4,6 +4,7 @@
 import asyncio
 import json
 import logging
+import os
 import time
 import uuid
 from pathlib import Path
@@ -95,13 +96,62 @@ class SMCConfig:
 class PositionManager:
     """Manage open positions and paper trading state."""
 
-    def __init__(self, initial_capital: float = 100000, currency: str = "USD"):
+    def __init__(self, initial_capital: float = 100000, currency: str = "USD",
+                 state_dir: Path | None = None):
         self.initial_capital = initial_capital
         self.currency = currency
         self.capital = initial_capital
         self.open_positions: dict[str, dict] = {}
         self.closed_positions: list[dict] = []
         self.trade_history: list[dict] = []
+        self.state_dir = state_dir
+        if self.state_dir:
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            self._load_state()
+
+    # ---------- persistence ----------
+
+    @property
+    def _state_file(self) -> Path | None:
+        return self.state_dir / "state.json" if self.state_dir else None
+
+    def _load_state(self):
+        """Restore capital/positions/history from disk if present."""
+        f = self._state_file
+        if not f or not f.exists():
+            return
+        try:
+            data = json.loads(f.read_text())
+            self.capital = data.get("capital", self.capital)
+            self.initial_capital = data.get("initial_capital", self.initial_capital)
+            self.open_positions = data.get("open_positions", {})
+            self.closed_positions = data.get("closed_positions", [])
+            self.trade_history = data.get("trade_history", [])
+            logger.info(
+                f"Restored state: capital={self.capital:.2f} "
+                f"open={len(self.open_positions)} closed={len(self.closed_positions)}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to load state ({f}): {e}")
+
+    def save_state(self):
+        """Persist full trading state to disk (atomic write)."""
+        f = self._state_file
+        if not f:
+            return
+        try:
+            tmp = f.with_suffix(".tmp")
+            tmp.write_text(json.dumps({
+                "capital": self.capital,
+                "initial_capital": self.initial_capital,
+                "open_positions": self.open_positions,
+                "closed_positions": self.closed_positions,
+                "trade_history": self.trade_history,
+                "saved_at": time.time(),
+            }, indent=2))
+            tmp.replace(f)
+        except Exception as e:
+            logger.error(f"Failed to save state ({f}): {e}")
 
     def calculate_position_size(
         self,
@@ -173,6 +223,7 @@ class PositionManager:
         }
         self.open_positions[trade_id] = position
         self.capital -= entry_price * position_size
+        self.save_state()
         return position
 
     def close_position(
@@ -212,6 +263,7 @@ class PositionManager:
         self.closed_positions.append(position)
         self.trade_history.append(position)
         del self.open_positions[trade_id]
+        self.save_state()
 
         logger.info(
             f"Closed position {trade_id}: {side} {size:.6f} @ {entry:.2f} → "
@@ -242,9 +294,12 @@ class SMCEngine:
     def __init__(self, config: SMCConfig | None = None):
         self.config = config or SMCConfig()
         self.market_data = MarketData()
+        state_dir_env = os.environ.get("STATE_DIR")
+        state_dir = Path(state_dir_env) if state_dir_env else None
         self.position_manager = PositionManager(
             initial_capital=self.config.get("paper_trading.initial_capital", 100000),
             currency=self.config.get("paper_trading.currency", "USD"),
+            state_dir=state_dir,
         )
         self.trades: list[dict] = []
         self.last_trade_time: float = 0
