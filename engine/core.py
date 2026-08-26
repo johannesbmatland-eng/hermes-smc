@@ -184,6 +184,8 @@ class MarketStructureDetector:
 
         last_hh_idx = -1
         last_hl_idx = -1
+        last_lh_idx = -1
+        last_ll_idx = -1
 
         for i in range(1, len(prices)):
             high, low, ts = prices[i]
@@ -191,16 +193,27 @@ class MarketStructureDetector:
 
             # HH: new high that is higher than previous high
             if high > prev_high:
-                # Check if this high is significantly higher (not just tick)
                 if last_hh_idx == -1 or high > prices[last_hh_idx][0]:
                     hh.append({"index": i, "price": high, "timestamp": ts})
                     last_hh_idx = i
 
+            # LH: new high that is lower than previous swing high
+            if high < prev_high:
+                if last_lh_idx == -1 or high < prices[last_lh_idx][0]:
+                    lh.append({"index": i, "price": high, "timestamp": ts})
+                    last_lh_idx = i
+
             # HL: new low that is higher than previous low
-            elif low > prev_low:
+            if low > prev_low:
                 if last_hl_idx == -1 or low > prices[last_hl_idx][1]:
                     hl.append({"index": i, "price": low, "timestamp": ts})
                     last_hl_idx = i
+
+            # LL: new low that is lower than previous swing low
+            if low < prev_low:
+                if last_ll_idx == -1 or low < prices[last_ll_idx][1]:
+                    ll.append({"index": i, "price": low, "timestamp": ts})
+                    last_ll_idx = i
 
         # BOS: when price moves beyond previous high/low in trend direction
         bos = []
@@ -219,10 +232,12 @@ class MarketStructureDetector:
             "bos": bos,
             "hh": hh,
             "hl": hl,
-            "lh": [],
-            "ll": [],
+            "lh": lh,
+            "ll": ll,
             "latest_hh": hh[-1] if hh else None,
             "latest_hl": hl[-1] if hl else None,
+            "latest_lh": lh[-1] if lh else None,
+            "latest_ll": ll[-1] if ll else None,
         }
 
 
@@ -325,33 +340,48 @@ class TrendAnalyzer:
         else:
             result["overall"] = "neutral"
 
-        # Check for BOS and HH/HL confirmation
+        # Check for BOS and HH/HL (uptrend) / LH/LL (downtrend) confirmation
         latest_hh_1h = structure_1h.get("latest_hh")
         latest_hl_1h = structure_1h.get("latest_hl")
         latest_hh_15m = structure_15m.get("latest_hh")
         latest_hl_15m = structure_15m.get("latest_hl")
+        latest_lh_1h = structure_1h.get("latest_lh")
+        latest_ll_1h = structure_1h.get("latest_ll")
+        latest_lh_15m = structure_15m.get("latest_lh")
+        latest_ll_15m = structure_15m.get("latest_ll")
 
         result["details"]["confirmed_uptrend"] = (
             latest_hh_1h is not None and latest_hl_1h is not None
         ) or (
             latest_hh_15m is not None and latest_hl_15m is not None
         )
-        result["details"]["confirmed_downtrend"] = False  # would need LL and LH
+        result["details"]["confirmed_downtrend"] = (
+            latest_lh_1h is not None and latest_ll_1h is not None
+        ) or (
+            latest_lh_15m is not None and latest_ll_15m is not None
+        )
 
-        # HH/HL sequence check: are we making higher highs and higher lows?
-        hh_count = len(structure_1h.get("hh", []))
-        hl_count = len(structure_1h.get("hl", []))
-        result["details"]["hh_count_1h"] = hh_count
-        result["details"]["hl_count_1h"] = hl_count
+        # HH/HL and LH/LL counts
+        result["details"]["hh_count_1h"] = len(structure_1h.get("hh", []))
+        result["details"]["hl_count_1h"] = len(structure_1h.get("hl", []))
+        result["details"]["lh_count_1h"] = len(structure_1h.get("lh", []))
+        result["details"]["ll_count_1h"] = len(structure_1h.get("ll", []))
 
-        # Determine if trend filter passes
+        # Trend filter: long needs bullish+HH/HL, short needs bearish+LH/LL
         trend_filter_enabled = config.get("trend_filter", {}).get("enabled", True)
         if trend_filter_enabled:
-            if result["overall"] == "bullish" and result["details"]["confirmed_uptrend"]:
-                result["trend_filter_pass"] = True
-            else:
-                result["trend_filter_pass"] = False
+            result["trend_filter_pass_long"] = (
+                result["overall"] == "bullish" and result["details"]["confirmed_uptrend"]
+            )
+            result["trend_filter_pass_short"] = (
+                result["overall"] == "bearish" and result["details"]["confirmed_downtrend"]
+            )
+            result["trend_filter_pass"] = (
+                result["trend_filter_pass_long"] or result["trend_filter_pass_short"]
+            )
         else:
+            result["trend_filter_pass_long"] = True
+            result["trend_filter_pass_short"] = True
             result["trend_filter_pass"] = True
 
         return result

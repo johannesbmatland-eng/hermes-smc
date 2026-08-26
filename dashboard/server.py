@@ -319,11 +319,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 // Update trades
                 const tradesContainer = document.getElementById('trades_container');
                 if (trades.trades && trades.trades.length > 0) {
-                    tradesContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Type</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>Reason</th><th>Time</th></tr></thead><tbody>' +
+                    tradesContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Type</th><th>Side</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>Reason</th><th>Time</th></tr></thead><tbody>' +
                         trades.trades.map(t => `
                             <tr>
                                 <td>${t.id.substring(0, 8)}...</td>
                                 <td>${t.type}</td>
+                                <td>${t.side || '--'}</td>
                                 <td>${t.entry_price ? t.entry_price.toFixed(2) : '--'}</td>
                                 <td>${t.position_size ? t.position_size.toFixed(6) : '--'}</td>
                                 <td>${t.sl_price ? t.sl_price.toFixed(2) : '--'}</td>

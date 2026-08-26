@@ -1,14 +1,10 @@
 """Paper trading simulator for SMC engine testing."""
 
 import asyncio
-import json
 import logging
 import time
-from pathlib import Path
+import uuid
 from typing import Any
-
-import ccxt.async_support as ccxt
-import numpy as np
 
 from .smc_engine import SMCEngine, SMCConfig, PositionManager
 
@@ -26,17 +22,13 @@ class PaperTradingEngine(SMCEngine):
     async def fetch_all_timeframes(self) -> dict[str, list[dict]]:
         """Fetch candles including 1m for confirmation signals."""
         market = self.config.get("market", "BTC/EUR")
-        timeframes = self.config.get("timeframes", {})
 
-        tasks = []
-        # Main 5m
-        tasks.append(self.market_data.fetch_candles(market, "5m", 500))
-        # Trend 15m
-        tasks.append(self.market_data.fetch_candles(market, "15m", 200))
-        # Trend 1h
-        tasks.append(self.market_data.fetch_candles(market, "1h", 200))
-        # 1m for confirmation (IFVG detection)
-        tasks.append(self.market_data.fetch_candles(market, "1m", 300))
+        tasks = [
+            self.market_data.fetch_candles(market, "5m", 500),
+            self.market_data.fetch_candles(market, "15m", 200),
+            self.market_data.fetch_candles(market, "1h", 200),
+            self.market_data.fetch_candles(market, "1m", 300),
+        ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -55,57 +47,56 @@ class PaperTradingEngine(SMCEngine):
         candles_1m: list[dict] | None = None,
     ) -> dict | None:
         """
-        Detect SMC entry signal with full ICT concepts:
-        - Unmitigated FVG
-        - Pullback into FVG (50% of move)
+        Detect SMC entry signal (long or short) with full ICT concepts:
+        - Unmitigated FVG (bullish for long, bearish for short)
+        - Pullback into FVG
         - Confirmation: engulfing on 5m OR IFVG on 1m
-        - Trend filter: EMA + BOS/HH-HL on 1h/15m
+        - Trend filter: EMA + structure on 1h/15m
         """
-        market = self.config.get("market", "BTC/EUR")
-
-        # Detect FVG on 5m
         fvgs = self._detect_fvg_full(candles_5m)
-        unmitigated_bullish = [f for f in fvgs if f["unmitigated"] and f["type"] == "bullish"]
-
-        if not unmitigated_bullish:
-            return None
-
-        # Trend filter
         trend_result = self._analyze_trend_full(candles_5m, candles_15m, candles_1h)
-        if not trend_result.get("trend_filter_pass", True):
+
+        side = None
+        candidate_fvgs: list[dict] = []
+        if trend_result.get("trend_filter_pass_long", False):
+            side = "long"
+            candidate_fvgs = [f for f in fvgs if f["unmitigated"] and f["type"] == "bullish"]
+        elif trend_result.get("trend_filter_pass_short", False):
+            side = "short"
+            candidate_fvgs = [f for f in fvgs if f["unmitigated"] and f["type"] == "bearish"]
+        else:
             logger.debug("Trend filter not passed")
             return None
 
-        # Find best FVG
-        best_fvg = self._find_best_fvg(unmitigated_bullish, candles_5m)
+        if not candidate_fvgs:
+            return None
+
+        best_fvg = self._find_best_fvg(candidate_fvgs, candles_5m)
         if not best_fvg:
             return None
 
-        # Confirmation
-        confirmation = self._check_smc_confirmation(candles_5m, candles_1m, best_fvg)
+        confirmation = self._check_smc_confirmation(candles_5m, candles_1m, best_fvg, side=side)
         if not confirmation:
             logger.debug("No confirmation signal")
             return None
 
-        # Entry mechanics
         entry_price = candles_5m[-1]["close"]
-        sl_price = self._calculate_smc_sl(entry_price, best_fvg)
-        tp_price = self._calculate_smc_tp(entry_price, sl_price)
-
-        # Position size (0.5% risk)
+        sl_price = self._calculate_smc_sl(entry_price, best_fvg, side=side)
+        tp_price = self._calculate_smc_tp(entry_price, sl_price, side=side)
         position_size = self._calculate_position_size(entry_price, sl_price)
 
         if position_size <= 0:
             return None
 
         logger.info(
-            f"SMC Entry Signal: FVG [{best_fvg['bottom']:.2f}-{best_fvg['top']:.2f}], "
+            f"SMC Entry Signal ({side}): FVG [{best_fvg['bottom']:.2f}-{best_fvg['top']:.2f}], "
             f"entry @ {entry_price:.2f}, SL @ {sl_price:.2f}, TP @ {tp_price:.2f}, "
             f"size: {position_size:.6f} BTC, confirmation: {confirmation}"
         )
 
         return {
             "type": "entry",
+            "side": side,
             "fvg": best_fvg,
             "entry_price": entry_price,
             "sl_price": sl_price,
@@ -156,7 +147,6 @@ class PaperTradingEngine(SMCEngine):
                     "unmitigated": True,
                 })
 
-        # Check which FVGs are still unmitigated
         for fvg in fvgs:
             fvg["unmitigated"] = self._check_fvg_unmitigated(candles, fvg)
 
@@ -180,7 +170,7 @@ class PaperTradingEngine(SMCEngine):
         candles_1h: list[dict],
     ) -> dict:
         """Comprehensive trend analysis using EMA + market structure."""
-        result = {
+        result: dict[str, Any] = {
             "trend_5m": "neutral",
             "trend_15m": "neutral",
             "trend_1h": "neutral",
@@ -190,7 +180,6 @@ class PaperTradingEngine(SMCEngine):
 
         ema_period = self.config.get("trend_filter.ema_period", 50)
 
-        # Calculate EMAs
         ema_5m = self._calc_ema(candles_5m, ema_period)
         ema_15m = self._calc_ema(candles_15m, ema_period)
         ema_1h = self._calc_ema(candles_1h, ema_period)
@@ -199,7 +188,6 @@ class PaperTradingEngine(SMCEngine):
         result["details"]["ema_15m"] = ema_15m
         result["details"]["ema_1h"] = ema_1h
 
-        # Trend direction from EMA
         if ema_5m:
             price_5m = candles_5m[-1]["close"]
             result["trend_5m"] = "bullish" if price_5m > ema_5m else "bearish"
@@ -212,7 +200,6 @@ class PaperTradingEngine(SMCEngine):
             price_1h = candles_1h[-1]["close"]
             result["trend_1h"] = "bullish" if price_1h > ema_1h else "bearish"
 
-        # Market structure analysis (BOS, HH, HL)
         struct_5m = self._analyze_structure(candles_5m)
         struct_15m = self._analyze_structure(candles_15m)
         struct_1h = self._analyze_structure(candles_1h)
@@ -221,7 +208,6 @@ class PaperTradingEngine(SMCEngine):
         result["details"]["structure_15m"] = struct_15m
         result["details"]["structure_1h"] = struct_1h
 
-        # Count bullish vs bearish timeframes
         bullish = 0
         bearish = 0
         for tf in ["trend_5m", "trend_15m", "trend_1h"]:
@@ -237,19 +223,30 @@ class PaperTradingEngine(SMCEngine):
         else:
             result["overall"] = "neutral"
 
-        # Confirmed uptrend: HH + HL on higher timeframes
         confirmed_uptrend = (
             (struct_1h.get("hh_count", 0) > 0 and struct_1h.get("hl_count", 0) > 0)
             or (struct_15m.get("hh_count", 0) > 0 and struct_15m.get("hl_count", 0) > 0)
         )
+        confirmed_downtrend = (
+            (struct_1h.get("lh_count", 0) > 0 and struct_1h.get("ll_count", 0) > 0)
+            or (struct_15m.get("lh_count", 0) > 0 and struct_15m.get("ll_count", 0) > 0)
+        )
         result["details"]["confirmed_uptrend"] = confirmed_uptrend
+        result["details"]["confirmed_downtrend"] = confirmed_downtrend
 
-        # Trend filter pass
         if self.config.get("trend_filter.enabled", True):
-            result["trend_filter_pass"] = (
+            result["trend_filter_pass_long"] = (
                 result["overall"] == "bullish" and confirmed_uptrend
             )
+            result["trend_filter_pass_short"] = (
+                result["overall"] == "bearish" and confirmed_downtrend
+            )
+            result["trend_filter_pass"] = (
+                result["trend_filter_pass_long"] or result["trend_filter_pass_short"]
+            )
         else:
+            result["trend_filter_pass_long"] = True
+            result["trend_filter_pass_short"] = True
             result["trend_filter_pass"] = True
 
         return result
@@ -266,59 +263,78 @@ class PaperTradingEngine(SMCEngine):
         return ema
 
     def _analyze_structure(self, candles: list[dict]) -> dict:
-        """Analyze market structure: BOS, HH, HL, etc."""
+        """Analyze market structure: BOS, HH/HL (uptrend) and LH/LL (downtrend)."""
         if len(candles) < 20:
-            return {"bos_count": 0, "hh_count": 0, "hl_count": 0}
+            return {
+                "bos_count": 0,
+                "hh_count": 0,
+                "hl_count": 0,
+                "lh_count": 0,
+                "ll_count": 0,
+            }
 
         highs = [c["high"] for c in candles]
         lows = [c["low"] for c in candles]
 
         hh_list = []
         hl_list = []
+        lh_list = []
+        ll_list = []
         bos_list = []
 
-        last_hh = None
-        last_hl = None
         last_swing_high = None
         last_swing_low = None
+        last_hh = None
+        last_ll = None
 
         for i in range(2, len(candles) - 2):
-            # Simple swing detection: 2 candles on each side
-            if (
+            is_swing_high = (
                 highs[i] > highs[i - 1]
                 and highs[i] > highs[i + 1]
                 and highs[i] > highs[i - 2]
                 and highs[i] > highs[i + 2]
-            ):
-                if last_swing_high is None or highs[i] > last_swing_high:
-                    hh_list.append({"index": i, "price": highs[i]})
-                    last_swing_high = highs[i]
-                    last_hh = highs[i]
-
-            if (
+            )
+            is_swing_low = (
                 lows[i] < lows[i - 1]
                 and lows[i] < lows[i + 1]
                 and lows[i] < lows[i - 2]
                 and lows[i] < lows[i + 2]
-            ):
-                if last_swing_low is None or lows[i] < last_swing_low:
-                    # This would be LL, but for HL we need previous HL
-                    if last_hl is not None and lows[i] > last_hl:
-                        hl_list.append({"index": i, "price": lows[i]})
-                    last_swing_low = lows[i]
-                    last_hl = lows[i]
+            )
 
-            # BOS: break of previous structure
+            if is_swing_high:
+                if last_swing_high is None or highs[i] > last_swing_high:
+                    hh_list.append({"index": i, "price": highs[i]})
+                    last_hh = highs[i]
+                else:
+                    lh_list.append({"index": i, "price": highs[i]})
+                last_swing_high = highs[i]
+
+            if is_swing_low:
+                if last_swing_low is None or lows[i] < last_swing_low:
+                    ll_list.append({"index": i, "price": lows[i]})
+                    last_ll = lows[i]
+                else:
+                    hl_list.append({"index": i, "price": lows[i]})
+                last_swing_low = lows[i]
+
             if last_hh and highs[i] > last_hh * 1.0005:
                 bos_list.append({"index": i, "type": "bullish", "price": highs[i]})
                 last_hh = highs[i]
+
+            if last_ll and lows[i] < last_ll * 0.9995:
+                bos_list.append({"index": i, "type": "bearish", "price": lows[i]})
+                last_ll = lows[i]
 
         return {
             "bos_count": len(bos_list),
             "hh_count": len(hh_list),
             "hl_count": len(hl_list),
+            "lh_count": len(lh_list),
+            "ll_count": len(ll_list),
             "latest_hh": hh_list[-1] if hh_list else None,
             "latest_hl": hl_list[-1] if hl_list else None,
+            "latest_lh": lh_list[-1] if lh_list else None,
+            "latest_ll": ll_list[-1] if ll_list else None,
         }
 
     def _find_best_fvg(self, fvgs: list[dict], candles: list[dict]) -> dict | None:
@@ -332,19 +348,17 @@ class PaperTradingEngine(SMCEngine):
             if candles_since > self.config.get("fvq_detection.min_candles_since_fvg", 50):
                 continue
 
-            # Score based on proximity to current price
             fvg_mid = fvg["mid"]
             distance = abs(current_price - fvg_mid) / fvg_mid
 
-            # Prefer FVGs that price is pulling back into
             if fvg["bottom"] <= current_price <= fvg["top"]:
-                score = 1.0 - distance * 2  # inside FVG is good
+                score = 1.0 - distance * 2
             elif abs(current_price - fvg["bottom"]) / fvg["bottom"] < 0.005:
-                score = 0.8  # near bottom
+                score = 0.8
             elif abs(current_price - fvg["top"]) / fvg["top"] < 0.005:
-                score = 0.6  # near top
+                score = 0.6
             else:
-                continue  # too far away
+                continue
 
             if score > best_score:
                 best_score = score
@@ -357,68 +371,91 @@ class PaperTradingEngine(SMCEngine):
         candles_5m: list[dict],
         candles_1m: list[dict] | None,
         fvg: dict,
+        side: str = "long",
     ) -> str | None:
-        """Check for SMC entry confirmation."""
+        """Check for SMC entry confirmation (bullish for long, bearish for short)."""
         method = self.config.get("entry.confirmation", "engulfing_or_ifvg")
 
-        # Engulfing on 5m
         if len(candles_5m) >= 3 and method in ["engulfing", "engulfing_or_ifvg"]:
             c_prev = candles_5m[-2]
             c_curr = candles_5m[-1]
 
-            if (c_curr["close"] > c_curr["open"] and c_prev["close"] < c_prev["open"]
-                    and c_curr["close"] > c_prev["open"]
-                    and c_curr["open"] < c_prev["close"]):
-                return "engulfing_5m"
+            if side == "long":
+                if (c_curr["close"] > c_curr["open"] and c_prev["close"] < c_prev["open"]
+                        and c_curr["close"] > c_prev["open"]
+                        and c_curr["open"] < c_prev["close"]):
+                    return "engulfing_5m"
+            else:
+                if (c_curr["close"] < c_curr["open"] and c_prev["close"] > c_prev["open"]
+                        and c_curr["close"] < c_prev["open"]
+                        and c_curr["open"] > c_prev["close"]):
+                    return "engulfing_5m"
 
-        # IFVG on 1m (requires 1m data)
         if candles_1m and method in ["ifvg", "engulfing_or_ifvg"]:
-            confirmation = self._detect_ifvg(candles_1m, fvg)
+            confirmation = self._detect_ifvg(candles_1m, fvg, side=side)
             if confirmation:
                 return confirmation
 
         return None
 
-    def _detect_ifvg(self, candles_1m: list[dict], fvg_5m: dict) -> str | None:
+    def _detect_ifvg(
+        self,
+        candles_1m: list[dict],
+        fvg_5m: dict,
+        side: str = "long",
+    ) -> str | None:
         """Detect Inverse FVG on 1m that confirms the 5m FVG entry."""
         if len(candles_1m) < 5:
             return None
 
-        # Look for rapid move creating imbalance on 1m
-        # This is a simplified IFVG detection
         recent = candles_1m[-10:]
 
         for i in range(2, len(recent)):
             c_prev = recent[i - 1]
             c_curr = recent[i]
 
-            # Bullish IFVG-like: strong impulsive move up
-            if c_curr["low"] > c_prev["high"]:
-                move_size = (c_curr["high"] - c_prev["low"]) / c_prev["low"]
-                if move_size > 0.003:  # 0.3% move in one candle
-                    # Check if this aligns with 5m FVG
-                    if c_curr["low"] >= fvg_5m["bottom"]:
+            if side == "long":
+                # Bullish IFVG-like: strong impulsive move up
+                if c_curr["low"] > c_prev["high"]:
+                    move_size = (c_curr["high"] - c_prev["low"]) / c_prev["low"]
+                    if move_size > 0.003 and c_curr["low"] >= fvg_5m["bottom"]:
                         return "ifvg_1m_bullish"
+            else:
+                # Bearish IFVG-like: strong impulsive move down
+                if c_curr["high"] < c_prev["low"]:
+                    move_size = (c_prev["high"] - c_curr["low"]) / c_prev["high"]
+                    if move_size > 0.003 and c_curr["high"] <= fvg_5m["top"]:
+                        return "ifvg_1m_bearish"
 
         return None
 
-    def _calculate_smc_sl(self, entry_price: float, fvg: dict) -> float:
-        """Calculate SL below FVG bottom with buffer."""
+    def _calculate_smc_sl(self, entry_price: float, fvg: dict, side: str = "long") -> float:
+        """Calculate SL below FVG bottom (long) or above FVG top (short)."""
+        buffer_pct = self.config.get("risk.sl_buffer_pct", 0.002)
+        if side == "short":
+            sl_base = fvg["top"]
+            return sl_base + sl_base * buffer_pct
         sl_base = fvg["bottom"]
-        buffer = sl_base * self.config.get("risk.sl_buffer_pct", 0.002)
-        return sl_base - buffer
+        return sl_base - sl_base * buffer_pct
 
-    def _calculate_smc_tp(self, entry_price: float, sl_price: float) -> float:
-        """Calculate TP with RR 1/2 or 1/3."""
-        risk_distance = entry_price - sl_price
+    def _calculate_smc_tp(
+        self,
+        entry_price: float,
+        sl_price: float,
+        side: str = "long",
+    ) -> float:
+        """Calculate TP with configured RR, mirrored for shorts."""
+        risk_distance = abs(entry_price - sl_price)
         rr = self.config.get("risk.rr_target", 0.5)
+        if side == "short":
+            return entry_price - (risk_distance * rr)
         return entry_price + (risk_distance * rr)
 
     def _calculate_position_size(self, entry_price: float, sl_price: float) -> float:
-        """Calculate position size based on 0.5% risk."""
+        """Calculate position size based on risk % (works for long and short)."""
         risk_pct = self.config.get("risk.risk_pct_per_trade", 0.5)
         risk_amount = self.position_manager.capital * (risk_pct / 100)
-        price_risk = entry_price - sl_price
+        price_risk = abs(entry_price - sl_price)
         if price_risk <= 0:
             return 0
         size = risk_amount / price_risk
@@ -451,7 +488,6 @@ class PaperTradingEngine(SMCEngine):
             logger.error(f"Price fetch failed: {e}")
             return
 
-        # Update and check open positions
         for trade_id, position in list(self.position_manager.open_positions.items()):
             self.position_manager.update_position_price(trade_id, current_price)
 
@@ -462,12 +498,12 @@ class PaperTradingEngine(SMCEngine):
                 self.trades.append({
                     "id": trade_id,
                     "type": "close",
+                    "side": position.get("side"),
                     "reason": exit_reason,
                     "price": current_price,
                     "timestamp": time.time(),
                 })
 
-        # Check for new entry
         if len(self.position_manager.open_positions) < self.config.get("entry.max_open_positions", 1):
             if time.time() - self.last_trade_time < self.config.get("entry.cooldown_seconds", 300):
                 return
@@ -475,15 +511,14 @@ class PaperTradingEngine(SMCEngine):
             signal = self.detect_entry_signal(candles_5m, candles_15m, candles_1h, candles_1m)
             if signal and signal["position_size"] > 0:
                 trade_id = str(uuid.uuid4())
-
-                # Simulate fill at current price (paper trading)
+                side = signal.get("side", "long")
                 fill_price = current_price
                 fill_size = signal["position_size"]
 
-                position = self.position_manager.open_position(
+                self.position_manager.open_position(
                     trade_id=trade_id,
                     asset=market,
-                    side="long",
+                    side=side,
                     entry_price=fill_price,
                     position_size=fill_size,
                     sl_price=signal["sl_price"],
@@ -493,6 +528,7 @@ class PaperTradingEngine(SMCEngine):
                         "fvg_top": signal["fvg"]["top"],
                         "confirmation": signal["confirmation"],
                         "trend": signal["trend_info"]["overall"],
+                        "side": side,
                         "paper_trade": True,
                     },
                 )
@@ -500,6 +536,7 @@ class PaperTradingEngine(SMCEngine):
                 self.last_trade_time = time.time()
                 self.simulated_fills.append({
                     "id": trade_id,
+                    "side": side,
                     "fill_price": fill_price,
                     "fill_size": fill_size,
                     "timestamp": time.time(),
@@ -508,6 +545,7 @@ class PaperTradingEngine(SMCEngine):
                 self.trades.append({
                     "id": trade_id,
                     "type": "open",
+                    "side": side,
                     "entry_price": fill_price,
                     "position_size": fill_size,
                     "sl_price": signal["sl_price"],
@@ -518,7 +556,7 @@ class PaperTradingEngine(SMCEngine):
 
                 logger.info(
                     f"PAPER TRADE OPEN: {trade_id[:8]}... | "
-                    f"Long {fill_size:.6f} BTC @ {fill_price:.2f} EUR | "
+                    f"{side.upper()} {fill_size:.6f} BTC @ {fill_price:.2f} EUR | "
                     f"SL: {signal['sl_price']:.2f} | TP: {signal['tp_price']:.2f} | "
                     f"Risk: 0.5% | Confirmation: {signal['confirmation']}"
                 )
