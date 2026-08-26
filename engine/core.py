@@ -1,0 +1,357 @@
+"""Engine core: data fetching, market structure detection, trade logic."""
+
+import asyncio
+import json
+import logging
+import time
+import uuid
+from pathlib import Path
+from typing import Any
+
+import ccxt.async_support as ccxt
+import numpy as np
+
+logger = logging.getLogger(__name__)
+
+# ----------------------------------------------------------------------
+# Configuration (will be loaded from YAML in production)
+# ----------------------------------------------------------------------
+
+DEFAULT_CONFIG = {
+    "market": "BTC/EUR",
+    "timeframes": {
+        "main": "5m",
+        "trend_1h": "1h",
+        "trend_15m": "15m",
+    },
+    "trend_filter": {
+        "enabled": True,
+        "method": "ema_and_structure",  # 'ema' or 'ema_and_structure'
+        "ema_period": 50,
+        "min_bos_since_start": 1,
+    },
+    "fvq_detection": {
+        "min_candles_since_fvg": 50,  # don't trade very old FVGs
+        "fvg_buffer_pct": 0.001,  # 0.1% buffer for entry
+    },
+    "entry": {
+        "confirmation": "engulfing_or_ifvg",  # 'engulfing' | 'ifvg' | 'both'
+        "pullback_depth_pct": 0.5,  # enter when price pulls back to 50% of move
+        "max_open_positions": 1,
+        "cooldown_seconds": 300,
+    },
+    "risk": {
+        "risk_pct_per_trade": 0.5,
+        "rr_target": 0.5,  # 1/2 RR default
+        "rr_alternative": 0.333,  # 1/3 RR
+        "sl_buffer_pct": 0.002,  # 0.2% SL buffer below FVG
+    },
+    "paper_trading": {
+        "initial_capital": 100000,
+        "currency": "USD",
+        "exchange": "kraken",  # paper mode uses kraken API but simulated
+    },
+}
+
+
+class MarketData:
+    """Fetch and cache market data from Kraken."""
+
+    def __init__(self, exchange_id: str = "kraken"):
+        self.exchange_id = exchange_id
+        self._cache: dict[str, Any] = {}
+        self._cache_ts: dict[str, float] = {}
+        self._cache_duration = 30  # seconds
+
+    async def fetch_candles(self, symbol: str, timeframe: str, limit: int = 500) -> list[dict]:
+        """Fetch OHLCV candles, with caching."""
+        cache_key = f"{symbol}:{timeframe}:{limit}"
+        now = time.time()
+        if cache_key in self._cache and now - self._cache_ts.get(cache_key, 0) < self._cache_duration:
+            return self._cache[cache_key]
+
+        try:
+            exchange = getattr(ccxt, self.exchange_id)({"enableRateLimit": True})
+            ohlcv = await exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+            await exchange.close()
+
+            candles = [
+                {
+                    "timestamp": int(c[0] / 1000),
+                    "open": float(c[1]),
+                    "high": float(c[2]),
+                    "low": float(c[3]),
+                    "close": float(c[4]),
+                    "volume": float(c[5]),
+                }
+                for c in ohlcv
+            ]
+            self._cache[cache_key] = candles
+            self._cache_ts[cache_key] = now
+            return candles
+        except Exception as e:
+            logger.error(f"Failed to fetch candles: {e}")
+            if cache_key in self._cache:
+                return self._cache[cache_key]
+            raise
+
+    async def get_latest_price(self, symbol: str) -> float:
+        """Get latest price for symbol."""
+        try:
+            exchange = getattr(ccxt, self.exchange_id)({"enableRateLimit": True})
+            ticker = await exchange.fetch_ticker(symbol)
+            await exchange.close()
+            return float(ticker["last"])
+        except Exception as e:
+            logger.error(f"Failed to get price: {e}")
+            if "price" in self._cache:
+                return self._cache["price"]
+            raise
+
+
+class MarketStructureDetector:
+    """Detect ICT/SMC concepts: FVG, BOS, HH/HL, order blocks."""
+
+    @staticmethod
+    def detect_fvg(candles: list[dict]) -> list[dict]:
+        """Detect Fair Value Gaps (FVGs) in candle data."""
+        fvgs = []
+        for i in range(2, len(candles)):
+            # Bullish FVG: current candle's low > previous candle's high
+            if candles[i]["low"] > candles[i - 1]["high"]:
+                fvg_top = candles[i]["high"]
+                fvg_bottom = candles[i - 1]["low"]
+                fvgs.append({
+                    "type": "bullish",
+                    "top": fvg_top,
+                    "bottom": fvg_bottom,
+                    "mid": (fvg_top + fvg_bottom) / 2,
+                    "start_candle": i - 1,
+                    "end_candle": i,
+                    "timestamp": candles[i - 1]["timestamp"],
+                    "unmitigated": True,  # will be updated below
+                })
+
+            # Bearish FVG: current candle's high < previous candle's low
+            elif candles[i]["high"] < candles[i - 1]["low"]:
+                fvg_top = candles[i - 1]["high"]
+                fvg_bottom = candles[i]["low"]
+                fvgs.append({
+                    "type": "bearish",
+                    "top": fvg_top,
+                    "bottom": fvg_bottom,
+                    "mid": (fvg_top + fvg_bottom) / 2,
+                    "start_candle": i - 1,
+                    "end_candle": i,
+                    "timestamp": candles[i - 1]["timestamp"],
+                    "unmitigated": True,
+                })
+
+        # Determine which FVGs are still unmitigated (price hasn't traded into them)
+        for fvg in fvgs:
+            fvg["unmitigated"] = MarketStructureDetector._is_fvg_unmitigated(candles, fvg)
+
+        return fvgs
+
+    @staticmethod
+    def _is_fvg_unmitigated(candles: list[dict], fvg: dict) -> bool:
+        """Check if an FVG has been mitigated by price."""
+        for c in candles[fvg["end_candle"]:]:
+            if fvg["type"] == "bullish":
+                # Price has mitigated if low <= fvg_bottom
+                if c["low"] <= fvg["bottom"]:
+                    return False
+            else:
+                # Price has mitigated if high >= fvg_top
+                if c["high"] >= fvg["top"]:
+                    return False
+        return True
+
+    @staticmethod
+    def detect_bos_hh_hl(candles: list[dict], lookback: int = 50) -> dict:
+        """Detect Break of Structure (BOS), Higher Highs (HH), Higher Lows (HL), etc."""
+        if len(candles) < lookback:
+            return {"bos": [], "hh": [], "hl": [], "lh": [], "ll": []}
+
+        recent = candles[-lookback:]
+        prices = [(c["high"], c["low"], c["timestamp"]) for c in recent]
+
+        # Find HH/HL/LH/LL
+        hh = []  # Higher High
+        hl = []  # Higher Low
+        lh = []  # Lower High
+        ll = []  # Lower Low
+
+        last_hh_idx = -1
+        last_hl_idx = -1
+
+        for i in range(1, len(prices)):
+            high, low, ts = prices[i]
+            prev_high, prev_low, _ = prices[i - 1]
+
+            # HH: new high that is higher than previous high
+            if high > prev_high:
+                # Check if this high is significantly higher (not just tick)
+                if last_hh_idx == -1 or high > prices[last_hh_idx][0]:
+                    hh.append({"index": i, "price": high, "timestamp": ts})
+                    last_hh_idx = i
+
+            # HL: new low that is higher than previous low
+            elif low > prev_low:
+                if last_hl_idx == -1 or low > prices[last_hl_idx][1]:
+                    hl.append({"index": i, "price": low, "timestamp": ts})
+                    last_hl_idx = i
+
+        # BOS: when price moves beyond previous high/low in trend direction
+        bos = []
+        for i in range(2, len(prices)):
+            high, low, ts = prices[i]
+            # Simple BOS: price breaks previous structure high (uptrend) or low (downtrend)
+            if i > 0:
+                prev_high = prices[i - 1][0]
+                prev_low = prices[i - 1][1]
+                if high > prev_high + (prev_high * 0.0005):  # 0.05% buffer
+                    bos.append({"index": i, "type": "bullish", "price": high, "timestamp": ts})
+                elif low < prev_low - (prev_low * 0.0005):
+                    bos.append({"index": i, "type": "bearish", "price": low, "timestamp": ts})
+
+        return {
+            "bos": bos,
+            "hh": hh,
+            "hl": hl,
+            "lh": [],
+            "ll": [],
+            "latest_hh": hh[-1] if hh else None,
+            "latest_hl": hl[-1] if hl else None,
+        }
+
+
+class TrendAnalyzer:
+    """Analyze trend using EMA and market structure."""
+
+    @staticmethod
+    def calculate_ema(candles: list[dict], period: int) -> float | None:
+        """Calculate Exponential Moving Average."""
+        if len(candles) < period:
+            return None
+        closes = [c["close"] for c in candles]
+        k = 2 / (period + 1)
+        ema = sum(closes[:period]) / period
+        for price in closes[period:]:
+            ema = price * k + ema * (1 - k)
+        return ema
+
+    @staticmethod
+    def analyze_trend(
+        candles_5m: list[dict],
+        candles_15m: list[dict],
+        candles_1h: list[dict],
+        config: dict,
+    ) -> dict:
+        """Analyze trend across multiple timeframes and return trend assessment."""
+        result = {
+            "trend_5m": "neutral",
+            "trend_15m": "neutral",
+            "trend_1h": "neutral",
+            "overall": "neutral",
+            "details": {},
+        }
+
+        # EMA analysis
+        ema_period = config.get("trend_filter", {}).get("ema_period", 50)
+
+        ema_5m = TrendAnalyzer.calculate_ema(candles_5m, ema_period)
+        ema_15m = TrendAnalyzer.calculate_ema(candles_15m, ema_period)
+        ema_1h = TrendAnalyzer.calculate_ema(candles_1h, ema_period)
+
+        result["details"]["ema_5m"] = ema_5m
+        result["details"]["ema_15m"] = ema_15m
+        result["details"]["ema_1h"] = ema_1h
+
+        # Determine trend direction
+        if ema_5m:
+            current_price_5m = candles_5m[-1]["close"]
+            if current_price_5m > ema_5m:
+                result["trend_5m"] = "bullish"
+            elif current_price_5m < ema_5m:
+                result["trend_5m"] = "bearish"
+
+        if ema_15m:
+            current_price_15m = candles_15m[-1]["close"]
+            if current_price_15m > ema_15m:
+                result["trend_15m"] = "bullish"
+            elif current_price_15m < ema_15m:
+                result["trend_15m"] = "bearish"
+
+        if ema_1h:
+            current_price_1h = candles_1h[-1]["close"]
+            if current_price_1h > ema_1h:
+                result["trend_1h"] = "bullish"
+            elif current_price_1h < ema_1h:
+                result["trend_1h"] = "bearish"
+
+        # Market structure analysis
+        structure_5m = MarketStructureDetector.detect_bos_hh_hl(candles_5m)
+        structure_15m = MarketStructureDetector.detect_bos_hh_hl(candles_15m)
+        structure_1h = MarketStructureDetector.detect_bos_hh_hl(candles_1h)
+
+        result["details"]["structure_5m"] = structure_5m
+        result["details"]["structure_15m"] = structure_15m
+        result["details"]["structure_1h"] = structure_1h
+
+        # Overall trend determination
+        bullish_count = 0
+        bearish_count = 0
+
+        if result["trend_5m"] == "bullish":
+            bullish_count += 1
+        elif result["trend_5m"] == "bearish":
+            bearish_count += 1
+
+        if result["trend_15m"] == "bullish":
+            bullish_count += 1
+        elif result["trend_15m"] == "bearish":
+            bearish_count += 1
+
+        if result["trend_1h"] == "bullish":
+            bullish_count += 1
+        elif result["trend_1h"] == "bearish":
+            bearish_count += 1
+
+        if bullish_count > bearish_count:
+            result["overall"] = "bullish"
+        elif bearish_count > bullish_count:
+            result["overall"] = "bearish"
+        else:
+            result["overall"] = "neutral"
+
+        # Check for BOS and HH/HL confirmation
+        latest_hh_1h = structure_1h.get("latest_hh")
+        latest_hl_1h = structure_1h.get("latest_hl")
+        latest_hh_15m = structure_15m.get("latest_hh")
+        latest_hl_15m = structure_15m.get("latest_hl")
+
+        result["details"]["confirmed_uptrend"] = (
+            latest_hh_1h is not None and latest_hl_1h is not None
+        ) or (
+            latest_hh_15m is not None and latest_hl_15m is not None
+        )
+        result["details"]["confirmed_downtrend"] = False  # would need LL and LH
+
+        # HH/HL sequence check: are we making higher highs and higher lows?
+        hh_count = len(structure_1h.get("hh", []))
+        hl_count = len(structure_1h.get("hl", []))
+        result["details"]["hh_count_1h"] = hh_count
+        result["details"]["hl_count_1h"] = hl_count
+
+        # Determine if trend filter passes
+        trend_filter_enabled = config.get("trend_filter", {}).get("enabled", True)
+        if trend_filter_enabled:
+            if result["overall"] == "bullish" and result["details"]["confirmed_uptrend"]:
+                result["trend_filter_pass"] = True
+            else:
+                result["trend_filter_pass"] = False
+        else:
+            result["trend_filter_pass"] = True
+
+        return result

@@ -1,0 +1,22 @@
+[project]
+name = "hermes-smc"
+version = "0.1.0"
+description = "ICT/SMC trading bot for BTC/EUR"
+requires-python = ">=3.11"
+dependencies = [
+    "ccxt>=4.5.75",
+    "numpy>=2.4.6",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hermes_smc*"]

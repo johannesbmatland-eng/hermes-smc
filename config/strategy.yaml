@@ -1,0 +1,30 @@
+market: "BTC/EUR"
+paper_trading:
+  initial_capital: 100000
+  currency: "USD"
+
+timeframes:
+  main: "5m"
+  trend_1h: "1h"
+  trend_15m: "15m"
+
+trend_filter:
+  enabled: true
+  method: "ema_and_structure"
+  ema_period: 50
+
+fvq_detection:
+  min_candles_since_fvg: 50
+  fvg_buffer_pct: 0.001
+
+entry:
+  confirmation: "engulfing_or_ifvg"
+  pullback_depth_pct: 0.5
+  max_open_positions: 1
+  cooldown_seconds: 300
+
+risk:
+  risk_pct_per_trade: 0.5
+  rr_target: 0.5
+  rr_alternative: 0.333
+  sl_buffer_pct: 0.002
