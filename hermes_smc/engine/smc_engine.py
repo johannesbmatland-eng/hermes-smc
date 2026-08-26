@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------------
 
 DEFAULT_STRATEGY = {
-    "market": "BTC/EUR",
+    "market": "BTC/USD",
     "paper_trading": {
         "initial_capital": 100000,
         "currency": "USD",
@@ -109,8 +109,6 @@ class PositionManager:
             self.state_dir.mkdir(parents=True, exist_ok=True)
             self._load_state()
 
-    # ---------- persistence ----------
-
     @property
     def _state_file(self) -> Path | None:
         return self.state_dir / "state.json" if self.state_dir else None
@@ -176,8 +174,14 @@ class PositionManager:
         entry_price: float,
         fvg_bottom: float,
         sl_buffer_pct: float = 0.002,
+        side: str = "long",
+        fvg_top: float | None = None,
     ) -> float:
-        """Calculate stop loss price below FVG bottom with buffer."""
+        """Calculate stop loss: below FVG bottom (long) or above FVG top (short)."""
+        if side == "short":
+            sl_base = fvg_top if fvg_top is not None else fvg_bottom
+            sl_buffer = sl_base * sl_buffer_pct
+            return sl_base + sl_buffer
         sl_base = fvg_bottom
         sl_buffer = sl_base * sl_buffer_pct
         return sl_base - sl_buffer
@@ -187,10 +191,13 @@ class PositionManager:
         entry_price: float,
         sl_price: float,
         rr_target: float = 0.5,
+        side: str = "long",
     ) -> float:
-        """Calculate take profit price based on RR target."""
+        """Calculate take profit price based on RR target (mirrored for shorts)."""
         risk_distance = abs(entry_price - sl_price)
         reward_distance = risk_distance * rr_target
+        if side == "short":
+            return entry_price - reward_distance
         return entry_price + reward_distance
 
     def open_position(
@@ -256,8 +263,8 @@ class PositionManager:
         position["pnl_pct"] = pnl_pct
         position["status"] = "closed"
 
-        # Update capital
-        self.capital += exit_price * size
+        # Return reserved notional + PnL (works for long and short)
+        self.capital += position["entry_value"] + pnl
 
         # Move to closed
         self.closed_positions.append(position)
@@ -308,7 +315,7 @@ class SMCEngine:
 
     async def fetch_all_timeframes(self) -> dict[str, list[dict]]:
         """Fetch candles for all required timeframes."""
-        market = self.config.get("market", "BTC/EUR")
+        market = self.config.get("market", "BTC/USD")
         timeframes = self.config.get("timeframes", {})
 
         tasks = []
@@ -330,77 +337,77 @@ class SMCEngine:
         candles_1h: list[dict],
     ) -> dict | None:
         """
-        Detect SMC entry signal: unmitigated FVG + pullback + confirmation.
-        Returns entry signal dict or None.
+        Detect SMC entry signal (long or short):
+        unmitigated FVG + pullback + confirmation, filtered by trend.
         """
-        market = self.config.get("market", "BTC/EUR")
-        side = "long"  # SMC default: look for long entries in uptrend
-
         # Detect FVG on 5m
         fvgs = MarketStructureDetector.detect_fvg(candles_5m)
-        unmitigated_fvgs = [f for f in fvgs if f["unmitigated"] and f["type"] == "bullish"]
-
-        if not unmitigated_fvgs:
-            return None
 
         # Check trend filter
         trend_result = TrendAnalyzer.analyze_trend(
             candles_5m, candles_15m, candles_1h,
-            self.config.get("trend_filter", {}),
+            {"trend_filter": self.config.get("trend_filter", {})},
         )
 
-        if not trend_result.get("trend_filter_pass", True):
+        # Prefer long in uptrend, short in downtrend (mirrored setup)
+        side = None
+        unmitigated_fvgs: list[dict] = []
+        if trend_result.get("trend_filter_pass_long", False):
+            side = "long"
+            unmitigated_fvgs = [f for f in fvgs if f["unmitigated"] and f["type"] == "bullish"]
+        elif trend_result.get("trend_filter_pass_short", False):
+            side = "short"
+            unmitigated_fvgs = [f for f in fvgs if f["unmitigated"] and f["type"] == "bearish"]
+        else:
             logger.debug("Trend filter not passed, skipping entry")
+            return None
+
+        if not unmitigated_fvgs:
             return None
 
         # Find best FVG for entry (most recently formed, unmitigated)
         best_fvg = None
         for fvg in unmitigated_fvgs:
-            # Check if FVG is recent enough
             candles_since = len(candles_5m) - fvg["end_candle"]
             if candles_since > self.config.get("fvq_detection.min_candles_since_fvg", 50):
                 continue
 
-            # Check if price has pulled back into FVG
             current_price = candles_5m[-1]["close"]
             fvg_top = fvg["top"]
             fvg_bottom = fvg["bottom"]
             fvg_mid = fvg["mid"]
 
-            # Price should be in or near the FVG zone (pullback)
             pullback_threshold = (fvg_top - fvg_bottom) * self.config.get("entry.pullback_depth_pct", 0.5)
 
             if fvg_bottom <= current_price <= fvg_top:
-                # Price is inside FVG - pullback detected
                 best_fvg = fvg
                 break
             elif abs(current_price - fvg_mid) <= pullback_threshold:
-                # Price is near 50% pullback level
                 best_fvg = fvg
                 break
 
         if not best_fvg:
             return None
 
-        # Look for confirmation: engulfing candle or IFVG on 1m
-        confirmation = self._check_confirmation(candles_5m, best_fvg)
+        confirmation = self._check_confirmation(candles_5m, best_fvg, side=side)
         if not confirmation:
             return None
 
-        # Calculate entry, SL, TP
         entry_price = candles_5m[-1]["close"]
         sl_price = self.position_manager.calculate_sl_price(
             entry_price,
             best_fvg["bottom"],
             self.config.get("risk.sl_buffer_pct", 0.002),
+            side=side,
+            fvg_top=best_fvg["top"],
         )
         tp_price = self.position_manager.calculate_tp_price(
             entry_price,
             sl_price,
             self.config.get("risk.rr_target", 0.5),
+            side=side,
         )
 
-        # Calculate position size
         position_size = self.position_manager.calculate_position_size(
             entry_price,
             sl_price,
@@ -408,13 +415,14 @@ class SMCEngine:
         )
 
         logger.info(
-            f"Entry signal detected: FVG at {best_fvg['bottom']:.2f}-{best_fvg['top']:.2f}, "
+            f"Entry signal ({side}): FVG at {best_fvg['bottom']:.2f}-{best_fvg['top']:.2f}, "
             f"entry @ {entry_price:.2f}, SL @ {sl_price:.2f}, TP @ {tp_price:.2f}, "
             f"size: {position_size:.6f} BTC"
         )
 
         return {
             "type": "entry",
+            "side": side,
             "fvg": best_fvg,
             "entry_price": entry_price,
             "sl_price": sl_price,
@@ -429,38 +437,45 @@ class SMCEngine:
         self,
         candles_5m: list[dict],
         fvg: dict,
+        side: str = "long",
     ) -> str | None:
         """
-        Check for entry confirmation:
+        Check for entry confirmation (mirrored for shorts):
         - Engulfing candle on 5m
-        - IFVG (inverse FVG) on 1m
+        - IFVG-like structure on 5m
         """
         confirmation_method = self.config.get("entry.confirmation", "engulfing_or_ifvg")
 
-        # Check 5m engulfing candle (last 2 candles)
         if len(candles_5m) >= 3:
-            c1 = candles_5m[-2]  # previous candle
-            c2 = candles_5m[-1]  # current candle
+            c1 = candles_5m[-2]
+            c2 = candles_5m[-1]
 
-            # Bullish engulfing: current candle body engulfs previous candle body
-            if c2["close"] > c2["open"] and c1["close"] < c1["open"]:
-                if c2["close"] > c1["open"] and c2["open"] < c1["close"]:
-                    if confirmation_method in ["engulfing", "engulfing_or_ifvg"]:
-                        return "engulfing_5m"
+            if confirmation_method in ["engulfing", "engulfing_or_ifvg"]:
+                if side == "long":
+                    # Bullish engulfing
+                    if c2["close"] > c2["open"] and c1["close"] < c1["open"]:
+                        if c2["close"] > c1["open"] and c2["open"] < c1["close"]:
+                            return "engulfing_5m"
+                else:
+                    # Bearish engulfing
+                    if c2["close"] < c2["open"] and c1["close"] > c1["open"]:
+                        if c2["close"] < c1["open"] and c2["open"] > c1["close"]:
+                            return "engulfing_5m"
 
-        # Check for IFVG (inverse FVG) - 1m timeframe
-        # This would require fetching 1m candles; for now use 5m internal structure
         if confirmation_method in ["ifvg", "engulfing_or_ifvg"]:
-            # Simplified: check if last candle created a potential IFVG zone
             if len(candles_5m) >= 3:
                 c0 = candles_5m[-3]
                 c1 = candles_5m[-2]
                 c2 = candles_5m[-1]
 
-                # IFVG-like structure: rapid move creating imbalance
-                if c1["high"] > c0["high"] and c2["low"] > c1["low"]:
-                    if c1["high"] - c0["low"] > (c0["high"] - c0["low"]) * 2:
-                        return "ifvg_5m"
+                if side == "long":
+                    if c1["high"] > c0["high"] and c2["low"] > c1["low"]:
+                        if c1["high"] - c0["low"] > (c0["high"] - c0["low"]) * 2:
+                            return "ifvg_5m"
+                else:
+                    if c1["low"] < c0["low"] and c2["high"] < c1["high"]:
+                        if c0["high"] - c1["low"] > (c0["high"] - c0["low"]) * 2:
+                            return "ifvg_5m"
 
         return None
 
@@ -495,12 +510,15 @@ class SMCEngine:
             return "take_profit"
 
         # Check market structure break (BOS against us)
-        # For long positions: if price breaks recent lower low
-        if side == "long" and len(candles_5m) >= 10:
-            recent_lows = [c["low"] for c in candles_5m[-10:-1]]
-            if recent_lows and min(recent_lows) < entry_price * 0.995:
-                # Price dropped 0.5% below previous lows - structural breakdown
-                return "structure_break"
+        if len(candles_5m) >= 10:
+            if side == "long":
+                recent_lows = [c["low"] for c in candles_5m[-10:-1]]
+                if recent_lows and min(recent_lows) < entry_price * 0.995:
+                    return "structure_break"
+            else:
+                recent_highs = [c["high"] for c in candles_5m[-10:-1]]
+                if recent_highs and max(recent_highs) > entry_price * 1.005:
+                    return "structure_break"
 
         return None
 
@@ -509,7 +527,7 @@ class SMCEngine:
         if self._stopped:
             return
 
-        market = self.config.get("market", "BTC/EUR")
+        market = self.config.get("market", "BTC/USD")
 
         # Fetch all timeframe data
         try:
@@ -558,12 +576,12 @@ class SMCEngine:
 
             signal = self.detect_entry_signal(candles_5m, candles_15m, candles_1h)
             if signal and signal["position_size"] > 0:
-                # Open position
                 trade_id = str(uuid.uuid4())
+                side = signal.get("side", "long")
                 position = self.position_manager.open_position(
                     trade_id=trade_id,
                     asset=market,
-                    side="long",
+                    side=side,
                     entry_price=signal["entry_price"],
                     position_size=signal["position_size"],
                     sl_price=signal["sl_price"],
@@ -573,6 +591,7 @@ class SMCEngine:
                         "fvg_top": signal["fvg"]["top"],
                         "confirmation": signal["confirmation"],
                         "trend": signal["trend_info"]["overall"],
+                        "side": side,
                     },
                 )
 
@@ -580,6 +599,7 @@ class SMCEngine:
                 self.trades.append({
                     "id": trade_id,
                     "type": "open",
+                    "side": side,
                     "entry_price": signal["entry_price"],
                     "position_size": signal["position_size"],
                     "sl_price": signal["sl_price"],
@@ -588,8 +608,8 @@ class SMCEngine:
                 })
 
                 logger.info(
-                    f"Opened long position {trade_id}: {signal['position_size']:.6f} BTC @ "
-                    f"{signal['entry_price']:.2f} EUR | SL: {signal['sl_price']:.2f} | "
+                    f"Opened {side} position {trade_id}: {signal['position_size']:.6f} BTC @ "
+                    f"{signal['entry_price']:.2f} USD | SL: {signal['sl_price']:.2f} | "
                     f"TP: {signal['tp_price']:.2f} | Size: {signal['position_size']:.6f}"
                 )
 

@@ -1,4 +1,4 @@
-market: "BTC/EUR"
+market: "BTC/USD"
 paper_trading:
   initial_capital: 100000
   currency: "USD"

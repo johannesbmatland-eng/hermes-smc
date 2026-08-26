@@ -1,6 +1,6 @@
 # Hermes SMC Trading Bot
 
-ICT/SMC (Smart Money Concepts) trading-bot for BTC/EUR pa Kraken.
+ICT/SMC (Smart Money Concepts) trading-bot for **BTC/USD** pa Kraken.
 Koyrer 24/7 pa Railway med paper trading (100 000 USD demo-kapital).
 
 ## Live dashboard (funkar pa mobil)
@@ -9,23 +9,23 @@ Koyrer 24/7 pa Railway med paper trading (100 000 USD demo-kapital).
 
 | Endpoint | Kva du far |
 |---|---|
-| `/` | Dashboard med saldo, winrate, posisjonar, trades |
+| `/` | Dashboard med **BTC/USD chart**, EMA, FVG, bot-thinking, saldo, trades |
+| `/api/analysis` | Kva boten tenker / ventar pa (JSON) |
+| `/api/chart` | 5m candles + EMA for chart (JSON) |
 | `/api/stats` | Rå tal (JSON) |
 | `/api/trades` | Siste trades (JSON) |
 | `/api/config` | Gjeldande strategi-config (JSON) |
 
 ## Strategi (kort forklart)
 
-Boten handlar berre **long** BTC/EUR, og berre nar "smart money"-monsteret stemmer:
+Boten handlar **long og short** pa BTC/USD nar SMC-monsteret stemmer:
 
-1. **Trend-filter**: 1t og 15m ma vise opptrend (EMA50 + marknadsstruktur HH/HL).
-2. **FVG (Fair Value Gap)**: ser etter prisgap pa 5m-charten der prisen bevega seg
-   sa fort at det oppsto ein ubalanse — dit kjem prisen ofte tilbake.
+1. **Trend-filter**: 1t og 15m ma vise klar trend (EMA50 + HH/HL for long, LH/LL for short).
+2. **FVG (Fair Value Gap)**: bullish gap for kjop, bearish gap for sal.
 3. **Pullback**: ventar pa at prisen trekkjer seg tilbake inn i gapet.
-4. **Bekreftelse**: krev engulfing-candle eller invertert FVG for entry.
-5. **Risk**: 0.5 % av kapitalen per trade. Stop-loss under FVG-botn,
-   take-profit pa 1:2 / 1:3 risk-reward.
-6. Maks 1 open posisjon, 5 min cooldown mellom trades.
+4. **Bekreftelse**: engulfing-candle eller IFVG.
+5. **Risk**: 0.5 % per trade, SL/TP spegla for begge retningar.
+6. Maks 1 open posisjon, 5 min cooldown.
 
 Detaljar/parametre: [`hermes_smc/config/strategy.yaml`](hermes_smc/config/strategy.yaml)
 
