@@ -10,4 +10,4 @@ COPY hermes_smc/state_defaults ./hermes_smc/state_defaults
 COPY pyproject.toml ./
 RUN uv sync
 ENV PYTHONUNBUFFERED=1
-CMD ["uv", "run", "python", "-m", "hermes_smc.dashboard.server"]
+CMD ["sh", "-c", "uv run python -m hermes_smc.dashboard.server"]
