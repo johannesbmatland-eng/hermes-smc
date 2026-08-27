@@ -271,7 +271,10 @@ class PositionManager:
             "strategy_info": strategy_info,
             "status": "open",
             "pnl": 0,
-            "pnl_pct": 0,
+            "pnl_pct": 0,  # price move %
+            "pnl_account_pct": 0,  # return on account capital %
+            "r_multiple": 0,
+            "capital_at_open": self.capital,
             "current_price": entry_price,
         }
         self.open_positions[trade_id] = position
@@ -279,6 +282,29 @@ class PositionManager:
         # Capital stays as realized equity; only PnL is applied on close.
         self.save_state()
         return position
+
+    def _pnl_metrics(
+        self,
+        side: str,
+        entry: float,
+        exit_price: float,
+        size: float,
+        sl_price: float,
+        capital_at_open: float | None = None,
+    ) -> tuple[float, float, float, float]:
+        """Return pnl $, price %, account %, R-multiple."""
+        if side == "long":
+            pnl = (exit_price - entry) * size
+            price_pct = (exit_price - entry) / entry * 100 if entry else 0.0
+        else:
+            pnl = (entry - exit_price) * size
+            price_pct = (entry - exit_price) / entry * 100 if entry else 0.0
+
+        baseline = capital_at_open if capital_at_open and capital_at_open > 0 else self.initial_capital
+        account_pct = (pnl / baseline) * 100 if baseline else 0.0
+        risk_amount = abs(entry - sl_price) * size
+        r_mult = (pnl / risk_amount) if risk_amount > 0 else 0.0
+        return pnl, price_pct, account_pct, r_mult
 
     def close_position(
         self,
@@ -294,20 +320,20 @@ class PositionManager:
         entry = position["entry_price"]
         size = position["position_size"]
         side = position["side"]
+        sl = position.get("stop_loss", entry)
 
-        # Calculate PnL
-        if side == "long":
-            pnl = (exit_price - entry) * size
-            pnl_pct = (exit_price - entry) / entry * 100
-        else:
-            pnl = (entry - exit_price) * size
-            pnl_pct = (entry - exit_price) / entry * 100
+        pnl, price_pct, account_pct, r_mult = self._pnl_metrics(
+            side, entry, exit_price, size, sl,
+            capital_at_open=position.get("capital_at_open"),
+        )
 
         position["exit_price"] = exit_price
         position["exit_time"] = time.time()
         position["exit_reason"] = exit_reason
         position["pnl"] = pnl
-        position["pnl_pct"] = pnl_pct
+        position["pnl_pct"] = price_pct
+        position["pnl_account_pct"] = account_pct
+        position["r_multiple"] = r_mult
         position["status"] = "closed"
 
         # Equity model: apply realized PnL only
@@ -321,28 +347,30 @@ class PositionManager:
 
         logger.info(
             f"Closed position {trade_id}: {side} {size:.6f} @ {entry:.2f} → "
-            f"{exit_price:.2f} | PnL: {pnl:+.2f} ({pnl_pct:+.2f}%) [{exit_reason}]"
+            f"{exit_price:.2f} | PnL: {pnl:+.2f} "
+            f"(account {account_pct:+.2f}%, price {price_pct:+.2f}%, R={r_mult:+.2f}) "
+            f"[{exit_reason}]"
         )
         return position
 
     def update_position_price(self, trade_id: str, current_price: float):
         """Update current price for an open position (for monitoring)."""
         if trade_id in self.open_positions:
-            self.open_positions[trade_id]["current_price"] = current_price
             position = self.open_positions[trade_id]
+            position["current_price"] = current_price
             entry = position["entry_price"]
             size = position["position_size"]
             side = position["side"]
+            sl = position.get("stop_loss", entry)
 
-            if side == "long":
-                pnl = (current_price - entry) * size
-                pnl_pct = (current_price - entry) / entry * 100
-            else:
-                pnl = (entry - current_price) * size
-                pnl_pct = (entry - current_price) / entry * 100
-
+            pnl, price_pct, account_pct, r_mult = self._pnl_metrics(
+                side, entry, current_price, size, sl,
+                capital_at_open=position.get("capital_at_open"),
+            )
             position["pnl"] = pnl
-            position["pnl_pct"] = pnl_pct
+            position["pnl_pct"] = price_pct
+            position["pnl_account_pct"] = account_pct
+            position["r_multiple"] = r_mult
 
 
 class SMCEngine:

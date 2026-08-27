@@ -12,6 +12,7 @@ from typing import Any
 from threading import Thread
 
 from ..engine.paper_trading import PaperTradingEngine, SMCConfig
+from ..engine.analytics import build_analytics, enrich_trade_meta
 
 logger = logging.getLogger(__name__)
 
@@ -93,24 +94,21 @@ class DashboardServer:
         open_positions = list(pm.open_positions.values())
         closed_positions = pm.closed_positions
 
-        # Ensure open positions have fresh dollar PnL from last_price
+        # Fresh mark-to-market for open trades (account % + price %)
         price = engine.last_price
         if price is not None:
             for p in open_positions:
-                entry = p["entry_price"]
-                size = p["position_size"]
-                side = p.get("side", "long")
-                if side == "long":
-                    p["pnl"] = (price - entry) * size
-                    p["pnl_pct"] = (price - entry) / entry * 100
-                else:
-                    p["pnl"] = (entry - price) * size
-                    p["pnl_pct"] = (entry - price) / entry * 100
-                p["current_price"] = price
+                pm.update_position_price(p["id"], price)
 
         unrealized = sum(p.get("pnl", 0) or 0 for p in open_positions)
         total_pnl = sum(p.get("pnl", 0) for p in closed_positions)
-        total_pnl_pct = sum(p.get("pnl_pct", 0) for p in closed_positions)
+        # Account return % vs initial capital (0.5% risk → ~1% at 1:2 RR)
+        total_account_pct = (
+            (total_pnl / pm.initial_capital) * 100 if pm.initial_capital else 0.0
+        )
+        unrealized_account_pct = (
+            (unrealized / pm.initial_capital) * 100 if pm.initial_capital else 0.0
+        )
         win_count = sum(1 for p in closed_positions if p.get("pnl", 0) > 0)
         win_rate = win_count / len(closed_positions) if closed_positions else 0
         market = engine.config.get("market", "BTC/USD")
@@ -120,6 +118,7 @@ class DashboardServer:
             p = open_positions[0]
             risk = abs(p["entry_price"] - p["stop_loss"])
             reward = abs(p["take_profit"] - p["entry_price"])
+            info = p.get("strategy_info") or {}
             live_trade = {
                 "id": p["id"],
                 "asset": p.get("asset", market),
@@ -130,10 +129,14 @@ class DashboardServer:
                 "position_size": p["position_size"],
                 "current_price": p.get("current_price", price),
                 "pnl": p.get("pnl", 0),
-                "pnl_pct": p.get("pnl_pct", 0),
+                "pnl_pct": p.get("pnl_pct", 0),  # price move
+                "pnl_account_pct": p.get("pnl_account_pct", 0),
+                "r_multiple": p.get("r_multiple", 0),
                 "open_time": p.get("open_time"),
                 "rr": (reward / risk) if risk > 0 else None,
-                "confirmation": (p.get("strategy_info") or {}).get("confirmation"),
+                "confirmation": info.get("confirmation"),
+                "session": info.get("session"),
+                "trend": info.get("trend"),
             }
 
         return {
@@ -144,8 +147,10 @@ class DashboardServer:
             "open_positions": open_positions,
             "closed_positions": closed_positions[-10:],
             "total_pnl": total_pnl,
-            "total_pnl_pct": total_pnl_pct,
+            "total_pnl_pct": total_account_pct,  # account % (was wrongly price %)
+            "total_account_pct": total_account_pct,
             "unrealized_pnl": unrealized,
+            "unrealized_account_pct": unrealized_account_pct,
             "live_trade": live_trade,
             "win_rate": win_rate,
             "trade_count": len(closed_positions),
@@ -154,17 +159,29 @@ class DashboardServer:
             "price": engine.last_price,
         }
 
+    def get_analytics(self) -> dict[str, Any]:
+        engine = self.load_engine()
+        pm = engine.position_manager
+        return build_analytics(
+            pm.closed_positions,
+            initial_capital=pm.initial_capital,
+            open_positions=list(pm.open_positions.values()),
+        )
+
     def get_positions(self) -> list[dict]:
         engine = self.load_engine()
         return list(engine.position_manager.open_positions.values())
 
     def get_trades(self, limit: int = 20) -> list[dict]:
         engine = self.load_engine()
-        # Persisted closed trades + any in-memory open events this process saw
-        history = list(engine.position_manager.trade_history)
+        pm = engine.position_manager
+        history = [
+            enrich_trade_meta(t, pm.initial_capital)
+            for t in pm.trade_history
+        ]
         opens = [
-            {**p, "type": "open", "status": "open"}
-            for p in engine.position_manager.open_positions.values()
+            enrich_trade_meta({**p, "type": "open", "status": "open"}, pm.initial_capital)
+            for p in pm.open_positions.values()
         ]
         combined = history + opens
         if combined:
@@ -263,6 +280,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
         elif path == "/api/trades":
             trades = self.engine_server.get_trades() if self.engine_server else []
             self.send_json({"trades": trades})
+        elif path == "/api/analytics":
+            self.send_json(self.engine_server.get_analytics() if self.engine_server else {})
         elif path == "/api/analysis":
             self.send_json(self.engine_server.get_analysis() if self.engine_server else {})
         elif path == "/api/chart":
@@ -587,8 +606,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             <div class="card">
                 <div class="card-title">Account</div>
                 <div class="stat"><div class="stat-label">Capital</div><div class="stat-value neutral" id="capital">--</div></div>
-                <div class="stat" style="margin-top:8px"><div class="stat-label">Total PnL</div><div class="stat-value" id="pnl">--</div></div>
-                <div class="stat" style="margin-top:8px"><div class="stat-label">PnL %</div><div class="stat-value" id="pnl_pct">--</div></div>
+                <div class="stat" style="margin-top:8px"><div class="stat-label">Account PnL $</div><div class="stat-value" id="pnl">--</div></div>
+                <div class="stat" style="margin-top:8px"><div class="stat-label">Account PnL %</div><div class="stat-value" id="pnl_pct">--</div></div>
             </div>
             <div class="card">
                 <div class="card-title">Performance</div>
@@ -604,6 +623,26 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 </div>
                 <div class="stat" style="margin-top:8px"><div class="stat-label">Last update</div><div class="stat-value" id="last_update">--</div></div>
                 <div class="stat" style="margin-top:8px"><div class="stat-label">Cooldown</div><div class="stat-value" style="font-size:0.9rem">Kraken · paper</div></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-title">Strategy analytics · sessions & conditions</div>
+            <p id="analytics_note" style="color:var(--muted);font-size:0.82rem;margin-bottom:12px">Loading…</p>
+            <div class="grid" id="analytics_highlights" style="margin-bottom:12px"></div>
+            <div class="grid">
+                <div>
+                    <div class="card-title">By session (UTC)</div>
+                    <div id="analytics_sessions"><p style="color:var(--muted);font-size:0.85rem">No closed trades yet</p></div>
+                </div>
+                <div>
+                    <div class="card-title">By market condition</div>
+                    <div id="analytics_conditions"><p style="color:var(--muted);font-size:0.85rem">No closed trades yet</p></div>
+                </div>
+                <div>
+                    <div class="card-title">By weekday</div>
+                    <div id="analytics_weekdays"><p style="color:var(--muted);font-size:0.85rem">No closed trades yet</p></div>
+                </div>
             </div>
         </div>
 
@@ -784,7 +823,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 return;
             }
             const pnl = Number(t.pnl || 0);
-            const pnlPct = Number(t.pnl_pct || 0);
+            const accountPct = Number(
+                t.pnl_account_pct != null ? t.pnl_account_pct : t.pnl_pct || 0
+            );
+            const pricePct = Number(t.pnl_pct || 0);
             const positive = pnl >= 0;
             panel.className = 'live-trade active ' + (positive ? 'profit' : 'loss');
             document.getElementById('live_side').textContent =
@@ -793,14 +835,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 'live-trade-side side-' + (t.side || 'long');
             const conf = t.confirmation ? (' · ' + t.confirmation) : '';
             const rr = t.rr != null ? (' · RR 1:' + Number(t.rr).toFixed(1)) : '';
+            const sess = t.session ? (' · ' + t.session) : '';
+            const rMult = t.r_multiple != null ? (' · R ' + Number(t.r_multiple).toFixed(2)) : '';
             document.getElementById('live_meta').textContent =
-                (t.id ? t.id.substring(0, 8) + '…' : '') + conf + rr;
+                (t.id ? t.id.substring(0, 8) + '…' : '') + conf + rr + sess + rMult;
 
             const wrap = document.getElementById('live_pnl_wrap');
             wrap.className = 'live-pnl ' + (positive ? 'positive' : 'negative');
             document.getElementById('live_pnl_usd').textContent = formatSignedCurrency(pnl);
             document.getElementById('live_pnl_pct').textContent =
-                (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%';
+                (accountPct >= 0 ? '+' : '') + accountPct.toFixed(2) + '% account'
+                + ' · price ' + (pricePct >= 0 ? '+' : '') + pricePct.toFixed(2) + '%';
 
             document.getElementById('live_entry').textContent = Number(t.entry_price).toFixed(2);
             document.getElementById('live_sl').textContent = Number(t.stop_loss).toFixed(2);
@@ -830,14 +875,54 @@ class DashboardHandler(BaseHTTPRequestHandler):
             `).join('');
         }
 
+        function renderAnalyticsTable(rows) {
+            if (!rows || !rows.length) {
+                return '<p style="color:var(--muted);font-size:0.85rem">No data yet</p>';
+            }
+            return '<table><thead><tr><th>Bucket</th><th>n</th><th>Win%</th><th>PnL $</th><th>Acct %</th><th>Avg R</th></tr></thead><tbody>' +
+                rows.map(r => `
+                    <tr>
+                        <td>${r.name}</td>
+                        <td>${r.trades}</td>
+                        <td>${(r.win_rate * 100).toFixed(0)}%</td>
+                        <td class="${r.total_pnl >= 0 ? 'positive' : 'negative'}">${formatSignedCurrency(r.total_pnl)}</td>
+                        <td class="${r.total_account_pct >= 0 ? 'positive' : 'negative'}">${(r.total_account_pct >= 0 ? '+' : '') + r.total_account_pct.toFixed(2)}%</td>
+                        <td>${Number(r.avg_r).toFixed(2)}</td>
+                    </tr>
+                `).join('') + '</tbody></table>';
+        }
+
+        function renderAnalytics(a) {
+            if (!a) return;
+            document.getElementById('analytics_note').textContent = a.note || '';
+            const hi = document.getElementById('analytics_highlights');
+            const bits = [];
+            if (a.best_session) {
+                bits.push(`<div class="stat"><div class="stat-label">Best session</div><div class="stat-value" style="font-size:1rem">${a.best_session.name}<div style="font-size:0.8rem;color:var(--muted);font-weight:400;margin-top:4px">${a.best_session.trades} trades · ${(a.best_session.total_account_pct>=0?'+':'') + a.best_session.total_account_pct.toFixed(2)}% acct</div></div></div>`);
+            }
+            if (a.best_weekday) {
+                bits.push(`<div class="stat"><div class="stat-label">Best weekday</div><div class="stat-value" style="font-size:1rem">${a.best_weekday.name}<div style="font-size:0.8rem;color:var(--muted);font-weight:400;margin-top:4px">${a.best_weekday.trades} trades · ${(a.best_weekday.total_account_pct>=0?'+':'') + a.best_weekday.total_account_pct.toFixed(2)}% acct</div></div></div>`);
+            }
+            if (a.best_condition) {
+                bits.push(`<div class="stat"><div class="stat-label">Best condition</div><div class="stat-value" style="font-size:1rem">${a.best_condition.name}<div style="font-size:0.8rem;color:var(--muted);font-weight:400;margin-top:4px">${a.best_condition.trades} trades · ${(a.best_condition.total_account_pct>=0?'+':'') + a.best_condition.total_account_pct.toFixed(2)}% acct</div></div></div>`);
+            }
+            bits.push(`<div class="stat"><div class="stat-label">Closed / win rate</div><div class="stat-value" style="font-size:1rem">${a.trade_count} · ${((a.win_rate||0)*100).toFixed(0)}%<div style="font-size:0.8rem;color:var(--muted);font-weight:400;margin-top:4px">Avg R ${Number(a.avg_r||0).toFixed(2)} · acct ${(a.total_account_pct>=0?'+':'') + Number(a.total_account_pct||0).toFixed(2)}%</div></div></div>`);
+            hi.innerHTML = bits.join('');
+            document.getElementById('analytics_sessions').innerHTML = renderAnalyticsTable(a.by_session);
+            const conditions = [].concat(a.by_trend || [], a.by_confirmation || [], a.by_side || []);
+            document.getElementById('analytics_conditions').innerHTML = renderAnalyticsTable(conditions);
+            document.getElementById('analytics_weekdays').innerHTML = renderAnalyticsTable(a.by_weekday);
+        }
+
         async function refresh() {
             try {
-                const [stats, positions, trades, analysis, chartData] = await Promise.all([
+                const [stats, positions, trades, analysis, chartData, analytics] = await Promise.all([
                     fetch('/api/stats').then(r => r.json()),
                     fetch('/api/positions').then(r => r.json()),
                     fetch('/api/trades').then(r => r.json()),
                     fetch('/api/analysis').then(r => r.json()),
                     fetch('/api/chart').then(r => r.json()),
+                    fetch('/api/analytics').then(r => r.json()),
                 ]);
 
                 document.getElementById('market_label').textContent = stats.market || analysis.market || 'BTC/USD';
@@ -846,16 +931,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 }
 
                 renderLiveTrade(stats);
+                renderAnalytics(analytics);
 
                 document.getElementById('capital').textContent = formatCurrency(stats.capital);
                 const unrealized = stats.unrealized_pnl || 0;
                 const realized = stats.total_pnl || 0;
                 document.getElementById('pnl').textContent = formatSignedCurrency(realized + unrealized);
                 document.getElementById('pnl').className = 'stat-value ' + ((realized + unrealized) >= 0 ? 'positive' : 'negative');
-                const open = stats.live_trade;
-                const pnlPct = open ? (open.pnl_pct || 0) : (stats.total_pnl_pct || 0);
-                document.getElementById('pnl_pct').textContent = (pnlPct >= 0 ? '+' : '') + Number(pnlPct).toFixed(2) + '%';
-                document.getElementById('pnl_pct').className = 'stat-value ' + (pnlPct >= 0 ? 'positive' : 'negative');
+                // Account % vs initial capital (NOT price move %)
+                const accountPct = stats.total_account_pct != null
+                    ? Number(stats.total_account_pct) + Number(stats.unrealized_account_pct || 0)
+                    : Number(stats.total_pnl_pct || 0);
+                document.getElementById('pnl_pct').textContent = (accountPct >= 0 ? '+' : '') + accountPct.toFixed(2) + '%';
+                document.getElementById('pnl_pct').className = 'stat-value ' + (accountPct >= 0 ? 'positive' : 'negative');
                 document.getElementById('winrate').textContent = ((stats.win_rate || 0) * 100).toFixed(1) + '%';
                 document.getElementById('trades').textContent = stats.trade_count;
                 document.getElementById('open_pos').textContent = (stats.open_positions || []).length;
@@ -916,8 +1004,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
                 const posContainer = document.getElementById('open_positions_container');
                 if (positions.positions && positions.positions.length > 0) {
-                    posContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Asset</th><th>Side</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>PnL $</th><th>PnL %</th></tr></thead><tbody>' +
-                        positions.positions.map(p => `
+                    posContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Asset</th><th>Side</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>PnL $</th><th>Acct %</th></tr></thead><tbody>' +
+                        positions.positions.map(p => {
+                            const acct = p.pnl_account_pct != null ? p.pnl_account_pct : p.pnl_pct;
+                            return `
                             <tr>
                                 <td>${p.id.substring(0, 8)}...</td>
                                 <td>${p.asset}</td>
@@ -927,31 +1017,33 @@ class DashboardHandler(BaseHTTPRequestHandler):
                                 <td>${p.stop_loss.toFixed(2)}</td>
                                 <td>${p.take_profit.toFixed(2)}</td>
                                 <td class="${(p.pnl || 0) >= 0 ? 'positive' : 'negative'}">${formatSignedCurrency(p.pnl || 0)}</td>
-                                <td class="${p.pnl_pct >= 0 ? 'positive' : 'negative'}">${(p.pnl_pct >= 0 ? '+' : '') + p.pnl_pct.toFixed(2)}%</td>
-                            </tr>
-                        `).join('') + '</tbody></table>';
+                                <td class="${acct >= 0 ? 'positive' : 'negative'}">${(acct >= 0 ? '+' : '') + Number(acct).toFixed(2)}%</td>
+                            </tr>`;
+                        }).join('') + '</tbody></table>';
                 } else {
                     posContainer.innerHTML = '<p style="color:var(--muted);font-size:0.85rem">No open positions</p>';
                 }
 
                 const tradesContainer = document.getElementById('trades_container');
                 if (trades.trades && trades.trades.length > 0) {
-                    tradesContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Type</th><th>Side</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>Reason</th><th>Time</th></tr></thead><tbody>' +
+                    tradesContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Type</th><th>Side</th><th>Session</th><th>Entry</th><th>PnL $</th><th>Acct %</th><th>R</th><th>Reason</th><th>Time</th></tr></thead><tbody>' +
                         trades.trades.map(t => {
                             const ts = t.timestamp || t.open_time || t.exit_time;
                             const timeLabel = ts ? new Date(ts * 1000).toLocaleTimeString() : '--';
-                            const sl = t.sl_price ?? t.stop_loss;
-                            const tp = t.tp_price ?? t.take_profit;
                             const reason = t.exit_reason || t.reason || t.confirmation || (t.strategy_info && t.strategy_info.confirmation) || '--';
+                            const acct = t.pnl_account_pct != null ? t.pnl_account_pct : null;
+                            const r = t.r_multiple != null ? Number(t.r_multiple).toFixed(2) : '--';
+                            const sess = t.session || (t.strategy_info && t.strategy_info.session) || '--';
                             return `
                             <tr>
                                 <td>${t.id.substring(0, 8)}...</td>
                                 <td>${t.type || t.status || '--'}</td>
                                 <td class="side-${t.side || ''}">${t.side || '--'}</td>
+                                <td>${sess}</td>
                                 <td>${t.entry_price ? t.entry_price.toFixed(2) : '--'}</td>
-                                <td>${t.position_size ? t.position_size.toFixed(6) : '--'}</td>
-                                <td>${sl != null ? Number(sl).toFixed(2) : '--'}</td>
-                                <td>${tp != null ? Number(tp).toFixed(2) : '--'}</td>
+                                <td class="${(t.pnl || 0) >= 0 ? 'positive' : 'negative'}">${t.pnl != null ? formatSignedCurrency(t.pnl) : '--'}</td>
+                                <td class="${(acct || 0) >= 0 ? 'positive' : 'negative'}">${acct != null ? ((acct >= 0 ? '+' : '') + Number(acct).toFixed(2) + '%') : '--'}</td>
+                                <td>${r}</td>
                                 <td>${reason}</td>
                                 <td>${timeLabel}</td>
                             </tr>`;

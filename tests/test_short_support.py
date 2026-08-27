@@ -47,9 +47,61 @@ def test_short_pnl_and_capital():
     assert closed is not None
     assert closed["pnl"] == 100.0  # (100-90)*10
     assert abs(pm.capital - (100_000 + 100.0)) < 1e-6
+    assert abs(closed["pnl_account_pct"] - 0.1) < 1e-9  # $100 / $100k
+    assert abs(closed["pnl_pct"] - 10.0) < 1e-9  # price move still tracked
+    assert abs(closed["r_multiple"] - 2.0) < 1e-9  # $100 / ($5 risk * 10)
 
 
-def test_capital_repair_from_negative_notional_reservation():
+def test_account_pct_matches_half_percent_risk_double_rr():
+    """0.5% risk at 1:2 RR ≈ +1% account — not the smaller price-move %."""
+    from hermes_smc.engine.smc_engine import PositionManager
+
+    pm = PositionManager(initial_capital=100_000)
+    entry, sl, tp = 78849.0, 78641.901, 79263.198
+    risk = entry - sl
+    size = (100_000 * 0.005) / risk
+    pm.open_position("t", "BTC/USD", "long", entry, size, sl, tp, {})
+    closed = pm.close_position("t", tp, "take_profit")
+    assert closed["pnl_account_pct"] > 0.99
+    assert closed["pnl_account_pct"] < 1.02
+    assert closed["pnl_pct"] < closed["pnl_account_pct"]  # price % is smaller on BTC
+    assert abs(closed["r_multiple"] - 2.0) < 1e-6
+
+
+def test_analytics_sessions_and_conditions():
+    from hermes_smc.engine.analytics import build_analytics, session_from_ts
+
+    assert session_from_ts(1787816139.0)  # any valid label
+    trades = [
+        {
+            "pnl": 1000,
+            "entry_price": 100,
+            "exit_price": 102,
+            "stop_loss": 99,
+            "position_size": 5,
+            "side": "long",
+            "open_time": 1700000000,  # will map to a session
+            "exit_reason": "take_profit",
+            "strategy_info": {"trend": "bullish", "confirmation": "engulfing_5m"},
+        },
+        {
+            "pnl": -500,
+            "entry_price": 100,
+            "exit_price": 99,
+            "stop_loss": 98,
+            "position_size": 5,
+            "side": "long",
+            "open_time": 1700000000 + 3600 * 14,
+            "exit_reason": "stop_loss",
+            "strategy_info": {"trend": "bullish", "confirmation": "engulfing_5m"},
+        },
+    ]
+    a = build_analytics(trades, initial_capital=100_000)
+    assert a["trade_count"] == 2
+    assert abs(a["total_account_pct"] - 0.5) < 1e-9
+    assert a["by_session"]
+    assert a["by_trend"]
+    assert a["best_session"] is not None
     """Old model left capital negative after large BTC notionals — repair on load."""
     import json
     import tempfile

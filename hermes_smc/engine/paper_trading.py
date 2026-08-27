@@ -8,6 +8,7 @@ from typing import Any
 
 from .core import MarketStructureDetector
 from .smc_engine import SMCEngine, SMCConfig, PositionManager
+from .analytics import build_entry_context
 
 logger = logging.getLogger(__name__)
 
@@ -893,6 +894,7 @@ class PaperTradingEngine(SMCEngine):
             side = signal.get("side", "long")
             fill_price = signal["entry_price"]
             fill_size = signal["position_size"]
+            ctx = build_entry_context(signal.get("trend_info"), signal.get("confirmation"))
 
             self.position_manager.open_position(
                 trade_id=trade_id,
@@ -909,6 +911,7 @@ class PaperTradingEngine(SMCEngine):
                     "trend": signal["trend_info"]["overall"],
                     "side": side,
                     "paper_trade": True,
+                    **ctx,
                 },
             )
 
