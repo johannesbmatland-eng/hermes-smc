@@ -39,6 +39,12 @@ DEFAULT_STRATEGY = {
     },
     "exits": {
         "structure_break": False,  # SL/TP only — avoid killing FVG pullback entries
+        "mode": "be_trail",        # fixed_tp | be_trail | trail_only
+        "be_at_rr": 2.0,
+        "trail_after_be": True,
+        "trail_rr": 1.0,
+        "tp_rr": 5.0,
+        "be_buffer_pct": 0.0001,
     },
     "fvq_detection": {
         "min_candles_since_fvg": 50,
@@ -63,7 +69,8 @@ class SMCConfig:
     """Load and manage strategy configuration."""
 
     def __init__(self, config_path: Path | None = None):
-        self._config = DEFAULT_STRATEGY.copy()
+        import copy
+        self._config = copy.deepcopy(DEFAULT_STRATEGY)
         if config_path and config_path.exists():
             import yaml
             with open(config_path) as f:
@@ -276,6 +283,11 @@ class PositionManager:
             "r_multiple": 0,
             "capital_at_open": self.capital,
             "current_price": entry_price,
+            "initial_stop_loss": sl_price,
+            "peak_price": entry_price if side == "long" else entry_price,
+            "trough_price": entry_price,
+            "be_moved": False,
+            "sl_mode": "initial",
         }
         self.open_positions[trade_id] = position
         # Paper equity model: do not reserve full notional (BTC size can exceed cash).
@@ -579,34 +591,35 @@ class SMCEngine:
         current_price: float,
     ) -> str | None:
         """
-        Check if position should be closed:
-        - SL hit
-        - TP hit
-        - RSI overbought/oversold
-        - Structure break
+        Manage open trade exits:
+        - Optional BE at N:R then trailing SL
+        - SL hit / optional hard TP
+        - Optional structure break
         """
+        self._ensure_exit_plan(position)
+        sl_before = position.get("stop_loss")
+        self._update_trailing_stops(position, current_price)
+        if position.get("stop_loss") != sl_before:
+            self.position_manager.save_state()
+
         entry_price = position["entry_price"]
         sl_price = position["stop_loss"]
-        tp_price = position["take_profit"]
+        tp_price = position.get("take_profit")
         side = position["side"]
 
-        # Check stop loss
         if side == "long" and current_price <= sl_price:
-            return "stop_loss"
-        elif side == "short" and current_price >= sl_price:
-            return "stop_loss"
+            return "trailing_stop" if position.get("sl_mode") in ("trailing", "break_even") else "stop_loss"
+        if side == "short" and current_price >= sl_price:
+            return "trailing_stop" if position.get("sl_mode") in ("trailing", "break_even") else "stop_loss"
 
-        # Check take profit
-        if side == "long" and current_price >= tp_price:
-            return "take_profit"
-        elif side == "short" and current_price <= tp_price:
-            return "take_profit"
+        if tp_price is not None:
+            if side == "long" and current_price >= tp_price:
+                return "take_profit"
+            if side == "short" and current_price <= tp_price:
+                return "take_profit"
 
-        # Optional structure break (off by default — FVG pullback lows often
-        # sit under entry and would close valid trades before SL/TP).
         if self.config.get("exits.structure_break", False) and len(candles_5m) >= 10:
             open_time = position.get("open_time", 0)
-            # Only candles strictly after entry count
             post = [c for c in candles_5m[-10:-1] if c.get("timestamp", 0) > open_time]
             if side == "long":
                 recent_lows = [c["low"] for c in post]
@@ -618,6 +631,84 @@ class SMCEngine:
                     return "structure_break"
 
         return None
+
+    def _ensure_exit_plan(self, position: dict):
+        """Initialize trail fields and widen TP for be_trail mode (migrates live trades)."""
+        entry = position["entry_price"]
+        side = position.get("side", "long")
+        initial_sl = position.setdefault("initial_stop_loss", position["stop_loss"])
+        position.setdefault("peak_price", entry)
+        position.setdefault("trough_price", entry)
+        position.setdefault("be_moved", False)
+        position.setdefault("sl_mode", "initial")
+
+        mode = self.config.get("exits.mode", "fixed_tp")
+        risk = abs(entry - initial_sl)
+        if risk <= 0:
+            return
+
+        if mode in ("be_trail", "trail_only"):
+            tp_rr = float(self.config.get("exits.tp_rr", 5.0) or 0)
+            if tp_rr > 0:
+                desired = entry + tp_rr * risk if side == "long" else entry - tp_rr * risk
+                cur_tp = position.get("take_profit")
+                if cur_tp is None:
+                    position["take_profit"] = desired
+                elif side == "long" and cur_tp < desired:
+                    position["take_profit"] = desired
+                elif side == "short" and cur_tp > desired:
+                    position["take_profit"] = desired
+            elif mode == "trail_only":
+                position["take_profit"] = None
+
+    def _update_trailing_stops(self, position: dict, current_price: float):
+        """At be_at_rr → SL to BE; then trail peak/trough by trail_rr."""
+        mode = self.config.get("exits.mode", "fixed_tp")
+        if mode not in ("be_trail", "trail_only"):
+            return
+
+        entry = position["entry_price"]
+        side = position.get("side", "long")
+        initial_sl = position.get("initial_stop_loss") or position["stop_loss"]
+        risk = abs(entry - initial_sl)
+        if risk <= 0:
+            return
+
+        be_at = float(self.config.get("exits.be_at_rr", 2.0))
+        trail_rr = float(self.config.get("exits.trail_rr", 1.0))
+        trail_after = bool(self.config.get("exits.trail_after_be", True))
+        be_buf = float(self.config.get("exits.be_buffer_pct", 0.0001))
+
+        if side == "long":
+            peak = max(float(position.get("peak_price", entry)), current_price)
+            position["peak_price"] = peak
+            rr_now = (peak - entry) / risk
+            if rr_now >= be_at:
+                be_price = entry * (1 + be_buf)
+                if position["stop_loss"] < be_price:
+                    position["stop_loss"] = be_price
+                    position["be_moved"] = True
+                    position["sl_mode"] = "break_even"
+                if trail_after and position.get("be_moved"):
+                    trail_sl = peak - trail_rr * risk
+                    if trail_sl > position["stop_loss"]:
+                        position["stop_loss"] = trail_sl
+                        position["sl_mode"] = "trailing"
+        else:
+            trough = min(float(position.get("trough_price", entry)), current_price)
+            position["trough_price"] = trough
+            rr_now = (entry - trough) / risk
+            if rr_now >= be_at:
+                be_price = entry * (1 - be_buf)
+                if position["stop_loss"] > be_price:
+                    position["stop_loss"] = be_price
+                    position["be_moved"] = True
+                    position["sl_mode"] = "break_even"
+                if trail_after and position.get("be_moved"):
+                    trail_sl = trough + trail_rr * risk
+                    if trail_sl < position["stop_loss"]:
+                        position["stop_loss"] = trail_sl
+                        position["sl_mode"] = "trailing"
 
     async def run_tick(self):
         """Execute one tick of the trading engine."""

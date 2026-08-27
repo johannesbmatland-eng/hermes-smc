@@ -137,6 +137,10 @@ class DashboardServer:
                 "confirmation": info.get("confirmation"),
                 "session": info.get("session"),
                 "trend": info.get("trend"),
+                "sl_mode": p.get("sl_mode", "initial"),
+                "be_moved": p.get("be_moved", False),
+                "initial_stop_loss": p.get("initial_stop_loss"),
+                "peak_price": p.get("peak_price"),
             }
 
         return {
@@ -837,8 +841,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             const rr = t.rr != null ? (' · RR 1:' + Number(t.rr).toFixed(1)) : '';
             const sess = t.session ? (' · ' + t.session) : '';
             const rMult = t.r_multiple != null ? (' · R ' + Number(t.r_multiple).toFixed(2)) : '';
+            const slMode = t.sl_mode ? (' · SL ' + t.sl_mode) : '';
             document.getElementById('live_meta').textContent =
-                (t.id ? t.id.substring(0, 8) + '…' : '') + conf + rr + sess + rMult;
+                (t.id ? t.id.substring(0, 8) + '…' : '') + conf + rr + sess + rMult + slMode;
 
             const wrap = document.getElementById('live_pnl_wrap');
             wrap.className = 'live-pnl ' + (positive ? 'positive' : 'negative');

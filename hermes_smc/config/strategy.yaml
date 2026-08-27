@@ -24,10 +24,16 @@ entry:
   cooldown_seconds: 300
 
 exits:
-  structure_break: false   # only SL/TP — keep FVG pullback trades alive
+  structure_break: false
+  mode: "be_trail"       # fixed_tp | be_trail | trail_only
+  be_at_rr: 2.0          # at 1:2 → move SL to break-even
+  trail_after_be: true   # then trail favorable extreme
+  trail_rr: 1.0          # trail distance = 1R behind peak/trough
+  tp_rr: 5.0             # hard TP at 1:5 (0 = no hard TP, pure trail)
+  be_buffer_pct: 0.0001  # tiny BE buffer past entry
 
 risk:
   risk_pct_per_trade: 0.5
-  rr_target: 2.0          # 1:2 RR → risk 0.5% to make 1%
-  rr_alternative: 3.0     # optional 1:3
+  rr_target: 2.0          # used for BE trigger alignment / legacy fixed TP
+  rr_alternative: 3.0
   sl_buffer_pct: 0.002

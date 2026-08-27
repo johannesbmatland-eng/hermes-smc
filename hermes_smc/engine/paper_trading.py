@@ -126,9 +126,10 @@ class PaperTradingEngine(SMCEngine):
             )
             return None
 
+        tp_label = f"{tp_price:.2f}" if tp_price is not None else "none (trail)"
         logger.info(
             f"SMC Entry Signal ({side}): FVG [{best_fvg['bottom']:.2f}-{best_fvg['top']:.2f}], "
-            f"entry @ {entry_price:.2f}, SL @ {sl_price:.2f}, TP @ {tp_price:.2f}, "
+            f"entry @ {entry_price:.2f}, SL @ {sl_price:.2f}, TP @ {tp_label}, "
             f"size: {position_size:.6f} BTC, confirmation: {confirmation}"
         )
 
@@ -487,10 +488,19 @@ class PaperTradingEngine(SMCEngine):
         entry_price: float,
         sl_price: float,
         side: str = "long",
-    ) -> float:
-        """Calculate TP with configured RR, mirrored for shorts."""
+    ) -> float | None:
+        """
+        TP price: in be_trail mode use exits.tp_rr (default 1:5 hard cap).
+        trail_only with tp_rr=0 → no hard TP.
+        """
+        mode = self.config.get("exits.mode", "fixed_tp")
+        if mode in ("be_trail", "trail_only"):
+            rr = float(self.config.get("exits.tp_rr", 5.0) or 0)
+            if rr <= 0:
+                return None
+        else:
+            rr = self.config.get("risk.rr_target", 2.0)
         risk_distance = abs(entry_price - sl_price)
-        rr = self.config.get("risk.rr_target", 2.0)
         if side == "short":
             return entry_price - (risk_distance * rr)
         return entry_price + (risk_distance * rr)

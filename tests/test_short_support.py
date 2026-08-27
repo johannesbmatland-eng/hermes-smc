@@ -223,6 +223,7 @@ def test_fvg_boxes_extend_until_fill():
 
 def test_paper_engine_short_sl_tp_helpers():
     engine = PaperTradingEngine(SMCConfig())
+    engine.config._config["exits"]["mode"] = "fixed_tp"
     fvg = {"top": 105.0, "bottom": 100.0, "mid": 102.5, "type": "bearish"}
     entry = 102.0
 
@@ -233,6 +234,86 @@ def test_paper_engine_short_sl_tp_helpers():
     assert sl > fvg["top"]
     assert tp < entry
     assert size > 0
+
+
+def test_be_trail_tp_defaults_to_five_r():
+    engine = PaperTradingEngine(SMCConfig())
+    entry, sl = 100.0, 99.0
+    tp = engine._calculate_smc_tp(entry, sl, side="long")
+    assert abs(tp - 105.0) < 1e-9  # 1:5 hard TP in be_trail mode
+
+
+def test_rr_two_makes_one_percent_from_half_percent_risk():
+    engine = PaperTradingEngine(SMCConfig())
+    engine.config._config["exits"]["mode"] = "fixed_tp"
+    entry, sl = 100.0, 99.0  # 1.0 price risk
+    tp = engine._calculate_smc_tp(entry, sl, side="long")
+    assert abs(tp - 102.0) < 1e-9  # 1:2 RR
+
+
+def test_exit_conditions_short():
+    engine = SMCEngine(SMCConfig())
+    engine.config._config["exits"]["mode"] = "fixed_tp"
+    position = {
+        "entry_price": 100.0,
+        "stop_loss": 105.0,
+        "take_profit": 90.0,
+        "side": "short",
+        "initial_stop_loss": 105.0,
+    }
+    candles = [_candle(i, 100, 101, 99, 100) for i in range(12)]
+
+    assert engine.check_exit_conditions(position, candles, 106.0) == "stop_loss"
+    assert engine.check_exit_conditions(position, candles, 89.0) == "take_profit"
+
+
+def test_be_at_two_r_then_trail():
+    engine = SMCEngine(SMCConfig())
+    engine.config._config["exits"]["mode"] = "be_trail"
+    engine.config._config["exits"]["be_at_rr"] = 2.0
+    engine.config._config["exits"]["trail_rr"] = 1.0
+    engine.config._config["exits"]["tp_rr"] = 5.0
+
+    position = {
+        "entry_price": 100.0,
+        "stop_loss": 99.0,
+        "take_profit": 102.0,  # old 1:2 — should widen to 105
+        "side": "long",
+        "initial_stop_loss": 99.0,
+        "open_time": 1.0,
+    }
+    candles = [_candle(i, 100, 101, 99.5, 100) for i in range(12)]
+
+    # At +2R (102): move SL to BE, do not exit yet
+    assert engine.check_exit_conditions(position, candles, 102.0) is None
+    assert position["be_moved"] is True
+    assert position["stop_loss"] >= 100.0
+    assert position["take_profit"] == 105.0  # widened to 1:5
+
+    # At +3R (103): trail SL to peak - 1R = 102
+    assert engine.check_exit_conditions(position, candles, 103.0) is None
+    assert abs(position["stop_loss"] - 102.0) < 1e-9
+    assert position["sl_mode"] == "trailing"
+
+    # Pullback to trailed SL
+    assert engine.check_exit_conditions(position, candles, 102.0) == "trailing_stop"
+
+
+def test_hard_tp_at_five_r_still_works():
+    engine = SMCEngine(SMCConfig())
+    position = {
+        "entry_price": 100.0,
+        "stop_loss": 99.0,
+        "take_profit": 105.0,
+        "side": "long",
+        "initial_stop_loss": 99.0,
+        "open_time": 1.0,
+        "peak_price": 100.0,
+        "be_moved": False,
+        "sl_mode": "initial",
+    }
+    candles = [_candle(i, 100, 101, 99.5, 100) for i in range(12)]
+    assert engine.check_exit_conditions(position, candles, 105.0) == "take_profit"
 
 
 def test_bearish_engulfing_confirmation():
@@ -262,27 +343,6 @@ def test_crypto_bullish_engulfing_when_open_equals_prev_close():
     assert engine._candle_touches_fvg(candles[1], fvg) is True
     assert engine._is_body_engulfing(candles[1], candles[2], "long") is True
     assert engine._check_smc_confirmation(candles, None, fvg, side="long") == "engulfing_5m"
-
-
-def test_rr_two_makes_one_percent_from_half_percent_risk():
-    engine = PaperTradingEngine(SMCConfig())
-    entry, sl = 100.0, 99.0  # 1.0 price risk
-    tp = engine._calculate_smc_tp(entry, sl, side="long")
-    assert abs(tp - 102.0) < 1e-9  # 1:2 RR
-
-
-def test_exit_conditions_short():
-    engine = SMCEngine(SMCConfig())
-    position = {
-        "entry_price": 100.0,
-        "stop_loss": 105.0,
-        "take_profit": 90.0,
-        "side": "short",
-    }
-    candles = [_candle(i, 100, 101, 99, 100) for i in range(12)]
-
-    assert engine.check_exit_conditions(position, candles, 106.0) == "stop_loss"
-    assert engine.check_exit_conditions(position, candles, 89.0) == "take_profit"
 
 
 def test_analysis_snapshot_has_checklist_and_phase():
