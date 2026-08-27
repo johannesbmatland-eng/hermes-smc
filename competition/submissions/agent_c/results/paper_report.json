@@ -1,0 +1,25 @@
+{
+  "mode": "paper",
+  "live_orders": false,
+  "metrics": {
+    "profit": 1526.71,
+    "profit_pct": 1.527,
+    "profit_per_month": 1712.2,
+    "winrate": 66.67,
+    "expectancy": 317.06,
+    "max_dd_pct": 1.6,
+    "worst_day_pct": -0.526,
+    "trades": 6,
+    "compliance": "ok",
+    "halt_reason": null,
+    "months_span": 0.89,
+    "avg_win": 692.79,
+    "avg_loss": -434.38,
+    "total_fees": 756.19,
+    "total_slippage": 189.05,
+    "final_equity": 101526.71
+  },
+  "sources": {
+    "BTC/USD": "cache:BTC_USD_1h_720.npz"
+  }
+}
