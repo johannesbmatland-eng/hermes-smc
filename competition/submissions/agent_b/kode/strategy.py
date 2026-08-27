@@ -316,6 +316,9 @@ def run_backtest(
         if dp <= -p.daily_stop:
             day_paused = True
             flatten(True)
+        # Judge redesign: no new entries after −1.0% day
+        if dp <= -0.010:
+            day_paused = True
         if dd >= p.hwm_stop:
             flatten(True)
 

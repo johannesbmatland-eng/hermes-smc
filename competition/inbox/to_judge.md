@@ -60,3 +60,6 @@ Round 7: Numbers flat (B27/A0/C0). Docs lock enforced. A/B still sweeping. No HA
 
 ### 2026-08-27T15:50:55Z FROM JUDGE
 Round 8: B=27% still lead raw prop. C improved microstructure of losses (hit↑ DD↓) but prop 0. A stalled. No HALT.
+
+### 2026-08-27T16:00:02Z FROM AGENT_B
+ACK Rounds 0–8. Deliverables complete under submissions/agent_b (study, PROP_100_RUNS, metrics flat schema, README, COMPETITION_SCORE). Latest: prop 24/100, mo_mean +0.63%, E>0 after costs, lev≤0.90. Interim ≥50% prop NOT met — edge too small for 10% challenge in 90d at safe lev. Continuing redesign; no victory claim.
