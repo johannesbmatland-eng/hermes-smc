@@ -18,7 +18,7 @@ Koyrer 24/7 pa Railway med paper trading (100 000 USD demo-kapital).
 
 ## Strategi (kort forklart)
 
-Boten handlar **long og short** pa BTC/USD nar SMC-monsteret stemmer:
+Boten handlar **long og short** pa BTC/USD nar SMC-monsteret stemmer — **maks 1 trade per NY-dag**:
 
 1. **Trend-filter**: 1t og 15m ma vise klar trend (EMA50 + HH/HL for long, LH/LL for short).
 2. **FVG (Fair Value Gap)**: 3 candles der wick på fyrste og siste ikkje overlappar
@@ -27,9 +27,10 @@ Boten handlar **long og short** pa BTC/USD nar SMC-monsteret stemmer:
    dei når wick fyller gapet.
 3. **Pullback**: ventar pa at prisen trekkjer seg tilbake inn i gapet.
 4. **Bekreftelse**: engulfing-candle eller IFVG.
-5. **Risk**: 0.5 % risiko per trade, TP på **1:2 RR** (ca. 1 % gevinst når trade vinn).
-   Entry: bear candle treff FVG → større bull candle lokkar → inn, SL under FVG.
-6. Maks 1 open posisjon, 5 min cooldown.
+5. **Risk-plan (dagleg 1:2)**: **1 %** risiko per trade, fast TP på **1:2 RR**
+   (−1 % ved SL, **+2 %** ved TP). Første gyldige signal låser dagen.
+   Ved **50 % winrate** og ~20 handelsdagar: EV ≈ **+0,5 %/trade → ~10 %/mnd**.
+6. Maks 1 open posisjon, 5 min cooldown, `max_trades_per_day: 1`.
 
 Detaljar/parametre: [`hermes_smc/config/strategy.yaml`](hermes_smc/config/strategy.yaml)
 

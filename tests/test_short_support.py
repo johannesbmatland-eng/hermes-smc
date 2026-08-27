@@ -52,20 +52,74 @@ def test_short_pnl_and_capital():
     assert abs(closed["r_multiple"] - 2.0) < 1e-9  # $100 / ($5 risk * 10)
 
 
-def test_account_pct_matches_half_percent_risk_double_rr():
-    """0.5% risk at 1:2 RR ≈ +1% account — not the smaller price-move %."""
+def test_account_pct_matches_one_percent_risk_double_rr():
+    """1% risk at 1:2 RR ≈ +2% account — not the smaller price-move %."""
     from hermes_smc.engine.smc_engine import PositionManager
 
     pm = PositionManager(initial_capital=100_000)
     entry, sl, tp = 78849.0, 78641.901, 79263.198
     risk = entry - sl
-    size = (100_000 * 0.005) / risk
+    size = (100_000 * 0.01) / risk
     pm.open_position("t", "BTC/USD", "long", entry, size, sl, tp, {})
     closed = pm.close_position("t", tp, "take_profit")
-    assert closed["pnl_account_pct"] > 0.99
-    assert closed["pnl_account_pct"] < 1.02
+    assert closed["pnl_account_pct"] > 1.99
+    assert closed["pnl_account_pct"] < 2.02
     assert closed["pnl_pct"] < closed["pnl_account_pct"]  # price % is smaller on BTC
     assert abs(closed["r_multiple"] - 2.0) < 1e-6
+
+
+def test_daily_plan_expectancy_ten_percent_month():
+    """20 days × 50% WR × (+2% / −1%) → +10% simple account return."""
+    pm = PositionManager(initial_capital=100_000)
+    entry, sl = 100.0, 99.0  # $1 risk
+    tp = 102.0  # 1:2
+    size = pm.calculate_position_size(entry, sl, risk_pct=1.0)
+    assert abs(size - 1000.0) < 1e-9  # $1000 risk / $1
+
+    for i in range(20):
+        tid = f"d{i}"
+        win = i % 2 == 0
+        pm.open_position(tid, "BTC/USD", "long", entry, size, sl, tp, {})
+        exit_px = tp if win else sl
+        pm.close_position(tid, exit_px, "take_profit" if win else "stop_loss")
+
+    total_pct = (pm.capital - 100_000) / 100_000 * 100
+    assert abs(total_pct - 10.0) < 1e-6
+
+
+def test_max_trades_per_day_counts_ny_calendar():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from hermes_smc.engine.analytics import count_opens_on_day, calendar_day_key
+
+    ny = ZoneInfo("America/New_York")
+    day1_am = datetime(2026, 3, 10, 10, 0, tzinfo=ny).timestamp()
+    day1_pm = datetime(2026, 3, 10, 15, 0, tzinfo=ny).timestamp()
+    day2 = datetime(2026, 3, 11, 10, 0, tzinfo=ny).timestamp()
+
+    assert calendar_day_key(day1_am) == "2026-03-10"
+    assert calendar_day_key(day1_pm) == "2026-03-10"
+
+    closed = [{"open_time": day1_am}]
+    open_pos = {"x": {"open_time": day1_pm}}
+    assert count_opens_on_day(open_pos, closed, ts=day1_pm) == 2
+    assert count_opens_on_day({}, closed, ts=day2) == 0
+
+    engine = PaperTradingEngine(SMCConfig())
+    engine.config._config["entry"]["max_trades_per_day"] = 1
+    engine.position_manager.closed_positions = [
+        {"open_time": day1_am, "id": "a"}
+    ]
+    assert engine.trades_opened_today(day1_pm) == 1
+    assert engine.daily_trade_limit_reached(day1_pm) is True
+    assert engine.daily_trade_limit_reached(day2) is False
+
+
+def test_fixed_tp_default_is_two_r():
+    engine = PaperTradingEngine(SMCConfig())
+    entry, sl = 100.0, 99.0
+    tp = engine._calculate_smc_tp(entry, sl, side="long")
+    assert abs(tp - 102.0) < 1e-9  # rr_target: 2 → 2R
 
 
 def test_analytics_sessions_and_conditions():
@@ -301,8 +355,10 @@ def test_paper_engine_short_sl_tp_helpers():
     assert size > 0
 
 
-def test_be_trail_default_hard_tp_at_three_r():
+def test_be_trail_hard_tp_at_three_r_when_enabled():
     engine = PaperTradingEngine(SMCConfig())
+    engine.config._config["exits"]["mode"] = "be_trail"
+    engine.config._config["exits"]["tp_rr"] = 3.0
     entry, sl = 100.0, 99.0
     tp = engine._calculate_smc_tp(entry, sl, side="long")
     assert abs(tp - 103.0) < 1e-9  # tp_rr: 3 → 3R hard TP
@@ -310,18 +366,22 @@ def test_be_trail_default_hard_tp_at_three_r():
 
 def test_be_trail_tp_none_when_tp_rr_zero():
     engine = PaperTradingEngine(SMCConfig())
+    engine.config._config["exits"]["mode"] = "be_trail"
     engine.config._config["exits"]["tp_rr"] = 0
     entry, sl = 100.0, 99.0
     tp = engine._calculate_smc_tp(entry, sl, side="long")
     assert tp is None
 
 
-def test_rr_two_makes_one_percent_from_half_percent_risk():
+def test_rr_two_makes_two_percent_from_one_percent_risk():
     engine = PaperTradingEngine(SMCConfig())
     engine.config._config["exits"]["mode"] = "fixed_tp"
+    engine.config._config["risk"]["risk_pct_per_trade"] = 1.0
     entry, sl = 100.0, 99.0  # 1.0 price risk
     tp = engine._calculate_smc_tp(entry, sl, side="long")
     assert abs(tp - 102.0) < 1e-9  # 1:2 RR
+    size = engine._calculate_position_size(entry, sl)
+    assert abs(size - 1000.0) < 1e-9  # 1% of 100k / $1
 
 
 def test_exit_conditions_short():
@@ -372,9 +432,12 @@ def test_be_at_one_r_then_trail_no_hard_tp():
     assert engine.check_exit_conditions(position, candles, 101.0) == "trailing_stop"
 
 
-def test_smart_defaults_be_at_1_5r_trail_and_3r_tp():
+def test_be_trail_at_1_5r_trail_and_3r_tp():
     engine = SMCEngine(SMCConfig())
-    # Defaults: be_at 1.5, trail 1.0, tp 3.0
+    engine.config._config["exits"]["mode"] = "be_trail"
+    engine.config._config["exits"]["be_at_rr"] = 1.5
+    engine.config._config["exits"]["trail_rr"] = 1.0
+    engine.config._config["exits"]["tp_rr"] = 3.0
     position = {
         "entry_price": 100.0,
         "stop_loss": 99.0,
@@ -401,6 +464,27 @@ def test_smart_defaults_be_at_1_5r_trail_and_3r_tp():
 
     # Hit 3R hard TP
     assert engine.check_exit_conditions(position, candles, 103.0) == "take_profit"
+
+
+def test_fixed_tp_default_hits_two_r_no_trail():
+    engine = SMCEngine(SMCConfig())
+    position = {
+        "entry_price": 100.0,
+        "stop_loss": 99.0,
+        "take_profit": 102.0,
+        "side": "long",
+        "initial_stop_loss": 99.0,
+        "open_time": 1.0,
+    }
+    candles = [_candle(i, 100, 101, 99.5, 100) for i in range(12)]
+
+    # Mid-path: no BE/trail mutation in fixed_tp
+    assert engine.check_exit_conditions(position, candles, 101.5) is None
+    assert position.get("be_moved") is False
+    assert abs(position["stop_loss"] - 99.0) < 1e-9
+    assert abs(position["take_profit"] - 102.0) < 1e-9
+    assert engine.check_exit_conditions(position, candles, 102.0) == "take_profit"
+    assert engine.check_exit_conditions(position, candles, 99.0) == "stop_loss"
 
 
 def test_hard_tp_at_five_r_still_works():
