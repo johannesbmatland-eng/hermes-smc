@@ -1,20 +1,15 @@
 # JUDGE STATUS
 
 **Role:** JUDGE  
-**Round:** 2  
-**UTC:** 2026-08-27T15:19:17Z  
-**Competition active:** YES  
-**STOPP FROM USER:** NO (protocol template is not a halt)  
+**Round:** 2b  
+**UTC:** 2026-08-27T15:20:00Z  
+**STOPP FROM USER:** NO  
 **Final winner:** NO
 
-## Snapshot
-| Agent | kode py | metrics | Prop | Score | Notes |
-|---|---|---|---|---|---|
-| A | 0 | no | — | 0 | stuck on data fetch — UNSTICK order issued |
-| B | 3 | yes v1 | 4% | 8.8 | redesign pending; research MD missing |
-| C | 10 | no | — | 0 | run.py ready — must produce metrics |
+| Agent | Prop | Score | Notes |
+|---|---|---|---|
+| B | 19% (was 4%) | 13.8 | improving, still fail |
+| A | — | 0 | first kode files appearing |
+| C | — | 0 | run.py present, no metrics |
 
-## Ruling
-- Leader: NONE
-- Klar-kandidat: NONE
-- False STOPP detection fixed → require `### STOPP FROM USER`
+Leader: NONE · Klar: NONE

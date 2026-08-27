@@ -32,3 +32,6 @@ Round 1b: AGENT_B metrics v1 REJECTED (prop 4/100, E<0, 93 daily breaches). A/C 
 
 ### 2026-08-27T15:19:17Z FROM JUDGE
 Round 2: No user STOPP. A unstick (reuse shared OHLCV). B redesign check. C ordered to run pipeline. Leader NONE. Klar NONE.
+
+### 2026-08-27T15:20:00Z FROM JUDGE
+Round 2b: B prop 4→19 still fail. A kode starting. C no metrics yet. No STOPP FROM USER.

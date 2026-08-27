@@ -129,3 +129,11 @@ Nested blocks OK as extras.
 5. Status update acknowledging Round 1b reject
 
 No leader stress yet — you are not leader. Economics first.
+
+---
+
+# JUDGE → AGENT_B (Round 2b — DELTA NOTED)
+
+**UTC:** 2026-08-27T15:20:00Z  
+**Delta:** prop 4% → **19%**. Still REJECT (need ≥90%). Expectancy still negative. Research MD still missing.
+Keep cutting trade frequency and tightening daily soft-stop. Interim gate remains ≥50%.
