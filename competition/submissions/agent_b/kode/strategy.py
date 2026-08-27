@@ -260,6 +260,7 @@ def run_backtest(
     position = 0.0
     hold_left = 0
     cooldown_left = 0
+    day_paused = False
     trades = 0
     costs = 0.0
     daily_breach = 0
@@ -289,10 +290,12 @@ def run_backtest(
             day_pnl_pct = (equity - day_start_eq) / day_start_eq if day_start_eq else 0.0
             if day_pnl_pct <= -DAILY_FAIL:
                 daily_breach += 1
-                failed = True
-                fail_reason = "daily_loss"
+                if challenge_mode:
+                    failed = True
+                    fail_reason = "daily_loss"
             cur_date = date
             day_start_eq = equity
+            day_paused = False
             if challenge_mode and challenge_end_date is not None and date > challenge_end_date:
                 break
 
@@ -338,23 +341,30 @@ def run_backtest(
             if hard_daily:
                 daily_breach += 1
                 fail_reason = "daily_loss"
+                day_paused = True
             else:
                 hwm_breach += 1
                 fail_reason = "max_dd"
-            failed = True
-            eq_path.append(equity)
-            eq_idx.append(dt)
-            continue
+            if challenge_mode:
+                failed = True
+                eq_path.append(equity)
+                eq_idx.append(dt)
+                continue
 
-        pause_entries = soft_daily or cooldown_left > 0
+        if soft_daily:
+            day_paused = True
+            if position != 0.0:
+                _flatten(True)
 
-        if position != 0.0 and (soft_daily or soft_hwm):
+        if position != 0.0 and soft_hwm:
             _flatten(True)
 
         if hold_left > 0 and position != 0.0:
             hold_left -= 1
             if hold_left == 0:
                 _flatten(True)
+
+        pause_entries = day_paused or cooldown_left > 0
 
         if position == 0.0 and not failed and not pause_entries:
             direction, mode, hold = decide_signal(row, p)
@@ -363,10 +373,13 @@ def run_backtest(
                 reg = regime_from_volz(float(vz) if np.isfinite(vz) else np.nan)
                 vol = float(row["vol"]) if np.isfinite(row["vol"]) else p.vol_target
                 lev = leverage_for(mode, vol, p, reg)
+                # de-risk when underwater from peak (still allow entries after cooldown)
+                if dd > 0.015:
+                    lev *= max(0.30, 1.0 - (dd / MAX_DD_FAIL) * 1.05)
                 if lev > MAX_LEV + 1e-9:
                     lev_breach += 1
                     lev = MAX_LEV
-                if lev > 0:
+                if lev > 0.05:
                     c = equity * lev * (COST_BPS_SIDE / 10000.0)
                     costs += c
                     equity -= c

@@ -159,3 +159,18 @@ Prop **19%** still far from 90%. Missing: `BTCUSD_MARKET_STUDY.md`, `PROP_100_RU
 3. Reduce lev further until HWM breaches ≈0 in prop sims; then carefully add edge trades.
 4. Write missing MD deliverables + refresh status (stale 15:11).
 5. Interim gate still ≥50% prop with risk_ok true.
+
+---
+
+# JUDGE → AGENT_B (Round 5 — E>0 NOTED)
+
+**UTC:** 2026-08-27T15:31:00Z  
+**Progress:** expectancy now **+0.0226**, hitrate 0.60, prop **27%**.  
+**Still FAIL:** monthly mean reported 0; only **5** trades; risk_ok false; DD fails dominate; missing all MD deliverables + stale status.
+
+## Next
+1. Fix monthly_profit_mean/median from equity curve (calendar months) — cannot stay 0 with nonzero pnl path.
+2. Scale to ~40–100 trades on full sample WITHOUT destroying E>0.
+3. Soft HWM stop tighter until prop hwm_breach_total ≈ 0.
+4. Write BTCUSD_MARKET_STUDY.md + PROP_100_RUNS.md + README + COMPETITION_SCORE NOW.
+5. Interim: prop ≥50% + risk_ok + monthly mean in (0, 0.20] at least pointing up.

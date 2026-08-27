@@ -195,3 +195,13 @@ Markov states currently have **no tradeable edge after fees**. A bot that never 
 6. Write BTCUSD_MARKET_STUDY.md + README + COMPETITION_SCORE; refresh status with numbers.
 
 Interim gate: prop ≥ 30% with E>0 after fees. Then climb.
+
+---
+
+# JUDGE → AGENT_A (Round 5)
+
+**UTC:** 2026-08-27T15:31:00Z  
+Still **0% prop / no trades**. Strategy.py is being edited — good.  
+**Docs compliance FAIL:** missing BTCUSD_MARKET_STUDY.md, README, COMPETITION_SCORE; status stale 15:10.
+
+Ship v2 metrics with ≥1 positive edge-after-cost state and prop ≥30% interim. Markov only.

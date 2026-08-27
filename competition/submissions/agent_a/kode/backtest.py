@@ -6,10 +6,18 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from .config import ACCOUNT_EQUITY, MAX_HOLD_BARS, PASS_PROFIT, STATES
-from .markov_model import MarkovFit, fit_markov
+from .config import ACCOUNT_EQUITY, PASS_PROFIT, STATES
+from .markov_model import MarkovFit, classify_regimes, fit_markov
 from .risk_engine import RiskEngine
-from .strategy import MarkovStrategy, Position, Trade, apply_side_cost, unrealized_pnl
+from .strategy import (
+    STRATEGY_STOP_PCT,
+    STRATEGY_TP_PCT,
+    MarkovStrategy,
+    Position,
+    Trade,
+    apply_side_cost,
+    unrealized_pnl,
+)
 
 
 @dataclass
@@ -30,13 +38,18 @@ def run_backtest(
     flatten_on_pass: bool = False,
     prop_mode: bool = False,
 ) -> BacktestResult:
-    if fit is None:
-        fit = fit_markov(df.iloc[start_i:end_i] if end_i else df)
-
     end_i = end_i if end_i is not None else len(df)
-    start_i = max(start_i, 50)
+    if fit is None:
+        fit = fit_markov(df.iloc[max(0, start_i - 5000) : start_i] if start_i > 1000 else df.iloc[:end_i])
+
+    labels = classify_regimes(df)
+    start_i = max(start_i, 60)
 
     strat = MarkovStrategy(fit)
+    # sync prev hard from just before window
+    if start_i > 0:
+        strat.prev_hard = int(labels[start_i - 1])
+
     risk = RiskEngine(equity=initial_equity, pass_profit=PASS_PROFIT)
     equity = initial_equity
     cash = initial_equity
@@ -46,9 +59,10 @@ def run_backtest(
     close = df["close"].values
     high = df["high"].values
     low = df["low"].values
-    atr = df["atr14"].values
     ret = df["ret"].fillna(0.0).values
     ts = df["timestamp"].values
+    hour = df["hour"].values
+    cum3 = pd.Series(close).pct_change(3).values
 
     for i in range(start_i, end_i):
         day_key = pd.Timestamp(ts[i]).floor("D")
@@ -57,18 +71,16 @@ def run_backtest(
         price = float(close[i])
         hi = float(high[i])
         lo = float(low[i])
-        a = float(atr[i]) if np.isfinite(atr[i]) else price * 0.005
 
-        # update belief with last observed return
         if i > start_i:
             strat.update_belief(float(ret[i]))
 
         pos = strat.pos
-        # manage open position: stop / tp / time
         if pos.side != 0:
             pos.bars_held += 1
-            hit_stop = (lo <= pos.stop) if pos.side > 0 else (hi >= pos.stop)
-            hit_tp = (hi >= pos.tp) if pos.side > 0 else (lo <= pos.tp)
+            # Wide protective stop: -4.5% from entry (portfolio soft-stops handle prop)
+            hit_stop = lo <= pos.stop if pos.side > 0 else hi >= pos.stop
+            hit_tp = hi >= pos.tp if pos.side > 0 else lo <= pos.tp
             exit_px = None
             reason = ""
             if hit_stop:
@@ -77,15 +89,12 @@ def run_backtest(
             elif hit_tp:
                 exit_px = pos.tp
                 reason = "tp"
-            elif pos.bars_held >= MAX_HOLD_BARS:
+            elif pos.bars_held >= pos.max_hold:
                 exit_px = price
                 reason = "time"
             elif risk.state.halted_today or risk.state.failed:
                 exit_px = price
                 reason = "risk_halt"
-            elif strat.desired_side() == -pos.side:
-                exit_px = price
-                reason = "regime_flip"
             elif flatten_on_pass and risk.state.passed:
                 exit_px = price
                 reason = "prop_pass"
@@ -95,32 +104,38 @@ def run_backtest(
                 fee = apply_side_cost(pos.notional, exit_px)
                 pnl -= fee
                 cash += pnl
-                # release margin notionally tracked via cash/equity only
                 strat.trades.append(
                     Trade(
                         entry_time=ts[i],
                         exit_time=ts[i],
                         side=pos.side,
                         entry=pos.entry,
-                        exit=exit_px,
+                        exit=float(exit_px),
                         pnl=pnl,
-                        state=STATES[pos.entry_state] if pos.entry_state >= 0 else "?",
+                        state=pos.tag or (STATES[pos.entry_state] if pos.entry_state >= 0 else "?"),
                         reason=reason,
                     )
                 )
                 strat.pos = Position()
+                strat.cooldown = 6
                 pos = strat.pos
 
         # entries
         if pos.side == 0 and risk.allow_new_trade() and not (prop_mode and risk.state.passed):
-            side = strat.desired_side()
-            if side != 0 and np.isfinite(a) and a > 0:
-                notional = strat.size_notional(equity, price, a, side)
+            side, risk_frac, tag, hold = strat.signal(
+                int(labels[i]),
+                float(cum3[i]) if np.isfinite(cum3[i]) else 0.0,
+                int(hour[i]),
+                float(ret[i]),
+            )
+            if side != 0 and risk_frac > 0:
+                notional = strat.size_notional(equity, risk_frac, side)
                 notional = risk.clamp_notional(notional, price, equity)
                 if abs(notional) > 0:
                     fee = apply_side_cost(notional, price)
                     cash -= fee
-                    stop, tp = strat.stops(price, a, side)
+                    stop = price * (1.0 - STRATEGY_STOP_PCT)
+                    tp = price * (1.0 + STRATEGY_TP_PCT)
                     strat.pos = Position(
                         side=side,
                         entry=price,
@@ -129,9 +144,10 @@ def run_backtest(
                         tp=tp,
                         bars_held=0,
                         entry_state=int(np.argmax(strat.posterior)),
+                        max_hold=hold,
+                        tag=tag,
                     )
 
-        # mark equity
         u = unrealized_pnl(strat.pos, price)
         equity = cash + u
         risk.update_equity(equity)
@@ -139,7 +155,6 @@ def run_backtest(
         idx_list.append(ts[i])
 
         if prop_mode and (risk.state.failed or risk.state.passed):
-            # flatten if needed
             if strat.pos.side != 0:
                 pnl = unrealized_pnl(strat.pos, price) - apply_side_cost(strat.pos.notional, price)
                 cash += pnl
@@ -167,7 +182,6 @@ def compute_stats(eq: pd.Series, trades: list[Trade], risk: RiskEngine) -> dict:
     payoff = avg_win / avg_loss if avg_loss > 0 else 0.0
     expectancy = float(pnls.mean()) if len(pnls) else 0.0
 
-    # annualize from hourly
     mu = float(rets.mean()) if len(rets) else 0.0
     sig = float(rets.std()) if len(rets) else 1e-9
     sharpe = (mu / sig) * np.sqrt(24 * 365) if sig > 0 else 0.0
@@ -175,9 +189,7 @@ def compute_stats(eq: pd.Series, trades: list[Trade], risk: RiskEngine) -> dict:
     dstd = float(downside.std()) if len(downside) else 1e-9
     sortino = (mu / dstd) * np.sqrt(24 * 365) if dstd > 0 else 0.0
 
-    # monthly profit from daily compounding approx
     if len(daily) >= 5:
-        # rolling 30d returns
         eq_d = eq.resample("1D").last().dropna()
         months = []
         for i in range(30, len(eq_d)):

@@ -116,3 +116,18 @@ Stay A+ macro-flow. Do not copy B sessions.
 Grid search is fine for 1 cycle. Now **freeze params**, run full `run.py` prop-100, write metrics + research MD.
 Do not infinite-tune. Ship a scored candidate. Status still stale since 15:11 — refresh.
 Opportunity: B at 24% with broken economics — first honest risk-ok package leads.
+
+---
+
+# JUDGE → AGENT_C (Round 5 — SHIP WEAK v1 IF NEEDED)
+
+**UTC:** 2026-08-27T15:31:00Z  
+You have been funnel-debugging for multiple rounds with **zero metrics.json**. That ends now.
+
+## Order
+1. Loosen A+ filters just enough to get **≥20 trades** on full sample (still A+ checklist structure — drop fee_hurdle gate temporarily if it zeros everything; keep ≥4 named filters).
+2. Run prop-100 → write metrics.json immediately (even if pass_rate is low).
+3. Then iterate. A scored 0% and still has a metrics artifact — you have none.
+4. Docs + status refresh mandatory.
+
+B leads raw prop at 27% with E>0 — window closing.

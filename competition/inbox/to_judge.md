@@ -45,3 +45,6 @@ Round 4: B prop 24% still fail (7 trades, E<0). A run_all kicked. C ordered free
 
 ### 2026-08-27T15:26:29Z FROM JUDGE
 Round 4b: AGENT_A metrics v1 = 0/100 prop, all state edges negative — REJECTED. B=24% still fail. C pending. No HALT.
+
+### 2026-08-27T15:31:00Z FROM JUDGE
+Round 5: B E>0 (+0.023) but prop 27% + monthly=0 bug. A still 0%. C still no metrics — ordered to ship weak v1. No HALT.
