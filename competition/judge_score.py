@@ -163,30 +163,63 @@ def _normalize_metrics(raw: dict) -> dict:
         )
 
     if out.get("fees_bps") is None:
-        out["fees_bps"] = raw.get("fees_bps") or data.get("fee_bps_per_side") or data.get("fees_bps")
+        out["fees_bps"] = (
+            raw.get("fees_bps")
+            or data.get("fee_bps_per_side")
+            or data.get("fees_bps")
+            or (raw.get("costs") or {}).get("taker_fee_bps")
+            or (raw.get("costs") or {}).get("fee_bps")
+        )
     if out.get("slippage_bps") is None:
         out["slippage_bps"] = (
-            raw.get("slippage_bps") or data.get("slip_bps_per_side") or data.get("slippage_bps")
+            raw.get("slippage_bps")
+            or data.get("slip_bps_per_side")
+            or data.get("slippage_bps")
+            or (raw.get("costs") or {}).get("slippage_bps")
         )
 
     breaches = out.get("risk_breaches") if isinstance(out.get("risk_breaches"), dict) else {}
     if not breaches:
         breaches = {
             "daily_3pct": int(
-                prop.get("daily_breach_total")
+                raw.get("daily_breach_count")
+                or prop.get("daily_breach_total")
                 or full.get("daily_breach")
                 or wf.get("daily_breach_total")
                 or 0
             ),
             "dd_6pct": int(
-                prop.get("hwm_breach_total")
+                raw.get("dd_breach_count")
+                or prop.get("hwm_breach_total")
                 or full.get("hwm_breach")
                 or wf.get("hwm_breach_total")
                 or 0
             ),
-            "leverage_5x": int(prop.get("lev_breach_total") or full.get("lev_breach") or 0),
+            "leverage_5x": int(
+                raw.get("leverage_breach_count")
+                or prop.get("lev_breach_total")
+                or full.get("lev_breach")
+                or 0
+            ),
         }
+    # Full-sample max DD over 6% is an automatic DD breach signal
+    full_dd = _safe_float(full.get("max_dd") or out.get("max_dd_observed"))
+    if full_dd is not None and full_dd > 0.06 + 1e-12:
+        breaches["dd_6pct"] = max(int(breaches.get("dd_6pct") or 0), 1)
     out["risk_breaches"] = breaches
+
+    if out.get("expectancy") is None:
+        out["expectancy"] = full.get("expectancy") or full.get("expectancy_R") or full.get("expectancy_usd")
+    if out.get("hitrate") is None:
+        out["hitrate"] = full.get("hitrate") or full.get("hit_rate")
+    if out.get("max_dd_observed") is None:
+        out["max_dd_observed"] = full.get("max_dd") or full.get("max_dd_observed")
+    if out.get("prop_passes") is None:
+        out["prop_passes"] = (
+            prop.get("passes")
+            or raw.get("prop_passes")
+            or raw.get("prop_pass_count")
+        )
 
     if out.get("walk_forward_pass") is None:
         if "walk_forward_pass" in raw:
@@ -235,12 +268,14 @@ def load_agent(letter: str) -> AgentScore | None:
     max_lev = _safe_float(raw.get("max_leverage_used"), 0.0) or 0.0
     risk_ok = d3 == 0 and dd6 == 0 and lev == 0 and max_lev <= 5.0 + 1e-9
     risk_s = 100.0 if risk_ok else 0.0
-    # Inactive / never-trades bots must not farm full risk points
+    # Inactive / never-trades / zero-prop losers must not farm full risk points
     inactive = (
         (rate is not None and rate == 0.0)
-        and (mean is not None and mean == 0.0)
-        and (max_lev == 0.0)
-        and int(raw.get("prop_passes") or 0) == 0
+        and (mean is not None and mean <= 0.0)
+        and (
+            max_lev == 0.0
+            or int(raw.get("prop_passes") or 0) == 0
+        )
     )
     if inactive and risk_ok:
         risk_s = 25.0
@@ -248,6 +283,12 @@ def load_agent(letter: str) -> AgentScore | None:
         notes_inactive = True
     else:
         notes_inactive = False
+    # Negative expectancy with 0% prop: further risk haircut
+    exp = _safe_float(raw.get("expectancy"), 0.0) or 0.0
+    if rate is not None and rate == 0.0 and exp < 0 and risk_s > 25.0:
+        risk_s = 25.0
+        risk_ok = False
+        notes_inactive = True
 
     research = research_score(d / "research" / "BTCUSD_MARKET_STUDY.md")
     code = code_score(d)

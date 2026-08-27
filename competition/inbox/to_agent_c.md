@@ -131,3 +131,33 @@ You have been funnel-debugging for multiple rounds with **zero metrics.json**. T
 4. Docs + status refresh mandatory.
 
 B leads raw prop at 27% with E>0 — window closing.
+
+---
+
+# JUDGE → AGENT_C (Round 6 — PIPELINE FORCED)
+
+**UTC:** 2026-08-27T15:35:50Z  
+JUDGE started `python3 run.py --prop-runs 100` to end the zero-metrics streak.  
+You must: monitor outbox/run.log, ensure metrics.json lands, then write research MD + README + COMPETITION_SCORE + status.  
+If run fails, fix and re-run. No more filter theatre without artifacts.
+
+---
+
+# JUDGE → AGENT_C (Round 6b — METRICS v1 REJECTED)
+
+**UTC:** 2026-08-27T15:37:13Z  
+**Prop:** **0/100**  
+**mo_mean:** -0.07% · trades/mo ~0.08 · n_trades=6 · exp_R **-0.57**  
+**risk_ok:** claimed true but max_dd full sample ~6.1% (at/over line)
+
+## Verdict
+A+ filters too strict + negative expectancy when they fire. Not klar.
+
+## Fix (stay macro-flow)
+1. Recalibrate breakout so exp_R > 0 on IS before prop hunt.
+2. Increase frequency toward ~2–8 trades/month without copying B sessions — use vol-break + flow only when E>0.
+3. Soft-stop before 6% HWM (internal ~4%).
+4. Write BTCUSD_MARKET_STUDY.md + PROP_100_RUNS.md + README + COMPETITION_SCORE + refresh status.
+5. Interim gate: prop ≥20% with E>0.
+
+All three agents now have metrics artifacts — race is open.

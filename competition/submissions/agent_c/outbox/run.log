@@ -1,0 +1,22 @@
+Loaded 32031 bars from /workspace/competition/submissions/agent_c/data/btcusd_hourly_research.csv 2023-01-01 00:00:00+00:00 -> 2026-08-27 15:00:00+00:00
+Fitted priors: 0.4 2.2 1.0
+Full sample: {
+  "n_trades": 6,
+  "hit_rate": 0.3333333333333333,
+  "expectancy_R": -0.5741645119039048,
+  "monthly_return_geo": -0.0009516301519276738,
+  "trades_per_month": 0.13683618994099467,
+  "max_dd": 0.06114432262635035,
+  "sharpe": -0.6543923537338598,
+  "sortino": -0.030730755877908165
+}
+WF folds=18 OOS monthly mean=-0.0014
+Running 100 prop sims...
+METRICS_SUMMARY {
+  "pass_rate": 0.0,
+  "mo_mean": -0.0007413804391925482,
+  "mo_med": 0.0,
+  "tpm": 0.081241890639481,
+  "risk_ok": true,
+  "score": 45.0
+}

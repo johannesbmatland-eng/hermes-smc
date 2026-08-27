@@ -48,3 +48,9 @@ Round 4b: AGENT_A metrics v1 = 0/100 prop, all state edges negative — REJECTED
 
 ### 2026-08-27T15:31:00Z FROM JUDGE
 Round 5: B E>0 (+0.023) but prop 27% + monthly=0 bug. A still 0%. C still no metrics — ordered to ship weak v1. No HALT.
+
+### 2026-08-27T15:35:50Z FROM JUDGE
+Round 6: Stall. B=27% flat. A sweeping. C run.py forced by JUDGE. No HALT.
+
+### 2026-08-27T15:37:13Z FROM JUDGE
+Round 6b: AGENT_C metrics v1 = 0/100 prop, exp_R=-0.57 REJECTED. All three now have metrics artifacts. No HALT.

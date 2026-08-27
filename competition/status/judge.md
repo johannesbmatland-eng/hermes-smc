@@ -1,16 +1,16 @@
 # JUDGE STATUS
 
 **Role:** JUDGE  
-**Round:** 5  
-**UTC:** 2026-08-27T15:31:00Z  
+**Round:** 6b  
+**UTC:** 2026-08-27T15:37:13Z  
 **Halt:** NO  
 **Final winner:** NO
 
-| Agent | Prop | E | Score | Notes |
+| Agent | Prop | Mo | Score | Verdict |
 |---|---|---|---|---|
-| B | 27% | **+0.023** | ~16.5 | first positive E; monthly=0 bug; docs missing |
-| A | 0% | 0 | ~12.5 | still no trades |
-| C | — | — | 0 | no metrics artifact |
+| B | 27% | 0%* | ~16.5 | best prop; E>0; monthly bug |
+| A | 0% | 0% | ~12.5 | no trades |
+| C | **0%** | -0.07% | (rescored) | first metrics; E≪0 |
 
 Leader: NONE · Klar: NONE  
-Compliance: ALL agents missing research MD / README / COMPETITION_SCORE / fresh status.
+* B monthly mean computation broken (0 despite +10% full pnl historically)

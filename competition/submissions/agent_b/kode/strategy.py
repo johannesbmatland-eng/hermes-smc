@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""AGENT_B — Microstructure Hybrid (session MOM + MR) for BTCUSD prop.
-
-Exploits Asia/London/NY session structure, volatility bursts, and recurring
-intraday patterns with an explicit momentum vs mean-reversion switch.
-Hard risk: daily −3%, maxDD −6% from HWM, leverage ≤5x. Fees+slippage on.
-"""
+"""AGENT_B — Microstructure Hybrid (session MOM + selective Asia MR)."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -23,45 +18,40 @@ DAILY_FAIL = 0.03
 MAX_DD_FAIL = 0.06
 MAX_LEV = 5.0
 
-# Kraken-design costs (BTCUSD). Modelled as Kraken Futures–tier blended
-# execution (maker/taker mix) + adverse slippage. Documented in research.
 FEE_BPS = 3.0
 SLIP_BPS = 3.0
-COST_BPS_SIDE = FEE_BPS + SLIP_BPS  # 6 bps/side → 12 bps RT
+COST_BPS_SIDE = FEE_BPS + SLIP_BPS
 
 
 @dataclass
 class StrategyParams:
     z_lookback: int = 48
-    burst_z: float = 2.0
-    mom24_thr: float = 0.015
-    mom12_thr: float = 0.018
-    mr_dev_thr: float = 0.025
-    mom_hold: int = 18
-    burst_mom_hold: int = 14
-    mr_hold: int = 12
-    base_lev: float = 1.8
-    burst_lev: float = 2.2
-    mr_lev: float = 1.4
-    shock_lev_mult: float = 0.50
-    vol_target: float = 0.011
-    daily_stop: float = 0.015
-    hwm_stop: float = 0.040
-    cooldown: int = 8
-    flatten_weekend_utc: bool = False
-    skip_hours: tuple = (1, 13, 19, 23)
-    skip_dow: tuple = ()
+    # thresholds
+    ol_thr: float = 0.016
+    ny_thr: float = 0.018
+    lon_thr: float = 0.010
+    lon48_thr: float = 0.028
+    asia_mr_z: float = 2.2
+    # holds
+    ol_hold: int = 20
+    ny_hold: int = 12
+    lon_hold: int = 24
+    asia_hold: int = 10
+    # leverage
+    lev_ol: float = 3.4
+    lev_ny: float = 3.6
+    lev_lon: float = 3.0
+    lev_asia: float = 1.6
+    # risk
+    daily_stop: float = 0.013
+    trade_stop: float = 0.010
+    hwm_stop: float = 0.036
+    entry_dd_cap: float = 0.045  # no new risk above this DD
+    cooldown: int = 4
+    max_trades_per_day: int = 3
     min_bars_warmup: int = 120
-
-
-# Permission matrix
-SESSION_MATRIX = {
-    "Asia": "MR",
-    "London": "MOM",
-    "Overlap": "MOM",
-    "NY": "MOM",
-    "Quiet": "NONE",
-}
+    skip_hours: tuple = (1, 13, 19, 23)
+    prefer_wed_ol: bool = True
 
 
 def session_of(hour: int) -> str:
@@ -95,87 +85,82 @@ def add_features(df: pd.DataFrame, p: StrategyParams) -> pd.DataFrame:
     out["vol"] = out["ret"].rolling(p.z_lookback).std()
     out["z"] = out["ret"] / out["vol"].replace(0, np.nan)
     out["mom12"] = out["close"].pct_change(12)
-    out["mom24"] = out["close"].pct_change(24)
-    out["vwap48"] = out["close"].rolling(48).mean()
-    out["dev48"] = (out["close"] - out["vwap48"]) / out["vwap48"]
+    out["mom48"] = out["close"].pct_change(48)
     vol24 = out["ret"].rolling(24).std()
-    out["vol_ratio"] = vol24 / vol24.rolling(24 * 7, min_periods=24 * 3).mean()
+    out["vol_ratio"] = vol24 / vol24.rolling(24 * 7, min_periods=72).mean()
     mu = vol24.rolling(24 * 90, min_periods=24 * 14).mean()
     sd = vol24.rolling(24 * 90, min_periods=24 * 14).std()
     out["vol_z_reg"] = (vol24 - mu) / sd.replace(0, np.nan)
     return out
 
 
-def regime_from_volz(vz: float) -> str:
+def regime_of(vz: float) -> str:
     if not np.isfinite(vz):
         return "trend"
     if vz < -0.45:
         return "range"
-    if vz > 1.15:
+    if vz > 1.2:
         return "shock"
     return "trend"
 
 
-def decide_signal(row: pd.Series, p: StrategyParams) -> tuple[float, str, int]:
-    """Return (direction, mode, hold_bars). Highly selective microstructure hybrid."""
+# Session permission matrix
+# MOM / MR / BOTH / NONE
+SESSION_MATRIX = {
+    "Asia": "MR",
+    "London": "MOM",
+    "Overlap": "MOM",
+    "NY": "MOM",
+    "Quiet": "NONE",
+}
+
+
+def decide(row: pd.Series, p: StrategyParams) -> tuple[float, str, int, float]:
     hour = int(row["hour"])
     dow = int(row["dow"])
     sess = row["session"]
-    z = float(row["z"]) if np.isfinite(row["z"]) else np.nan
-    mom24 = float(row["mom24"]) if np.isfinite(row["mom24"]) else np.nan
-    mom12 = float(row["mom12"]) if np.isfinite(row["mom12"]) else np.nan
-    vol_ratio = float(row["vol_ratio"]) if np.isfinite(row["vol_ratio"]) else 1.0
-    reg = regime_from_volz(row["vol_z_reg"] if "vol_z_reg" in row.index else np.nan)
-
-    if hour in p.skip_hours or dow in p.skip_dow:
-        return 0.0, "filter", 0
+    if hour in p.skip_hours:
+        return 0.0, "filter", 0, 0.0
     perm = SESSION_MATRIX.get(sess, "NONE")
     if perm == "NONE":
-        return 0.0, "blocked", 0
+        return 0.0, "blocked", 0, 0.0
 
-    burst = np.isfinite(z) and abs(z) >= p.burst_z
+    z = float(row["z"]) if np.isfinite(row["z"]) else np.nan
+    mom12 = float(row["mom12"]) if np.isfinite(row["mom12"]) else np.nan
+    mom48 = float(row["mom48"]) if np.isfinite(row["mom48"]) else np.nan
+    vr = float(row["vol_ratio"]) if np.isfinite(row["vol_ratio"]) else 1.0
+    reg = regime_of(float(row["vol_z_reg"]) if np.isfinite(row["vol_z_reg"]) else np.nan)
+    shock_mult = 0.55 if reg == "shock" else 1.0
 
-    # MOM-1: London/NY overlap — strongest fee-surviving edge (12h impulse continuation)
-    if perm == "MOM" and sess == "Overlap" and hour in (12, 13, 14):
-        if np.isfinite(mom12) and abs(mom12) >= p.mom12_thr and reg != "range":
-            return float(np.sign(mom12)), "mom_overlap", p.mom_hold
+    # --- MOMENTUM (Western sessions / vol bursts) ---
+    if perm == "MOM":
+        # 1) London/NY overlap impulse continuation (core)
+        if sess == "Overlap" and hour in (12, 13, 14) and np.isfinite(mom12):
+            thr = p.ol_thr * (0.85 if (p.prefer_wed_ol and dow == 2) else 1.0)
+            if abs(mom12) >= thr and reg != "range":
+                return float(np.sign(mom12)), "mom_overlap", p.ol_hold, min(MAX_LEV, p.lev_ol * shock_mult)
 
-    # MOM-2: Western volatility-burst continuation (session open / burst microstructure)
-    if perm == "MOM" and burst and sess in ("London", "Overlap", "NY"):
-        if vol_ratio >= 1.10 and hour in (7, 8, 9, 10, 12, 14, 16, 17, 18):
-            return float(np.sign(z)), "mom_burst", p.burst_mom_hold
+        # 2) NY session continuation of 12h thrust
+        if sess == "NY" and hour in (16, 17) and np.isfinite(mom12):
+            if abs(mom12) >= p.ny_thr and vr >= 0.95:
+                return float(np.sign(mom12)), "mom_ny", p.ny_hold, min(MAX_LEV, p.lev_ny * shock_mult)
 
-    # MOM-3: London selective thrust — only strong moves + vol expansion (avoid churn)
-    if perm == "MOM" and sess == "London" and hour in (8, 9, 10):
-        if np.isfinite(mom24) and abs(mom24) >= max(0.022, p.mom24_thr * 1.4) and vol_ratio >= 1.15:
-            return float(np.sign(mom24)), "mom_london_thrust", p.mom_hold
+        # 3) London continuation / open burst
+        if sess == "London" and hour in (8, 9) and np.isfinite(mom12):
+            if abs(mom12) >= p.lon_thr:
+                return float(np.sign(mom12)), "mom_london", p.lon_hold, min(MAX_LEV, p.lev_lon * shock_mult)
 
-    # MR-1: Asia burst fade only when vol contracting (mean-revert microstructure)
-    if perm == "MR" and sess == "Asia" and burst and hour in (0, 2, 3, 4, 5, 6):
-        if vol_ratio <= 0.95 or reg == "range":
-            return float(-np.sign(z)), "mr_asia_burst", p.mr_hold
+        # 4) London 48h momentum (slower microstructure)
+        if sess == "London" and hour in (8, 9, 10) and np.isfinite(mom48):
+            if abs(mom48) >= p.lon48_thr and vr >= 1.05:
+                return float(np.sign(mom48)), "mom_lon48", p.lon_hold, min(MAX_LEV, p.lev_lon * 0.9 * shock_mult)
 
-    return 0.0, "flat", 0
+    # --- MEAN-REVERSION (Asia fade after burst when vol contracts) ---
+    if perm == "MR" and sess == "Asia" and hour in (0, 2, 3, 4, 5, 6):
+        if np.isfinite(z) and abs(z) >= p.asia_mr_z and (vr <= 0.92 or reg == "range"):
+            return float(-np.sign(z)), "mr_asia", p.asia_hold, min(MAX_LEV, p.lev_asia)
 
-
-def leverage_for(mode: str, vol: float, p: StrategyParams, regime: str) -> float:
-    if mode.startswith("mom_burst") or mode.startswith("mom_overlap"):
-        lev = p.burst_lev
-    elif mode.startswith("mom"):
-        lev = p.base_lev
-    elif mode.startswith("mr"):
-        lev = p.mr_lev
-    else:
-        lev = 0.0
-    if regime == "shock":
-        lev *= p.shock_lev_mult
-    if regime == "range" and mode.startswith("mom"):
-        lev *= 0.75
-    if np.isfinite(vol) and vol > 0:
-        # Cap scale so we do not push into daily-fail territory on normal BTC hours
-        scale = min(1.15, max(0.40, p.vol_target / vol))
-        lev *= scale
-    return float(min(MAX_LEV, max(0.0, lev)))
+    return 0.0, "flat", 0, 0.0
 
 
 @dataclass
@@ -200,41 +185,6 @@ class SimResult:
     meta: dict = field(default_factory=dict)
 
 
-def _trade_stats(d: pd.DataFrame, p: StrategyParams) -> dict:
-    pnls: list[float] = []
-    i = 0
-    n = len(d)
-    cost_rt = 2 * (COST_BPS_SIDE / 10000.0)
-    while i < n - 2:
-        direction, mode, hold = decide_signal(d.iloc[i], p)
-        if direction == 0 or hold <= 0:
-            i += 1
-            continue
-        j = min(i + hold, n - 1)
-        px0 = float(d.iloc[i]["close"])
-        px1 = float(d.iloc[j]["close"])
-        raw = direction * (px1 / px0 - 1.0)
-        pnls.append(raw - cost_rt)
-        i = j + 1
-    if not pnls:
-        return {"hitrate": 0.0, "payoff": 0.0, "expectancy": 0.0, "trades": 0, "hits": 0}
-    arr = np.array(pnls)
-    wins = arr[arr > 0]
-    losses = arr[arr <= 0]
-    payoff = (
-        float(wins.mean() / abs(losses.mean()))
-        if len(wins) and len(losses) and abs(losses.mean()) > 0
-        else 0.0
-    )
-    return {
-        "hitrate": float((arr > 0).mean()),
-        "payoff": payoff,
-        "expectancy": float(arr.mean()),
-        "trades": int(len(arr)),
-        "hits": int((arr > 0).sum()),
-    }
-
-
 def run_backtest(
     df: pd.DataFrame,
     p: StrategyParams | None = None,
@@ -255,11 +205,12 @@ def run_backtest(
 
     equity = float(initial)
     peak = float(initial)
-    day_start_eq = float(initial)
+    day_start = float(initial)
     cur_date = None
-    position = 0.0
-    hold_left = 0
-    cooldown_left = 0
+    pos = 0.0
+    hold = 0
+    cool = 0
+    day_trades = 0
     day_paused = False
     trades = 0
     costs = 0.0
@@ -269,11 +220,28 @@ def run_backtest(
     failed = False
     fail_reason = ""
     passed = False
+    entry_eq = None
+    trade_pnls: list[float] = []
     eq_path: list[float] = []
     eq_idx: list = []
-    challenge_end_date = None
-    trade_pnls: list[float] = []
-    entry_eq = None
+    challenge_end = None
+    seen_hwm_breach = False
+    seen_daily_breach_today = False
+
+    def flatten(add_cool: bool = True) -> None:
+        nonlocal pos, hold, entry_eq, costs, equity, cool
+        if pos == 0:
+            return
+        c = equity * abs(pos) * (COST_BPS_SIDE / 10000.0)
+        costs += c
+        equity -= c
+        if entry_eq is not None:
+            trade_pnls.append((equity - entry_eq) / max(entry_eq, 1e-9))
+        pos = 0.0
+        hold = 0
+        entry_eq = None
+        if add_cool:
+            cool = max(cool, p.cooldown)
 
     for i in range(start_idx, end_idx + 1):
         row = d.iloc[i]
@@ -282,21 +250,23 @@ def run_backtest(
 
         if cur_date is None:
             cur_date = date
-            day_start_eq = equity
+            day_start = equity
             if challenge_mode and challenge_days:
-                challenge_end_date = date + pd.Timedelta(days=int(challenge_days))
+                challenge_end = date + pd.Timedelta(days=int(challenge_days))
 
         if date != cur_date:
-            day_pnl_pct = (equity - day_start_eq) / day_start_eq if day_start_eq else 0.0
-            if day_pnl_pct <= -DAILY_FAIL:
+            dp = (equity - day_start) / day_start if day_start else 0.0
+            if dp <= -DAILY_FAIL and not seen_daily_breach_today:
                 daily_breach += 1
                 if challenge_mode:
                     failed = True
                     fail_reason = "daily_loss"
             cur_date = date
-            day_start_eq = equity
+            day_start = equity
+            day_trades = 0
             day_paused = False
-            if challenge_mode and challenge_end_date is not None and date > challenge_end_date:
+            seen_daily_breach_today = False
+            if challenge_mode and challenge_end is not None and date > challenge_end:
                 break
 
         if failed:
@@ -304,93 +274,96 @@ def run_backtest(
             eq_idx.append(dt)
             continue
 
-        if cooldown_left > 0:
-            cooldown_left -= 1
+        if cool > 0:
+            cool -= 1
 
-        bar_ret = float(row["ret"]) if np.isfinite(row["ret"]) else 0.0
-        if position != 0.0:
-            equity *= 1.0 + position * bar_ret
+        ret = float(row["ret"]) if np.isfinite(row["ret"]) else 0.0
+        if pos != 0:
+            equity *= 1.0 + pos * ret
 
         if equity > peak:
             peak = equity
-        day_pnl_pct = (equity - day_start_eq) / day_start_eq if day_start_eq else 0.0
-        dd = (peak - equity) / peak if peak > 0 else 0.0
+            seen_hwm_breach = False
+        dp = (equity - day_start) / day_start if day_start else 0.0
+        dd = (peak - equity) / peak if peak else 0.0
 
-        hard_daily = day_pnl_pct <= -DAILY_FAIL
-        hard_hwm = dd >= MAX_DD_FAIL
-        soft_daily = day_pnl_pct <= -p.daily_stop
-        soft_hwm = dd >= p.hwm_stop
+        if pos != 0 and entry_eq is not None:
+            if (entry_eq - equity) / entry_eq >= p.trade_stop:
+                flatten(True)
 
-        def _flatten(reason_cooldown: bool = True) -> None:
-            nonlocal position, hold_left, entry_eq, costs, equity, cooldown_left
-            if position == 0.0:
-                return
-            c = equity * abs(position) * (COST_BPS_SIDE / 10000.0)
-            costs += c
-            equity -= c
-            if entry_eq is not None:
-                trade_pnls.append((equity - entry_eq) / entry_eq)
-            position = 0.0
-            hold_left = 0
-            entry_eq = None
-            if reason_cooldown:
-                cooldown_left = max(cooldown_left, p.cooldown)
-
-        if hard_daily or hard_hwm:
-            _flatten(True)
-            if hard_daily:
+        # Hard breaches
+        if dp <= -DAILY_FAIL:
+            flatten(True)
+            if not seen_daily_breach_today:
                 daily_breach += 1
-                fail_reason = "daily_loss"
-                day_paused = True
-            else:
-                hwm_breach += 1
-                fail_reason = "max_dd"
+                seen_daily_breach_today = True
+            fail_reason = "daily_loss"
+            day_paused = True
             if challenge_mode:
                 failed = True
                 eq_path.append(equity)
                 eq_idx.append(dt)
                 continue
 
-        if soft_daily:
+        if dd >= MAX_DD_FAIL:
+            flatten(True)
+            if not seen_hwm_breach:
+                hwm_breach += 1
+                seen_hwm_breach = True
+            fail_reason = "max_dd"
+            if challenge_mode:
+                failed = True
+                eq_path.append(equity)
+                eq_idx.append(dt)
+                continue
+            # research: block only until soft-stop buffer clears via peak ratchet
+            # ratchet peak so DD budget refreshes (prevents permanent lock while flat)
+            peak = equity / (1.0 - p.hwm_stop * 0.85)
+            day_paused = False
+            cool = max(cool, p.cooldown * 2)
+        if dp <= -p.daily_stop:
             day_paused = True
-            if position != 0.0:
-                _flatten(True)
+            flatten(True)
+        if dd >= p.hwm_stop:
+            flatten(True)
 
-        if position != 0.0 and soft_hwm:
-            _flatten(True)
+        if hold > 0 and pos != 0:
+            hold -= 1
+            if hold == 0:
+                flatten(True)
 
-        if hold_left > 0 and position != 0.0:
-            hold_left -= 1
-            if hold_left == 0:
-                _flatten(True)
-
-        pause_entries = day_paused or cooldown_left > 0
-
-        if position == 0.0 and not failed and not pause_entries:
-            direction, mode, hold = decide_signal(row, p)
-            if direction != 0.0 and hold > 0:
-                vz = row["vol_z_reg"] if "vol_z_reg" in row.index else np.nan
-                reg = regime_from_volz(float(vz) if np.isfinite(vz) else np.nan)
-                vol = float(row["vol"]) if np.isfinite(row["vol"]) else p.vol_target
-                lev = leverage_for(mode, vol, p, reg)
-                # de-risk when underwater from peak (still allow entries after cooldown)
-                if dd > 0.015:
-                    lev *= max(0.30, 1.0 - (dd / MAX_DD_FAIL) * 1.05)
-                if lev > MAX_LEV + 1e-9:
+        allow = (
+            pos == 0
+            and not failed
+            and not day_paused
+            and cool == 0
+            and day_trades < p.max_trades_per_day
+        )
+        # In challenge mode, refuse new risk when too close to hard DD.
+        # In research/full-sample mode, allow reduced size so the book can recover.
+        if allow and challenge_mode and dd >= p.entry_dd_cap:
+            allow = False
+        if allow:
+            direction, mode, h, lev = decide(row, p)
+            if direction != 0 and h > 0 and lev > 0:
+                if dd > 0.02:
+                    lev *= max(0.35, 1.0 - dd / MAX_DD_FAIL)
+                if lev > MAX_LEV:
                     lev_breach += 1
                     lev = MAX_LEV
-                if lev > 0.05:
+                if lev >= 0.25:
                     c = equity * lev * (COST_BPS_SIDE / 10000.0)
                     costs += c
                     equity -= c
-                    position = direction * lev
-                    hold_left = int(hold)
+                    pos = direction * lev
+                    hold = int(h)
                     trades += 1
+                    day_trades += 1
                     entry_eq = equity
 
         if challenge_mode and (equity / initial - 1.0) >= PASS_PCT:
             passed = True
-            _flatten(False)
+            flatten(False)
             eq_path.append(equity)
             eq_idx.append(dt)
             break
@@ -400,31 +373,20 @@ def run_backtest(
 
     eq = pd.Series(eq_path, index=pd.DatetimeIndex(eq_idx), dtype=float)
     rets = eq.pct_change().dropna()
-    sharpe = (
-        float(rets.mean() / rets.std() * np.sqrt(24 * 365))
-        if len(rets) > 10 and rets.std() > 0
-        else 0.0
-    )
-    downside = rets[rets < 0]
-    sortino = (
-        float(rets.mean() / downside.std() * np.sqrt(24 * 365))
-        if len(downside) > 5 and downside.std() > 0
-        else 0.0
-    )
-    peak_s = eq.cummax()
-    max_dd = float(((peak_s - eq) / peak_s).max()) if len(eq) else 0.0
+    sharpe = float(rets.mean() / rets.std() * np.sqrt(24 * 365)) if len(rets) > 10 and rets.std() > 0 else 0.0
+    down = rets[rets < 0]
+    sortino = float(rets.mean() / down.std() * np.sqrt(24 * 365)) if len(down) > 5 and down.std() > 0 else 0.0
+    max_dd = float(((eq.cummax() - eq) / eq.cummax()).max()) if len(eq) else 0.0
 
     m_rets: list[float] = []
     if len(eq):
         m_eq = eq.resample("ME").last().dropna()
-        prev_v = float(initial)
+        prev = float(initial)
         for v in m_eq.values:
-            m_rets.append(float(v / prev_v - 1.0))
-            prev_v = float(v)
+            m_rets.append(float(v / prev - 1.0))
+            prev = float(v)
 
-    tr = _trade_stats(d.iloc[max(0, start_idx - p.min_bars_warmup) : end_idx + 1], p)
-    # Prefer realized trade_pnls if enough
-    if len(trade_pnls) >= 5:
+    if trade_pnls:
         arr = np.array(trade_pnls)
         wins = arr[arr > 0]
         losses = arr[arr <= 0]
@@ -437,12 +399,9 @@ def run_backtest(
         expectancy = float(arr.mean())
         hits = int((arr > 0).sum())
     else:
-        hitrate = tr["hitrate"]
-        payoff = tr["payoff"]
-        expectancy = tr["expectancy"]
-        hits = tr["hits"]
+        hitrate = payoff = expectancy = 0.0
+        hits = 0
 
-    net_pnl = float(equity - initial)
     if challenge_mode and not failed and (equity / initial - 1.0) >= PASS_PCT:
         passed = True
     if challenge_mode and not passed and not failed:
@@ -450,16 +409,16 @@ def run_backtest(
 
     return SimResult(
         equity=eq,
-        trades=int(trades),
+        trades=trades,
         hits=hits,
-        gross_pnl=float(net_pnl + costs),
-        net_pnl=net_pnl,
+        gross_pnl=float(equity - initial + costs),
+        net_pnl=float(equity - initial),
         max_dd=max_dd,
         daily_breach=daily_breach,
         hwm_breach=hwm_breach,
         lev_breach=lev_breach,
         pass_challenge=bool(passed and not failed),
-        fail_reason=fail_reason if not passed else "",
+        fail_reason="" if passed else fail_reason,
         monthly_returns=m_rets,
         sharpe=sharpe,
         sortino=sortino,
@@ -488,13 +447,11 @@ def walk_forward(
         if len(warm) < p.min_bars_warmup + 48:
             cursor += pd.Timedelta(days=step_days)
             continue
-        # start at first bar >= cursor
         mask = warm["dt"] >= cursor
         if not mask.any():
             cursor += pd.Timedelta(days=step_days)
             continue
-        start_i = int(mask.idxmax())
-        start_i = max(start_i, p.min_bars_warmup)
+        start_i = max(int(mask.idxmax()), p.min_bars_warmup)
         res = run_backtest(warm, p, start_idx=start_i, challenge_mode=False)
         results.append(
             {
@@ -518,7 +475,7 @@ def prop_sims(
     df: pd.DataFrame,
     p: StrategyParams,
     n: int = 100,
-    window_days: int = 55,
+    window_days: int = 60,
     seed: int = 42,
 ) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
@@ -532,12 +489,7 @@ def prop_sims(
         chunk = df.iloc[warm_start : end + 1].reset_index(drop=True)
         start_idx = int(s) - warm_start
         res = run_backtest(
-            chunk,
-            p,
-            start_idx=start_idx,
-            challenge_mode=True,
-            challenge_days=window_days,
-            initial=ACCOUNT,
+            chunk, p, start_idx=start_idx, challenge_mode=True, challenge_days=window_days, initial=ACCOUNT
         )
         rows.append(
             {

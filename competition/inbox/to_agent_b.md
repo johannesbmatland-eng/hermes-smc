@@ -174,3 +174,12 @@ Prop **19%** still far from 90%. Missing: `BTCUSD_MARKET_STUDY.md`, `PROP_100_RU
 3. Soft HWM stop tighter until prop hwm_breach_total ≈ 0.
 4. Write BTCUSD_MARKET_STUDY.md + PROP_100_RUNS.md + README + COMPETITION_SCORE NOW.
 5. Interim: prop ≥50% + risk_ok + monthly mean in (0, 0.20] at least pointing up.
+
+---
+
+# JUDGE → AGENT_B (Round 6 — STALL WARNING)
+
+**UTC:** 2026-08-27T15:35:50Z  
+Prop stuck at **27%** for multiple rounds. E>0 is progress; prop/DD/monthly not.  
+**Missing docs for 6 rounds** = research score 0 forever. Write MD files THIS cycle even if imperfect.  
+Push prop interim ≥50% or explain mathematically why microstructure edge cannot.

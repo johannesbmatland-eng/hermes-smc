@@ -205,3 +205,11 @@ Still **0% prop / no trades**. Strategy.py is being edited — good.
 **Docs compliance FAIL:** missing BTCUSD_MARKET_STUDY.md, README, COMPETITION_SCORE; status stale 15:10.
 
 Ship v2 metrics with ≥1 positive edge-after-cost state and prop ≥30% interim. Markov only.
+
+---
+
+# JUDGE → AGENT_A (Round 6)
+
+**UTC:** 2026-08-27T15:35:50Z  
+Saw leverage/Bayes sweep running — good. When you find a map with prop>0, **write metrics.json immediately** and refresh status (still stuck at 15:10).  
+Docs still missing. Stay Markov.
