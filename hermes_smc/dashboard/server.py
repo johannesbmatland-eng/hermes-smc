@@ -116,16 +116,19 @@ class DashboardServer:
         live_trade = None
         if open_positions:
             p = open_positions[0]
-            risk = abs(p["entry_price"] - p["stop_loss"])
-            reward = abs(p["take_profit"] - p["entry_price"])
+            entry = float(p["entry_price"])
+            sl = float(p["stop_loss"])
+            tp = p.get("take_profit")
+            risk = abs(entry - sl)
+            reward = abs(float(tp) - entry) if tp is not None else None
             info = p.get("strategy_info") or {}
             live_trade = {
                 "id": p["id"],
                 "asset": p.get("asset", market),
                 "side": p.get("side", "long"),
-                "entry_price": p["entry_price"],
-                "stop_loss": p["stop_loss"],
-                "take_profit": p["take_profit"],
+                "entry_price": entry,
+                "stop_loss": sl,
+                "take_profit": tp,
                 "position_size": p["position_size"],
                 "current_price": p.get("current_price", price),
                 "pnl": p.get("pnl", 0),
@@ -133,7 +136,7 @@ class DashboardServer:
                 "pnl_account_pct": p.get("pnl_account_pct", 0),
                 "r_multiple": p.get("r_multiple", 0),
                 "open_time": p.get("open_time"),
-                "rr": (reward / risk) if risk > 0 else None,
+                "rr": (reward / risk) if (reward is not None and risk > 0) else None,
                 "confirmation": info.get("confirmation"),
                 "session": info.get("session"),
                 "trend": info.get("trend"),
@@ -324,7 +327,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if path == "/" or path == "/index.html":
             self.send_html(self._get_dashboard_html())
         elif path == "/api/stats":
-            self.send_json(self.engine_server.get_stats() if self.engine_server else {})
+            try:
+                self.send_json(self.engine_server.get_stats() if self.engine_server else {})
+            except Exception as e:
+                logger.exception("get_stats failed")
+                self.send_json({"ok": False, "error": str(e), "engine_status": "error"})
         elif path == "/api/positions":
             positions = self.engine_server.get_positions() if self.engine_server else []
             self.send_json({"positions": positions})
@@ -1055,6 +1062,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     fetch('/api/analytics').then(r => r.json()),
                 ]);
 
+                if (!stats || stats.error || stats.ok === false) {
+                    console.warn('stats unavailable', stats && stats.error);
+                    document.getElementById('status_text').textContent = 'error';
+                    document.getElementById('status_dot').className = 'status-dot stopped';
+                    return;
+                }
+
                 document.getElementById('market_label').textContent = stats.market || analysis.market || 'BTC/USD';
                 if (stats.price != null) {
                     document.getElementById('live_price').textContent = formatCurrency(stats.price);
@@ -1136,16 +1150,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 if (positions.positions && positions.positions.length > 0) {
                     posContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Asset</th><th>Side</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>PnL $</th><th>Acct %</th></tr></thead><tbody>' +
                         positions.positions.map(p => {
-                            const acct = p.pnl_account_pct != null ? p.pnl_account_pct : p.pnl_pct;
+                            const acct = p.pnl_account_pct != null ? p.pnl_account_pct : (p.pnl_pct || 0);
+                            const tp = p.take_profit;
                             return `
                             <tr>
-                                <td>${p.id.substring(0, 8)}...</td>
-                                <td>${p.asset}</td>
-                                <td class="side-${p.side}">${p.side}</td>
-                                <td>${p.entry_price.toFixed(2)}</td>
-                                <td>${p.position_size.toFixed(6)}</td>
-                                <td>${p.stop_loss.toFixed(2)}</td>
-                                <td>${p.take_profit.toFixed(2)}</td>
+                                <td>${(p.id || '').substring(0, 8)}...</td>
+                                <td>${p.asset || '--'}</td>
+                                <td class="side-${p.side || ''}">${p.side || '--'}</td>
+                                <td>${p.entry_price != null ? Number(p.entry_price).toFixed(2) : '--'}</td>
+                                <td>${p.position_size != null ? Number(p.position_size).toFixed(6) : '--'}</td>
+                                <td>${p.stop_loss != null ? Number(p.stop_loss).toFixed(2) : '--'}</td>
+                                <td>${tp != null ? Number(tp).toFixed(2) : 'trail'}</td>
                                 <td class="${(p.pnl || 0) >= 0 ? 'positive' : 'negative'}">${formatSignedCurrency(p.pnl || 0)}</td>
                                 <td class="${acct >= 0 ? 'positive' : 'negative'}">${(acct >= 0 ? '+' : '') + Number(acct).toFixed(2)}%</td>
                             </tr>`;
