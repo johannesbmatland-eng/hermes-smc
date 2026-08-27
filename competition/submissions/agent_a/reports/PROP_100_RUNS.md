@@ -8,7 +8,7 @@
 5. Hard fail: daily loss ≤ −$3,000 **OR** drawdown from peak ≥ 6%. Leverage clamped ≤ 5x.
 6. Fees **8 bps/side** + slippage **3 bps/side** on every entry/exit.
 7. Simulation stops early on pass or fail (`prop_mode=True`).
-8. Position stops are **equity-mapped** (~1.9% equity stop / ~6.5% equity TP) so a single trade cannot breach the daily −3% rule.
+8. Position stops are **equity-mapped** (~1.5% equity stop / ~5.5% equity TP) with gap-aware fills; leverage ≤ 0.55x so a single trade cannot breach the daily −3% rule.
 
 ## Summary
 - Passes: **5** / 100
