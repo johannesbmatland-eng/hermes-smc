@@ -28,58 +28,75 @@ DEFAULT_STRATEGY = {
         "currency": "USD",
     },
     "timeframes": {
-        "main": "5m",       # primary trading timeframe
-        "trend_1h": "1h",   # higher timeframe trend filter
-        "trend_15m": "15m", # intermediate trend filter
+        "main": "5m",
+        "trend_1h": "1h",
+        "trend_15m": "15m",
     },
     "trend_filter": {
         "enabled": True,
-        "method": "ema_majority",  # ema_majority | ema_and_structure
+        "method": "ema_majority",
         "ema_period": 50,
     },
-    "exits": {
-        "structure_break": False,  # SL/TP only — avoid killing FVG pullback entries
-        "mode": "be_trail",        # fixed_tp | be_trail | trail_only
-        "be_at_rr": 1.5,
-        "trail_after_be": True,
-        "trail_rr": 1.0,
-        "tp_rr": 3.0,              # hard TP at 3R
-        "be_buffer_pct": 0.0001,
+    "scalp": {
+        "ema_fast": 9,
+        "ema_slow": 21,
+        "ema_trend": 50,
+        "bb_period": 20,
+        "bb_mult": 2.0,
     },
     "fvq_detection": {
         "min_candles_since_fvg": 50,
         "fvg_buffer_pct": 0.001,
     },
     "entry": {
+        "strategy": "scalp",
+        "scalp_mode": "ema_cross",
         "confirmation": "engulfing_or_ifvg",
         "pullback_depth_pct": 0.5,
         "max_open_positions": 1,
-        "cooldown_seconds": 300,
+        "cooldown_seconds": 60,
         "engulf_lookback": 2,
+        "allowed_sides": ["long", "short"],
+        "min_engulf_body_ratio": 1.0,
+        "min_engulf_body_pct": 0.0,
     },
     "rsi": {
         "enabled": True,
         "period": 14,
-        "long_max": 65,
-        "short_min": 35,
+        "long_max": 75,
+        "short_min": 25,
     },
     "sessions": {
         "timezone": "America/New_York",
         "filter_entries": True,
         "windows": [
-            {"name": "ASIA", "start": "20:00", "end": "02:00", "enabled": True},
+            {"name": "ASIA", "start": "20:00", "end": "02:00", "enabled": False},
             {"name": "LNDN", "start": "02:00", "end": "09:30", "enabled": True},
             {"name": "NYAM", "start": "09:30", "end": "13:30", "enabled": True},
-            {"name": "NYPM", "start": "13:30", "end": "20:00", "enabled": True},
+            {"name": "NYPM", "start": "13:30", "end": "20:00", "enabled": False},
         ],
     },
+    "exits": {
+        "structure_break": False,
+        "mode": "fixed_tp",
+        "be_at_rr": 0.5,
+        "trail_after_be": False,
+        "trail_rr": 1.0,
+        "tp_rr": 2.0,
+        "be_buffer_pct": 0.0001,
+    },
     "risk": {
-        "risk_pct_per_trade": 0.5,
-        "rr_target": 2.0,       # 1:2 RR → 0.5% risk makes 1%
-        "rr_alternative": 3.0,
-        "sl_buffer_pct": 0.0003,  # just beyond FVG zone edge
+        "risk_pct_per_trade": 1.0,
+        "rr_target": 2.0,
+        "rr_alternative": 1.2,
+        "sl_pct": 0.003,
+        "sl_buffer_pct": 0.0003,
+        "max_daily_loss_pct": 3.0,
+        "max_drawdown_pct": 6.0,
+        "fee_roundtrip_pct": 0.0004,
     },
 }
+
 
 
 class SMCConfig:
@@ -132,9 +149,72 @@ class PositionManager:
         self.closed_positions: list[dict] = []
         self.trade_history: list[dict] = []
         self.state_dir = state_dir
+        # Prop-style risk tracking (NY day + equity peak)
+        self.day_key: str | None = None
+        self.day_start_equity: float = initial_capital
+        self.day_realized_pnl: float = 0.0
+        self.equity_peak: float = initial_capital
+        self.entries_halted_reason: str | None = None
         if self.state_dir:
             self.state_dir.mkdir(parents=True, exist_ok=True)
             self._load_state()
+
+    def _ny_day_key(self, ts: float | None = None) -> str:
+        from datetime import datetime, timezone
+        from zoneinfo import ZoneInfo
+        t = ts if ts is not None else time.time()
+        return datetime.fromtimestamp(t, tz=ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+
+    def sync_risk_day(self, ts: float | None = None):
+        """Roll daily risk window in America/New_York."""
+        key = self._ny_day_key(ts)
+        if self.day_key != key:
+            self.day_key = key
+            self.day_start_equity = self.equity
+            self.day_realized_pnl = 0.0
+            if self.entries_halted_reason and self.entries_halted_reason.startswith("daily"):
+                self.entries_halted_reason = None
+
+    def note_realized_pnl(self, pnl: float, ts: float | None = None):
+        self.sync_risk_day(ts)
+        self.day_realized_pnl += float(pnl)
+        self.equity_peak = max(self.equity_peak, self.equity)
+
+    def risk_allows_new_entry(
+        self,
+        risk_pct: float,
+        max_daily_loss_pct: float = 2.0,
+        max_drawdown_pct: float = 6.0,
+        ts: float | None = None,
+    ) -> tuple[bool, str | None]:
+        """
+        Prop-style gates before opening a new trade.
+        Blocks if another full-risk loss would breach daily loss, or if MDD is hit.
+        """
+        self.sync_risk_day(ts)
+        eq = self.equity
+        self.equity_peak = max(self.equity_peak, eq)
+        if self.equity_peak > 0:
+            dd_pct = (self.equity_peak - eq) / self.equity_peak * 100
+            if dd_pct >= max_drawdown_pct:
+                self.entries_halted_reason = f"drawdown {dd_pct:.2f}%≥{max_drawdown_pct}%"
+                return False, self.entries_halted_reason
+
+        start = self.day_start_equity or self.initial_capital
+        day_pct = (self.day_realized_pnl / start * 100) if start else 0.0
+        if day_pct <= -max_daily_loss_pct:
+            self.entries_halted_reason = f"daily {day_pct:.2f}%≤-{max_daily_loss_pct}%"
+            return False, self.entries_halted_reason
+        # Another full loss must stay within daily cap
+        if day_pct - float(risk_pct) < -max_daily_loss_pct:
+            self.entries_halted_reason = (
+                f"daily budget {day_pct:.2f}% risk {risk_pct}% would breach -{max_daily_loss_pct}%"
+            )
+            return False, self.entries_halted_reason
+        if float(risk_pct) > max_daily_loss_pct + 1e-9:
+            return False, f"risk {risk_pct}% > daily cap {max_daily_loss_pct}%"
+        return True, None
+
 
     @property
     def _state_file(self) -> Path | None:
@@ -152,10 +232,22 @@ class PositionManager:
             self.open_positions = data.get("open_positions", {})
             self.closed_positions = data.get("closed_positions", [])
             self.trade_history = data.get("trade_history", [])
+            self.day_key = data.get("day_key", self.day_key)
+            self.day_start_equity = float(
+                data.get("day_start_equity", self.day_start_equity)
+            )
+            self.day_realized_pnl = float(
+                data.get("day_realized_pnl", self.day_realized_pnl)
+            )
+            self.equity_peak = float(data.get("equity_peak", self.equity_peak or self.capital))
+            self.entries_halted_reason = data.get("entries_halted_reason")
             self._repair_capital_accounting()
+            # Peak must never be below current equity after restore
+            self.equity_peak = max(self.equity_peak, self.equity)
             logger.info(
                 f"Restored state: capital={self.capital:.2f} "
-                f"open={len(self.open_positions)} closed={len(self.closed_positions)}"
+                f"open={len(self.open_positions)} closed={len(self.closed_positions)} "
+                f"day={self.day_key} peak={self.equity_peak:.2f}"
             )
         except Exception as e:
             logger.error(f"Failed to load state ({f}): {e}")
@@ -216,6 +308,11 @@ class PositionManager:
                 "open_positions": self.open_positions,
                 "closed_positions": self.closed_positions,
                 "trade_history": self.trade_history,
+                "day_key": self.day_key,
+                "day_start_equity": self.day_start_equity,
+                "day_realized_pnl": self.day_realized_pnl,
+                "equity_peak": self.equity_peak,
+                "entries_halted_reason": self.entries_halted_reason,
                 "saved_at": time.time(),
             }, indent=2))
             tmp.replace(f)
@@ -381,6 +478,7 @@ class PositionManager:
                 position["rsi_at_entry"] = info["rsi_at_entry"]
         # Equity model: apply realized PnL only
         self.capital += pnl
+        self.note_realized_pnl(pnl, position.get("exit_time"))
 
         # Move to closed
         self.closed_positions.append(position)

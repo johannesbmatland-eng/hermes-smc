@@ -1,0 +1,81 @@
+{
+  "plan": {
+    "name": "Starter",
+    "account": 100000.0,
+    "profit_target_pct": 10.0,
+    "daily_loss_pct": 3.0,
+    "max_dd_pct": 6.0,
+    "fee_usd": 800.0
+  },
+  "strategy": "short ASIA+LNDN engulf1.5 tp1.2R risk1.35%",
+  "trades": 149,
+  "period": {
+    "start": "2025-08-27T13:25:00+00:00",
+    "end": "2026-08-27T13:20:00+00:00"
+  },
+  "elapsed_sec": 48.2,
+  "results": {
+    "static": {
+      "dd_mode": "static",
+      "passes": 0,
+      "pass_list": [],
+      "failed": {
+        "reason": "drawdown_static",
+        "when": "2025-10-18 07:05",
+        "challenge": 1,
+        "day_pct": -1.35,
+        "dd_pct": 6.219,
+        "from_start_pct": -6.219,
+        "equity": 93781.35,
+        "passes_before_fail": 0
+      },
+      "events": [
+        {
+          "type": "FAIL",
+          "reason": "drawdown_static",
+          "when": "2025-10-18 07:05",
+          "challenge": 1,
+          "day_pct": -1.35,
+          "dd_pct": 6.219,
+          "from_start_pct": -6.219,
+          "equity": 93781.35,
+          "passes_before_fail": 0
+        }
+      ],
+      "final_equity": 93781.35,
+      "challenges_started": 1,
+      "fees_if_each_attempt": 800.0
+    },
+    "trailing": {
+      "dd_mode": "trailing",
+      "passes": 0,
+      "pass_list": [],
+      "failed": {
+        "reason": "drawdown_trailing",
+        "when": "2025-10-18 07:05",
+        "challenge": 1,
+        "day_pct": -1.35,
+        "dd_pct": 6.57,
+        "from_start_pct": -6.219,
+        "equity": 93781.35,
+        "passes_before_fail": 0
+      },
+      "events": [
+        {
+          "type": "FAIL",
+          "reason": "drawdown_trailing",
+          "when": "2025-10-18 07:05",
+          "challenge": 1,
+          "day_pct": -1.35,
+          "dd_pct": 6.57,
+          "from_start_pct": -6.219,
+          "equity": 93781.35,
+          "passes_before_fail": 0
+        }
+      ],
+      "final_equity": 93781.35,
+      "challenges_started": 1,
+      "fees_if_each_attempt": 800.0
+    }
+  }
+}

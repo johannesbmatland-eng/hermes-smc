@@ -1,0 +1,37 @@
+{
+  "plan": {
+    "profit_target_pct": 10.0,
+    "daily_loss_pct": 3.0,
+    "max_dd_pct": 6.0,
+    "account": 100000.0,
+    "fee": 800.0,
+    "note": "Protective gates: skip new entries that could breach daily/DD"
+  },
+  "results": {
+    "static": {
+      "tag": "okx_BTCUSDT_365d_2025-08-27_2026-08-27_5m.json",
+      "dd_mode": "static",
+      "passes": 0,
+      "pass_list": [],
+      "failed": null,
+      "final_equity": 94708.37,
+      "halted_entry_skips": 99477,
+      "closed_trades": 4,
+      "fee_total_usd": 800.0,
+      "attempts": 1
+    },
+    "trailing": {
+      "tag": "okx_BTCUSDT_365d_2025-08-27_2026-08-27_5m.json",
+      "dd_mode": "trailing",
+      "passes": 0,
+      "pass_list": [],
+      "failed": null,
+      "final_equity": 94708.37,
+      "halted_entry_skips": 99477,
+      "closed_trades": 4,
+      "fee_total_usd": 800.0,
+      "attempts": 1
+    }
+  },
+  "elapsed_sec": 19.0
+}

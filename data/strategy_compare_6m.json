@@ -1,0 +1,1757 @@
+{
+  "caps": {
+    "max_daily_loss_pct": 2.0,
+    "max_dd_pct": 6.0,
+    "period_months": 6.0
+  },
+  "elapsed_sec": 256.4,
+  "best_name": "short_strong_engulf_1.5",
+  "ranked": [
+    {
+      "trades": 66,
+      "wins": 42,
+      "losses": 24,
+      "win_rate_pct": 63.64,
+      "total_pnl": 41728.16,
+      "total_account_pct": 41.728,
+      "per_month_simple_pct": 6.955,
+      "max_dd_pct": 3.996,
+      "worst_day_pct": -1.35,
+      "halted_days": 20,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 6247.56,
+          "pct": 6.248,
+          "trades": 13,
+          "wins": 8,
+          "win_rate_pct": 61.5
+        },
+        {
+          "month": "2026-04",
+          "pnl": 8466.63,
+          "pct": 8.467,
+          "trades": 14,
+          "wins": 9,
+          "win_rate_pct": 64.3
+        },
+        {
+          "month": "2026-05",
+          "pnl": 9141.31,
+          "pct": 9.141,
+          "trades": 14,
+          "wins": 9,
+          "win_rate_pct": 64.3
+        },
+        {
+          "month": "2026-06",
+          "pnl": 15780.84,
+          "pct": 15.781,
+          "trades": 13,
+          "wins": 10,
+          "win_rate_pct": 76.9
+        },
+        {
+          "month": "2026-07",
+          "pnl": -857.14,
+          "pct": -0.857,
+          "trades": 7,
+          "wins": 3,
+          "win_rate_pct": 42.9
+        },
+        {
+          "month": "2026-08",
+          "pnl": 2948.95,
+          "pct": 2.949,
+          "trades": 5,
+          "wins": 3,
+          "win_rate_pct": 60.0
+        }
+      ],
+      "profit_factor": 2.05,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "short_strong_engulf_1.5",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.2,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.35,
+          "rr_target": 1.2,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 120,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.5,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "short_strong_engulf_1.5"
+      }
+    },
+    {
+      "trades": 114,
+      "wins": 65,
+      "losses": 49,
+      "win_rate_pct": 57.02,
+      "total_pnl": 33272.43,
+      "total_account_pct": 33.272,
+      "per_month_simple_pct": 5.545,
+      "max_dd_pct": 5.471,
+      "worst_day_pct": -1.15,
+      "halted_days": 36,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 1424.56,
+          "pct": 1.425,
+          "trades": 18,
+          "wins": 9,
+          "win_rate_pct": 50.0
+        },
+        {
+          "month": "2026-04",
+          "pnl": 4183.74,
+          "pct": 4.184,
+          "trades": 20,
+          "wins": 11,
+          "win_rate_pct": 55.0
+        },
+        {
+          "month": "2026-05",
+          "pnl": 4529.29,
+          "pct": 4.529,
+          "trades": 22,
+          "wins": 12,
+          "win_rate_pct": 54.5
+        },
+        {
+          "month": "2026-06",
+          "pnl": 6425.63,
+          "pct": 6.426,
+          "trades": 25,
+          "wins": 14,
+          "win_rate_pct": 56.0
+        },
+        {
+          "month": "2026-07",
+          "pnl": 9093.71,
+          "pct": 9.094,
+          "trades": 17,
+          "wins": 11,
+          "win_rate_pct": 64.7
+        },
+        {
+          "month": "2026-08",
+          "pnl": 7615.5,
+          "pct": 7.615,
+          "trades": 12,
+          "wins": 8,
+          "win_rate_pct": 66.7
+        }
+      ],
+      "profit_factor": 1.528,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "short_asia_lndn_nypm_1.15R",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.15,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.15,
+          "rr_target": 1.15,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 180,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": true
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "short_asia_lndn_nypm_1.15R"
+      }
+    },
+    {
+      "trades": 72,
+      "wins": 44,
+      "losses": 28,
+      "win_rate_pct": 61.11,
+      "total_pnl": 31757.26,
+      "total_account_pct": 31.757,
+      "per_month_simple_pct": 5.293,
+      "max_dd_pct": 4.907,
+      "worst_day_pct": -1.25,
+      "halted_days": 23,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 5262.53,
+          "pct": 5.263,
+          "trades": 13,
+          "wins": 8,
+          "win_rate_pct": 61.5
+        },
+        {
+          "month": "2026-04",
+          "pnl": 7322.8,
+          "pct": 7.323,
+          "trades": 16,
+          "wins": 10,
+          "win_rate_pct": 62.5
+        },
+        {
+          "month": "2026-05",
+          "pnl": 4443.46,
+          "pct": 4.443,
+          "trades": 14,
+          "wins": 8,
+          "win_rate_pct": 57.1
+        },
+        {
+          "month": "2026-06",
+          "pnl": 7929.5,
+          "pct": 7.929,
+          "trades": 14,
+          "wins": 9,
+          "win_rate_pct": 64.3
+        },
+        {
+          "month": "2026-07",
+          "pnl": 4492.5,
+          "pct": 4.493,
+          "trades": 10,
+          "wins": 6,
+          "win_rate_pct": 60.0
+        },
+        {
+          "month": "2026-08",
+          "pnl": 2306.46,
+          "pct": 2.306,
+          "trades": 5,
+          "wins": 3,
+          "win_rate_pct": 60.0
+        }
+      ],
+      "profit_factor": 1.773,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "prop_short_asia_lndn_1.15R",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.15,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.25,
+          "rr_target": 1.15,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 150,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "prop_short_asia_lndn_1.15R"
+      }
+    },
+    {
+      "trades": 72,
+      "wins": 45,
+      "losses": 27,
+      "win_rate_pct": 62.5,
+      "total_pnl": 30232.88,
+      "total_account_pct": 30.233,
+      "per_month_simple_pct": 5.039,
+      "max_dd_pct": 4.714,
+      "worst_day_pct": -1.2,
+      "halted_days": 23,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 4555.33,
+          "pct": 4.555,
+          "trades": 13,
+          "wins": 8,
+          "win_rate_pct": 61.5
+        },
+        {
+          "month": "2026-04",
+          "pnl": 6321.21,
+          "pct": 6.321,
+          "trades": 16,
+          "wins": 10,
+          "win_rate_pct": 62.5
+        },
+        {
+          "month": "2026-05",
+          "pnl": 6581.03,
+          "pct": 6.581,
+          "trades": 14,
+          "wins": 9,
+          "win_rate_pct": 64.3
+        },
+        {
+          "month": "2026-06",
+          "pnl": 6971.65,
+          "pct": 6.972,
+          "trades": 14,
+          "wins": 9,
+          "win_rate_pct": 64.3
+        },
+        {
+          "month": "2026-07",
+          "pnl": 3839.64,
+          "pct": 3.84,
+          "trades": 10,
+          "wins": 6,
+          "win_rate_pct": 60.0
+        },
+        {
+          "month": "2026-08",
+          "pnl": 1964.03,
+          "pct": 1.964,
+          "trades": 5,
+          "wins": 3,
+          "win_rate_pct": 60.0
+        }
+      ],
+      "profit_factor": 1.803,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "prop_short_1.1R_risk1.2",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.1,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.2,
+          "rr_target": 1.1,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 150,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "prop_short_1.1R_risk1.2"
+      }
+    },
+    {
+      "trades": 143,
+      "wins": 79,
+      "losses": 64,
+      "win_rate_pct": 55.24,
+      "total_pnl": 24875.87,
+      "total_account_pct": 24.876,
+      "per_month_simple_pct": 4.146,
+      "max_dd_pct": 4.898,
+      "worst_day_pct": -1.693,
+      "halted_days": 6,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": -514.73,
+          "pct": -0.515,
+          "trades": 22,
+          "wins": 10,
+          "win_rate_pct": 45.5
+        },
+        {
+          "month": "2026-04",
+          "pnl": 4420.73,
+          "pct": 4.421,
+          "trades": 27,
+          "wins": 15,
+          "win_rate_pct": 55.6
+        },
+        {
+          "month": "2026-05",
+          "pnl": 2653.11,
+          "pct": 2.653,
+          "trades": 27,
+          "wins": 14,
+          "win_rate_pct": 51.9
+        },
+        {
+          "month": "2026-06",
+          "pnl": 5956.91,
+          "pct": 5.957,
+          "trades": 30,
+          "wins": 17,
+          "win_rate_pct": 56.7
+        },
+        {
+          "month": "2026-07",
+          "pnl": 7904.56,
+          "pct": 7.905,
+          "trades": 22,
+          "wins": 14,
+          "win_rate_pct": 63.6
+        },
+        {
+          "month": "2026-08",
+          "pnl": 4455.3,
+          "pct": 4.455,
+          "trades": 15,
+          "wins": 9,
+          "win_rate_pct": 60.0
+        }
+      ],
+      "profit_factor": 1.422,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "short_all_sessions_low_risk",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.15,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 0.85,
+          "rr_target": 1.15,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 120,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": true
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": true
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "short_all_sessions_low_risk"
+      }
+    },
+    {
+      "trades": 56,
+      "wins": 33,
+      "losses": 23,
+      "win_rate_pct": 58.93,
+      "total_pnl": 19923.73,
+      "total_account_pct": 19.924,
+      "per_month_simple_pct": 3.321,
+      "max_dd_pct": 4.907,
+      "worst_day_pct": -1.25,
+      "halted_days": 19,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 5084.38,
+          "pct": 5.084,
+          "trades": 11,
+          "wins": 7,
+          "win_rate_pct": 63.6
+        },
+        {
+          "month": "2026-04",
+          "pnl": 3962.55,
+          "pct": 3.963,
+          "trades": 12,
+          "wins": 7,
+          "win_rate_pct": 58.3
+        },
+        {
+          "month": "2026-05",
+          "pnl": 1113.92,
+          "pct": 1.114,
+          "trades": 12,
+          "wins": 6,
+          "win_rate_pct": 50.0
+        },
+        {
+          "month": "2026-06",
+          "pnl": 8751.48,
+          "pct": 8.751,
+          "trades": 11,
+          "wins": 8,
+          "win_rate_pct": 72.7
+        },
+        {
+          "month": "2026-07",
+          "pnl": 4066.65,
+          "pct": 4.067,
+          "trades": 8,
+          "wins": 5,
+          "win_rate_pct": 62.5
+        },
+        {
+          "month": "2026-08",
+          "pnl": -3055.26,
+          "pct": -3.055,
+          "trades": 2,
+          "wins": 0,
+          "win_rate_pct": 0.0
+        }
+      ],
+      "profit_factor": 1.616,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "short_ema_1h_15m",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.15,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.25,
+          "rr_target": 1.15,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 150,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_1h_15m",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "short_ema_1h_15m"
+      }
+    },
+    {
+      "trades": 81,
+      "wins": 56,
+      "losses": 25,
+      "win_rate_pct": 69.14,
+      "total_pnl": 15525.66,
+      "total_account_pct": 15.526,
+      "per_month_simple_pct": 2.588,
+      "max_dd_pct": 3.967,
+      "worst_day_pct": -1.99,
+      "halted_days": 3,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 1051.9,
+          "pct": 1.052,
+          "trades": 14,
+          "wins": 8,
+          "win_rate_pct": 57.1
+        },
+        {
+          "month": "2026-04",
+          "pnl": 3763.66,
+          "pct": 3.764,
+          "trades": 19,
+          "wins": 14,
+          "win_rate_pct": 73.7
+        },
+        {
+          "month": "2026-05",
+          "pnl": 1956.78,
+          "pct": 1.957,
+          "trades": 15,
+          "wins": 10,
+          "win_rate_pct": 66.7
+        },
+        {
+          "month": "2026-06",
+          "pnl": 7931.59,
+          "pct": 7.932,
+          "trades": 16,
+          "wins": 13,
+          "win_rate_pct": 81.2
+        },
+        {
+          "month": "2026-07",
+          "pnl": -206.42,
+          "pct": -0.206,
+          "trades": 11,
+          "wins": 7,
+          "win_rate_pct": 63.6
+        },
+        {
+          "month": "2026-08",
+          "pnl": 1028.15,
+          "pct": 1.028,
+          "trades": 6,
+          "wins": 4,
+          "win_rate_pct": 66.7
+        }
+      ],
+      "profit_factor": 1.576,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "short_be_trail",
+      "overrides": {
+        "exits": {
+          "mode": "be_trail",
+          "be_at_rr": 0.75,
+          "trail_after_be": true,
+          "trail_rr": 0.4,
+          "tp_rr": 2.0,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.0,
+          "rr_target": 2.0,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 150,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "short_be_trail"
+      }
+    },
+    {
+      "trades": 32,
+      "wins": 17,
+      "losses": 15,
+      "win_rate_pct": 53.12,
+      "total_pnl": 7776.5,
+      "total_account_pct": 7.776,
+      "per_month_simple_pct": 1.296,
+      "max_dd_pct": 3.788,
+      "worst_day_pct": -1.25,
+      "halted_days": 13,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 2158.46,
+          "pct": 2.158,
+          "trades": 5,
+          "wins": 3,
+          "win_rate_pct": 60.0
+        },
+        {
+          "month": "2026-04",
+          "pnl": 900.51,
+          "pct": 0.901,
+          "trades": 6,
+          "wins": 3,
+          "win_rate_pct": 50.0
+        },
+        {
+          "month": "2026-05",
+          "pnl": -90.36,
+          "pct": -0.09,
+          "trades": 9,
+          "wins": 4,
+          "win_rate_pct": 44.4
+        },
+        {
+          "month": "2026-06",
+          "pnl": 1915.26,
+          "pct": 1.915,
+          "trades": 3,
+          "wins": 2,
+          "win_rate_pct": 66.7
+        },
+        {
+          "month": "2026-07",
+          "pnl": -703.29,
+          "pct": -0.703,
+          "trades": 5,
+          "wins": 2,
+          "win_rate_pct": 40.0
+        },
+        {
+          "month": "2026-08",
+          "pnl": 3595.91,
+          "pct": 3.596,
+          "trades": 4,
+          "wins": 3,
+          "win_rate_pct": 75.0
+        }
+      ],
+      "profit_factor": 1.396,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "short_lndn_only_1.25R",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.25,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.25,
+          "rr_target": 1.25,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 120,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": false
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "short_lndn_only_1.25R"
+      }
+    },
+    {
+      "trades": 69,
+      "wins": 34,
+      "losses": 35,
+      "win_rate_pct": 49.28,
+      "total_pnl": 3770.04,
+      "total_account_pct": 3.77,
+      "per_month_simple_pct": 0.628,
+      "max_dd_pct": 5.722,
+      "worst_day_pct": -1.99,
+      "halted_days": 4,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 4064.35,
+          "pct": 4.064,
+          "trades": 11,
+          "wins": 7,
+          "win_rate_pct": 63.6
+        },
+        {
+          "month": "2026-04",
+          "pnl": -2670.69,
+          "pct": -2.671,
+          "trades": 9,
+          "wins": 3,
+          "win_rate_pct": 33.3
+        },
+        {
+          "month": "2026-05",
+          "pnl": 1270.9,
+          "pct": 1.271,
+          "trades": 18,
+          "wins": 9,
+          "win_rate_pct": 50.0
+        },
+        {
+          "month": "2026-06",
+          "pnl": 2811.91,
+          "pct": 2.812,
+          "trades": 8,
+          "wins": 5,
+          "win_rate_pct": 62.5
+        },
+        {
+          "month": "2026-07",
+          "pnl": 2251.64,
+          "pct": 2.252,
+          "trades": 15,
+          "wins": 8,
+          "win_rate_pct": 53.3
+        },
+        {
+          "month": "2026-08",
+          "pnl": -3958.07,
+          "pct": -3.958,
+          "trades": 8,
+          "wins": 2,
+          "win_rate_pct": 25.0
+        }
+      ],
+      "profit_factor": 1.102,
+      "passes": false,
+      "risk_ok": true,
+      "period_months": 6.0,
+      "name": "both_sides_strict_rsi",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.15,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.0,
+          "rr_target": 1.15,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 50,
+          "short_min": 50,
+          "entry_band": [
+            35,
+            65
+          ]
+        },
+        "entry": {
+          "cooldown_seconds": 180,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "long",
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "long",
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "both_sides_strict_rsi"
+      }
+    },
+    {
+      "trades": 104,
+      "wins": 51,
+      "losses": 53,
+      "win_rate_pct": 49.04,
+      "total_pnl": 13205.9,
+      "total_account_pct": 13.206,
+      "per_month_simple_pct": 2.201,
+      "max_dd_pct": 8.669,
+      "worst_day_pct": -1.25,
+      "halted_days": 44,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 1088.32,
+          "pct": 1.088,
+          "trades": 17,
+          "wins": 8,
+          "win_rate_pct": 47.1
+        },
+        {
+          "month": "2026-04",
+          "pnl": 5340.97,
+          "pct": 5.341,
+          "trades": 16,
+          "wins": 9,
+          "win_rate_pct": 56.2
+        },
+        {
+          "month": "2026-05",
+          "pnl": -1514.58,
+          "pct": -1.515,
+          "trades": 19,
+          "wins": 8,
+          "win_rate_pct": 42.1
+        },
+        {
+          "month": "2026-06",
+          "pnl": 4802.47,
+          "pct": 4.802,
+          "trades": 21,
+          "wins": 11,
+          "win_rate_pct": 52.4
+        },
+        {
+          "month": "2026-07",
+          "pnl": -2192.32,
+          "pct": -2.192,
+          "trades": 15,
+          "wins": 6,
+          "win_rate_pct": 40.0
+        },
+        {
+          "month": "2026-08",
+          "pnl": 5681.04,
+          "pct": 5.681,
+          "trades": 16,
+          "wins": 9,
+          "win_rate_pct": 56.2
+        }
+      ],
+      "profit_factor": 1.186,
+      "passes": false,
+      "risk_ok": false,
+      "period_months": 6.0,
+      "name": "short_rsi40_tp1.25",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.25,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.25,
+          "rr_target": 1.25,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 60,
+          "short_min": 40
+        },
+        "entry": {
+          "cooldown_seconds": 150,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "short_rsi40_tp1.25"
+      }
+    },
+    {
+      "trades": 76,
+      "wins": 31,
+      "losses": 45,
+      "win_rate_pct": 40.79,
+      "total_pnl": 17540.92,
+      "total_account_pct": 17.541,
+      "per_month_simple_pct": 2.923,
+      "max_dd_pct": 6.821,
+      "worst_day_pct": -1.99,
+      "halted_days": 4,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 4965.7,
+          "pct": 4.966,
+          "trades": 13,
+          "wins": 6,
+          "win_rate_pct": 46.2
+        },
+        {
+          "month": "2026-04",
+          "pnl": 10786.83,
+          "pct": 10.787,
+          "trades": 17,
+          "wins": 9,
+          "win_rate_pct": 52.9
+        },
+        {
+          "month": "2026-05",
+          "pnl": -5771.41,
+          "pct": -5.771,
+          "trades": 14,
+          "wins": 3,
+          "win_rate_pct": 21.4
+        },
+        {
+          "month": "2026-06",
+          "pnl": 8924.14,
+          "pct": 8.924,
+          "trades": 16,
+          "wins": 8,
+          "win_rate_pct": 50.0
+        },
+        {
+          "month": "2026-07",
+          "pnl": 2269.71,
+          "pct": 2.27,
+          "trades": 10,
+          "wins": 4,
+          "win_rate_pct": 40.0
+        },
+        {
+          "month": "2026-08",
+          "pnl": -3634.06,
+          "pct": -3.634,
+          "trades": 6,
+          "wins": 1,
+          "win_rate_pct": 16.7
+        }
+      ],
+      "profit_factor": 1.345,
+      "passes": false,
+      "risk_ok": false,
+      "period_months": 6.0,
+      "name": "short_2R_fixed",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.75,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 2.0,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.0,
+          "rr_target": 2.0,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 150,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "short"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "short"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "short_2R_fixed"
+      }
+    },
+    {
+      "trades": 73,
+      "wins": 34,
+      "losses": 39,
+      "win_rate_pct": 46.58,
+      "total_pnl": -318.92,
+      "total_account_pct": -0.319,
+      "per_month_simple_pct": -0.053,
+      "max_dd_pct": 8.874,
+      "worst_day_pct": -1.99,
+      "halted_days": 7,
+      "months": [
+        {
+          "month": "2026-03",
+          "pnl": 4064.35,
+          "pct": 4.064,
+          "trades": 11,
+          "wins": 7,
+          "win_rate_pct": 63.6
+        },
+        {
+          "month": "2026-04",
+          "pnl": -2670.69,
+          "pct": -2.671,
+          "trades": 9,
+          "wins": 3,
+          "win_rate_pct": 33.3
+        },
+        {
+          "month": "2026-05",
+          "pnl": -4030.57,
+          "pct": -4.031,
+          "trades": 19,
+          "wins": 7,
+          "win_rate_pct": 36.8
+        },
+        {
+          "month": "2026-06",
+          "pnl": 3677.1,
+          "pct": 3.677,
+          "trades": 7,
+          "wins": 5,
+          "win_rate_pct": 71.4
+        },
+        {
+          "month": "2026-07",
+          "pnl": -2320.19,
+          "pct": -2.32,
+          "trades": 13,
+          "wins": 5,
+          "win_rate_pct": 38.5
+        },
+        {
+          "month": "2026-08",
+          "pnl": 961.08,
+          "pct": 0.961,
+          "trades": 14,
+          "wins": 7,
+          "win_rate_pct": 50.0
+        }
+      ],
+      "profit_factor": 0.992,
+      "passes": false,
+      "risk_ok": false,
+      "period_months": 6.0,
+      "name": "long_only_asia_lndn",
+      "overrides": {
+        "exits": {
+          "mode": "fixed_tp",
+          "be_at_rr": 0.55,
+          "trail_after_be": false,
+          "trail_rr": 1.0,
+          "tp_rr": 1.15,
+          "structure_break": false
+        },
+        "risk": {
+          "risk_pct_per_trade": 1.0,
+          "rr_target": 1.15,
+          "sl_buffer_pct": 0.0003,
+          "max_daily_loss_pct": 2.0,
+          "max_drawdown_pct": 6.0
+        },
+        "rsi": {
+          "enabled": true,
+          "period": 14,
+          "long_max": 55,
+          "short_min": 45
+        },
+        "entry": {
+          "cooldown_seconds": 150,
+          "engulf_lookback": 2,
+          "max_open_positions": 1,
+          "allowed_sides": [
+            "long"
+          ],
+          "min_engulf_body_ratio": 1.25,
+          "min_engulf_body_pct": 0.0
+        },
+        "trend_filter": {
+          "enabled": true,
+          "method": "ema_majority",
+          "ema_period": 50
+        },
+        "fvq_detection": {
+          "min_candles_since_fvg": 50,
+          "fvg_buffer_pct": 0.001
+        },
+        "sessions": {
+          "timezone": "America/New_York",
+          "filter_entries": true,
+          "windows": [
+            {
+              "name": "ASIA",
+              "start": "20:00",
+              "end": "02:00",
+              "enabled": true
+            },
+            {
+              "name": "LNDN",
+              "start": "02:00",
+              "end": "09:30",
+              "enabled": true
+            },
+            {
+              "name": "NYAM",
+              "start": "09:30",
+              "end": "13:30",
+              "enabled": false
+            },
+            {
+              "name": "NYPM",
+              "start": "13:30",
+              "end": "20:00",
+              "enabled": false
+            }
+          ]
+        },
+        "_allowed_sides": [
+          "long"
+        ],
+        "_min_engulf_body_pct": 0.0,
+        "_max_daily_loss_pct": 2.0,
+        "_name": "long_only_asia_lndn"
+      }
+    }
+  ]
+}

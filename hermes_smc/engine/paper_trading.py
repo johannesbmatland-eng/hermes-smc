@@ -53,6 +53,19 @@ class PaperTradingEngine(SMCEngine):
         candles_1h: list[dict],
         candles_1m: list[dict] | None = None,
     ) -> dict | None:
+        """Dispatch by entry.strategy: scalp (many small) or smc (FVG)."""
+        strategy = str(self.config.get("entry.strategy", "smc") or "smc").lower()
+        if strategy in ("scalp", "scalp_ema_bb", "many_small"):
+            return self._detect_scalp_entry(candles_5m, candles_15m, candles_1h)
+        return self._detect_smc_entry(candles_5m, candles_15m, candles_1h, candles_1m)
+
+    def _detect_smc_entry(
+        self,
+        candles_5m: list[dict],
+        candles_15m: list[dict],
+        candles_1h: list[dict],
+        candles_1m: list[dict] | None = None,
+    ) -> dict | None:
         """
         Entry rule (long example):
         1) Trend OK + unmitigated bullish FVG
@@ -94,6 +107,21 @@ class PaperTradingEngine(SMCEngine):
                 f"long_max={long_max}, short_min={short_min})"
             )
             return None
+
+        allowed = self.config.get("entry.allowed_sides", ["long", "short"])
+        if isinstance(allowed, str):
+            allowed = [allowed]
+        if side not in set(allowed):
+            logger.info(f"Skip entry: side={side} not in allowed_sides={allowed}")
+            return None
+
+        # Optional hard RSI band (in addition to long_max/short_min)
+        rsi_band = self.config.get("rsi.entry_band") or None
+        if rsi is not None and isinstance(rsi_band, (list, tuple)) and len(rsi_band) == 2:
+            lo, hi = float(rsi_band[0]), float(rsi_band[1])
+            if not (lo <= rsi <= hi):
+                logger.info(f"Skip entry: RSI {rsi:.1f} outside band [{lo}, {hi}]")
+                return None
 
         session_cfg = self.config.get("sessions", {}) or {}
         if isinstance(session_cfg, dict) and session_cfg.get("filter_entries", True):
@@ -167,6 +195,194 @@ class PaperTradingEngine(SMCEngine):
             "rsi": rsi,
             "timestamp": time.time(),
         }
+
+
+    def _detect_scalp_entry(
+        self,
+        candles_5m: list[dict],
+        candles_15m: list[dict],
+        candles_1h: list[dict],
+    ) -> dict | None:
+        """
+        High-frequency scalp: many small trades with tight SL/TP.
+
+        entry.scalp_mode: ema_pullback | bb_bounce | ema_bb (default)
+        """
+        if len(candles_5m) < 60:
+            return None
+
+        session_cfg = self.config.get("sessions", {}) or {}
+        if isinstance(session_cfg, dict) and session_cfg.get("filter_entries", True):
+            sess = active_session(config=session_cfg)
+            if not sess:
+                return None
+        else:
+            sess = session_from_ts(time.time(), session_cfg) if session_cfg else None
+
+        allowed = self.config.get("entry.allowed_sides", ["long", "short"])
+        if isinstance(allowed, str):
+            allowed = [allowed]
+        allowed_set = set(allowed)
+
+        locked = candles_5m[-2]
+        entry_price = float(locked["close"])
+
+        fast_p = int(self.config.get("scalp.ema_fast", 9))
+        slow_p = int(self.config.get("scalp.ema_slow", 21))
+        trend_p = int(self.config.get("scalp.ema_trend", 50))
+        bb_p = int(self.config.get("scalp.bb_period", 20))
+        bb_mult = float(self.config.get("scalp.bb_mult", 2.0))
+
+        ema_fast = self._calc_ema(candles_5m[:-1], fast_p)
+        ema_slow = self._calc_ema(candles_5m[:-1], slow_p)
+        ema_trend = self._calc_ema(candles_5m[:-1], trend_p)
+        ema_15 = self._calc_ema(candles_15m, trend_p) if len(candles_15m) >= trend_p else None
+        ema_1h = self._calc_ema(candles_1h, trend_p) if len(candles_1h) >= trend_p else None
+        trend_ref = ema_1h or ema_15 or ema_trend
+        if ema_fast is None or ema_slow is None or trend_ref is None:
+            return None
+
+        mid, upper, lower = self._calc_bollinger(candles_5m[:-1], bb_p, bb_mult)
+        rsi = self._calc_rsi(candles_5m, int(self.config.get("rsi.period", 14)))
+
+        uptrend = entry_price > trend_ref and ema_fast >= ema_slow
+        downtrend = entry_price < trend_ref and ema_fast <= ema_slow
+
+        scalp_mode = str(self.config.get("entry.scalp_mode", "ema_bb") or "ema_bb")
+        side = None
+        confirmation = None
+
+        touch_fast = locked["low"] <= ema_fast <= locked["high"]
+        range_hl = max(1e-9, locked["high"] - locked["low"])
+        long_pb = (
+            uptrend
+            and touch_fast
+            and locked["close"] > ema_fast
+            and locked["close"] > locked["open"]
+            and (locked["close"] - locked["low"]) / range_hl >= 0.45
+        )
+        short_pb = (
+            downtrend
+            and touch_fast
+            and locked["close"] < ema_fast
+            and locked["close"] < locked["open"]
+            and (locked["high"] - locked["close"]) / range_hl >= 0.45
+        )
+        long_bb = (
+            lower is not None
+            and uptrend
+            and locked["low"] <= lower
+            and locked["close"] > lower
+            and locked["close"] > locked["open"]
+        )
+        short_bb = (
+            upper is not None
+            and downtrend
+            and locked["high"] >= upper
+            and locked["close"] < upper
+            and locked["close"] < locked["open"]
+        )
+
+        use_pb = scalp_mode in ("ema_pullback", "ema_bb", "all")
+        use_bb = scalp_mode in ("bb_bounce", "ema_bb", "all")
+        use_cross = scalp_mode in ("ema_cross", "all")
+
+        # EMA cross on locked bar vs previous locked values
+        ema_fast_prev = self._calc_ema(candles_5m[:-2], fast_p) if len(candles_5m) > fast_p + 2 else None
+        ema_slow_prev = self._calc_ema(candles_5m[:-2], slow_p) if len(candles_5m) > slow_p + 2 else None
+        long_x = (
+            use_cross
+            and ema_fast_prev is not None
+            and ema_slow_prev is not None
+            and ema_fast_prev <= ema_slow_prev
+            and ema_fast > ema_slow
+            and entry_price > trend_ref
+        )
+        short_x = (
+            use_cross
+            and ema_fast_prev is not None
+            and ema_slow_prev is not None
+            and ema_fast_prev >= ema_slow_prev
+            and ema_fast < ema_slow
+            and entry_price < trend_ref
+        )
+
+        if use_cross and long_x and "long" in allowed_set:
+            side, confirmation = "long", "scalp_ema_cross"
+        elif use_cross and short_x and "short" in allowed_set:
+            side, confirmation = "short", "scalp_ema_cross"
+        elif use_pb and long_pb and "long" in allowed_set:
+            side, confirmation = "long", "scalp_ema_pullback"
+        elif use_pb and short_pb and "short" in allowed_set:
+            side, confirmation = "short", "scalp_ema_pullback"
+        elif use_bb and long_bb and "long" in allowed_set:
+            side, confirmation = "long", "scalp_bb_bounce"
+        elif use_bb and short_bb and "short" in allowed_set:
+            side, confirmation = "short", "scalp_bb_bounce"
+        else:
+            return None
+
+        if rsi is not None:
+            if side == "long" and rsi > float(self.config.get("rsi.long_max", 70)):
+                return None
+            if side == "short" and rsi < float(self.config.get("rsi.short_min", 30)):
+                return None
+
+        sl_pct = float(self.config.get("risk.sl_pct", 0.0025) or 0.0025)
+        if side == "long":
+            sl_price = entry_price * (1.0 - sl_pct)
+        else:
+            sl_price = entry_price * (1.0 + sl_pct)
+        tp_price = self._calculate_smc_tp(entry_price, sl_price, side=side)
+        position_size = self._calculate_position_size(entry_price, sl_price)
+        if position_size <= 0:
+            return None
+
+        trend_info = {
+            "overall": "bullish" if uptrend else ("bearish" if downtrend else "neutral"),
+            "trend_filter_pass_long": uptrend,
+            "trend_filter_pass_short": downtrend,
+            "ema_fast": ema_fast,
+            "ema_slow": ema_slow,
+            "ema_trend": trend_ref,
+            "bb_mid": mid,
+            "bb_upper": upper,
+            "bb_lower": lower,
+            "session": sess,
+        }
+        logger.info(
+            f"Scalp Entry ({side}/{confirmation}): entry={entry_price:.2f} "
+            f"SL={sl_price:.2f} TP={tp_price} size={position_size:.6f} rsi={rsi}"
+        )
+        return {
+            "type": "entry",
+            "side": side,
+            "fvg": {
+                "top": entry_price * 1.001,
+                "bottom": entry_price * 0.999,
+                "mid": entry_price,
+                "type": "bullish" if side == "long" else "bearish",
+            },
+            "entry_price": entry_price,
+            "sl_price": sl_price,
+            "tp_price": tp_price,
+            "position_size": position_size,
+            "confirmation": confirmation,
+            "trend_info": trend_info,
+            "rsi": rsi,
+            "timestamp": time.time(),
+        }
+
+    def _calc_bollinger(
+        self, candles: list[dict], period: int = 20, mult: float = 2.0
+    ) -> tuple[float | None, float | None, float | None]:
+        if len(candles) < period:
+            return None, None, None
+        closes = [c["close"] for c in candles[-period:]]
+        mid = sum(closes) / period
+        var = sum((x - mid) ** 2 for x in closes) / period
+        std = var ** 0.5
+        return mid, mid + mult * std, mid - mult * std
 
     def _detect_fvg_full(self, candles: list[dict]) -> list[dict]:
         """Detect 3-candle FVGs (same ICT definition as MarketStructureDetector)."""
@@ -266,6 +482,18 @@ class PaperTradingEngine(SMCEngine):
                 )
                 result["trend_filter_pass_short"] = (
                     result["overall"] == "bearish" and confirmed_downtrend
+                )
+            elif method == "ema_unanimous":
+                # All three TFs must agree
+                result["trend_filter_pass_long"] = bullish == 3
+                result["trend_filter_pass_short"] = bearish == 3
+            elif method == "ema_1h_15m":
+                # Require higher-timeframe alignment (ignore 5m noise)
+                result["trend_filter_pass_long"] = (
+                    result["trend_1h"] == "bullish" and result["trend_15m"] == "bullish"
+                )
+                result["trend_filter_pass_short"] = (
+                    result["trend_1h"] == "bearish" and result["trend_15m"] == "bearish"
                 )
             else:
                 # ema_majority: allow trades when EMA bias is clear
@@ -441,8 +669,7 @@ class PaperTradingEngine(SMCEngine):
 
         Long: curr must be bullish, larger body, and cover prev body.
         Short: curr must be bearish, larger body, and cover prev body.
-        Touch candle color does not matter.
-        Crypto-friendly: open may equal previous close.
+        Optional quality gates via entry.min_engulf_body_ratio / min_engulf_body_pct.
         """
         prev_top = max(prev["open"], prev["close"])
         prev_bot = min(prev["open"], prev["close"])
@@ -451,16 +678,23 @@ class PaperTradingEngine(SMCEngine):
         prev_body = abs(prev["close"] - prev["open"])
         curr_body = abs(curr["close"] - curr["open"])
 
+        min_ratio = float(self.config.get("entry.min_engulf_body_ratio", 1.0) or 1.0)
+        min_pct = float(self.config.get("entry.min_engulf_body_pct", 0.0) or 0.0)
+        if prev_body <= 0:
+            return False
+        if curr_body < prev_body * min_ratio:
+            return False
+        if min_pct > 0 and (curr_body / curr["close"]) < min_pct:
+            return False
+
         if side == "long":
             return (
                 curr["close"] > curr["open"]
-                and curr_body > prev_body
                 and curr_top > prev_top
                 and curr_bot <= prev_bot
             )
         return (
             curr["close"] < curr["open"]
-            and curr_body > prev_body
             and curr_bot < prev_bot
             and curr_top >= prev_top
         )
@@ -1077,6 +1311,18 @@ class PaperTradingEngine(SMCEngine):
             return
 
         if time.time() - self.last_trade_time < self.config.get("entry.cooldown_seconds", 300):
+            return
+
+        risk_pct = float(self.config.get("risk.risk_pct_per_trade", 0.5))
+        max_daily = float(self.config.get("risk.max_daily_loss_pct", 2.0))
+        max_dd = float(self.config.get("risk.max_drawdown_pct", 6.0))
+        ok_risk, reason = self.position_manager.risk_allows_new_entry(
+            risk_pct=risk_pct,
+            max_daily_loss_pct=max_daily,
+            max_drawdown_pct=max_dd,
+        )
+        if not ok_risk:
+            logger.info(f"Skip entry: risk gate — {reason}")
             return
 
         signal = self.detect_entry_signal(candles_5m, candles_15m, candles_1h, candles_1m)

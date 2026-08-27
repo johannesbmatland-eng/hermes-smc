@@ -1,0 +1,758 @@
+{
+  "v2_best_nolimit": {
+    "label": "v2_best_maxNone",
+    "passes": 5,
+    "fails": 2,
+    "attempts": 7,
+    "pass_rate": 0.7143,
+    "pass_days": [
+      57.1,
+      60.0,
+      49.1,
+      10.9,
+      35.2
+    ],
+    "median_pass_days": 49.1,
+    "max_pass_days": 60.0,
+    "min_pass_days": 10.9,
+    "fail_reasons": {
+      "stuck": 2
+    },
+    "events": [
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2025-11-16",
+        "days": 80.0,
+        "equity": 94367.09,
+        "from_start_pct": -5.63
+      },
+      {
+        "type": "PASS",
+        "when": "2026-01-12",
+        "days": 57.1,
+        "equity": 110881.9,
+        "from_start_pct": 10.88
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2026-02-19",
+        "days": 37.8,
+        "equity": 94353.92,
+        "from_start_pct": -5.65
+      },
+      {
+        "type": "PASS",
+        "when": "2026-04-20",
+        "days": 60.0,
+        "equity": 110493.46,
+        "from_start_pct": 10.49
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-08",
+        "days": 49.1,
+        "equity": 110182.43,
+        "from_start_pct": 10.18
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-19",
+        "days": 10.9,
+        "equity": 110648.77,
+        "from_start_pct": 10.65
+      },
+      {
+        "type": "PASS",
+        "when": "2026-07-24",
+        "days": 35.2,
+        "equity": 110304.58,
+        "from_start_pct": 10.3
+      }
+    ],
+    "n_trades": 549
+  },
+  "v2_best_max30d": {
+    "label": "v2_best_max30",
+    "passes": 4,
+    "fails": 8,
+    "attempts": 12,
+    "pass_rate": 0.3333,
+    "pass_days": [
+      22.8,
+      22.1,
+      18.9,
+      29.1
+    ],
+    "median_pass_days": 22.450000000000003,
+    "max_pass_days": 29.1,
+    "min_pass_days": 18.9,
+    "fail_reasons": {
+      "time_limit": 8
+    },
+    "events": [
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-09-27",
+        "days": 30.0,
+        "equity": 101589.78,
+        "from_start_pct": 1.59
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-10-28",
+        "days": 30.8,
+        "equity": 94776.39,
+        "from_start_pct": -5.22
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-11-27",
+        "days": 30.2,
+        "equity": 94392.0,
+        "from_start_pct": -5.61
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-12-27",
+        "days": 30.1,
+        "equity": 104044.84,
+        "from_start_pct": 4.04
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-01-26",
+        "days": 30.1,
+        "equity": 99897.19,
+        "from_start_pct": -0.1
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-02-26",
+        "days": 30.8,
+        "equity": 94820.41,
+        "from_start_pct": -5.18
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-03-28",
+        "days": 30.1,
+        "equity": 97342.25,
+        "from_start_pct": -2.66
+      },
+      {
+        "type": "PASS",
+        "when": "2026-04-20",
+        "days": 22.8,
+        "equity": 110524.56,
+        "from_start_pct": 10.52
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-05-20",
+        "days": 30.1,
+        "equity": 103967.86,
+        "from_start_pct": 3.97
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-11",
+        "days": 22.1,
+        "equity": 110524.56,
+        "from_start_pct": 10.52
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-30",
+        "days": 18.9,
+        "equity": 110814.16,
+        "from_start_pct": 10.81
+      },
+      {
+        "type": "PASS",
+        "when": "2026-07-29",
+        "days": 29.1,
+        "equity": 110139.94,
+        "from_start_pct": 10.14
+      }
+    ],
+    "n_trades": 549
+  },
+  "v2_best_max45d": {
+    "label": "v2_best_max45",
+    "passes": 4,
+    "fails": 6,
+    "attempts": 10,
+    "pass_rate": 0.4,
+    "pass_days": [
+      19.0,
+      12.4,
+      9.1,
+      35.2
+    ],
+    "median_pass_days": 15.7,
+    "max_pass_days": 35.2,
+    "min_pass_days": 9.1,
+    "fail_reasons": {
+      "time_limit": 4,
+      "stuck": 2
+    },
+    "events": [
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-10-12",
+        "days": 45.0,
+        "equity": 100051.38,
+        "from_start_pct": 0.05
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2025-11-16",
+        "days": 35.0,
+        "equity": 94318.63,
+        "from_start_pct": -5.68
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-01-01",
+        "days": 45.9,
+        "equity": 105793.36,
+        "from_start_pct": 5.79
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-02-15",
+        "days": 45.0,
+        "equity": 94215.96,
+        "from_start_pct": -5.78
+      },
+      {
+        "type": "PASS",
+        "when": "2026-03-06",
+        "days": 19.0,
+        "equity": 110001.43,
+        "from_start_pct": 10.0
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2026-04-13",
+        "days": 37.9,
+        "equity": 94318.63,
+        "from_start_pct": -5.68
+      },
+      {
+        "type": "PASS",
+        "when": "2026-04-25",
+        "days": 12.4,
+        "equity": 110648.77,
+        "from_start_pct": 10.65
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-06-10",
+        "days": 45.6,
+        "equity": 107224.02,
+        "from_start_pct": 7.22
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-19",
+        "days": 9.1,
+        "equity": 110386.6,
+        "from_start_pct": 10.39
+      },
+      {
+        "type": "PASS",
+        "when": "2026-07-24",
+        "days": 35.2,
+        "equity": 110304.58,
+        "from_start_pct": 10.3
+      }
+    ],
+    "n_trades": 549
+  },
+  "v2_best_max60d": {
+    "label": "v2_best_max60",
+    "passes": 4,
+    "fails": 5,
+    "attempts": 9,
+    "pass_rate": 0.4444,
+    "pass_days": [
+      40.0,
+      10.8,
+      44.1,
+      19.9
+    ],
+    "median_pass_days": 29.95,
+    "max_pass_days": 44.1,
+    "min_pass_days": 10.8,
+    "fail_reasons": {
+      "time_limit": 2,
+      "stuck": 3
+    },
+    "events": [
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-10-28",
+        "days": 60.8,
+        "equity": 94367.09,
+        "from_start_pct": -5.63
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2025-12-04",
+        "days": 37.1,
+        "equity": 94392.0,
+        "from_start_pct": -5.61
+      },
+      {
+        "type": "PASS",
+        "when": "2026-01-13",
+        "days": 40.0,
+        "equity": 110805.71,
+        "from_start_pct": 10.81
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2026-02-17",
+        "days": 35.2,
+        "equity": 94712.67,
+        "from_start_pct": -5.29
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-04-18",
+        "days": 60.0,
+        "equity": 105386.91,
+        "from_start_pct": 5.39
+      },
+      {
+        "type": "PASS",
+        "when": "2026-04-29",
+        "days": 10.8,
+        "equity": 110125.05,
+        "from_start_pct": 10.13
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-12",
+        "days": 44.1,
+        "equity": 111031.69,
+        "from_start_pct": 11.03
+      },
+      {
+        "type": "PASS",
+        "when": "2026-07-02",
+        "days": 19.9,
+        "equity": 111077.35,
+        "from_start_pct": 11.08
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2026-08-13",
+        "days": 42.0,
+        "equity": 94864.85,
+        "from_start_pct": -5.14
+      }
+    ],
+    "n_trades": 549
+  },
+  "refine_83_nolimit": {
+    "label": "refine_83_maxNone",
+    "passes": 5,
+    "fails": 1,
+    "attempts": 6,
+    "pass_rate": 0.8333,
+    "pass_days": [
+      97.1,
+      39.9,
+      48.2,
+      16.9,
+      41.9
+    ],
+    "median_pass_days": 41.9,
+    "max_pass_days": 97.1,
+    "min_pass_days": 16.9,
+    "fail_reasons": {
+      "stuck": 1
+    },
+    "events": [
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2025-12-04",
+        "days": 97.9,
+        "equity": 94445.36,
+        "from_start_pct": -5.55
+      },
+      {
+        "type": "PASS",
+        "when": "2026-03-11",
+        "days": 97.1,
+        "equity": 110132.39,
+        "from_start_pct": 10.13
+      },
+      {
+        "type": "PASS",
+        "when": "2026-04-20",
+        "days": 39.9,
+        "equity": 111037.09,
+        "from_start_pct": 11.04
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-07",
+        "days": 48.2,
+        "equity": 110278.38,
+        "from_start_pct": 10.28
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-24",
+        "days": 16.9,
+        "equity": 110298.67,
+        "from_start_pct": 10.3
+      },
+      {
+        "type": "PASS",
+        "when": "2026-08-05",
+        "days": 41.9,
+        "equity": 110707.9,
+        "from_start_pct": 10.71
+      }
+    ],
+    "n_trades": 597
+  },
+  "refine_83_max30d": {
+    "label": "refine_83_max30",
+    "passes": 3,
+    "fails": 9,
+    "attempts": 12,
+    "pass_rate": 0.25,
+    "pass_days": [
+      23.0,
+      24.0,
+      18.9
+    ],
+    "median_pass_days": 23.0,
+    "max_pass_days": 24.0,
+    "min_pass_days": 18.9,
+    "fail_reasons": {
+      "time_limit": 9
+    },
+    "events": [
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-09-27",
+        "days": 30.0,
+        "equity": 98779.21,
+        "from_start_pct": -1.22
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-10-27",
+        "days": 30.0,
+        "equity": 101781.94,
+        "from_start_pct": 1.78
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-11-27",
+        "days": 30.9,
+        "equity": 94600.87,
+        "from_start_pct": -5.4
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-12-27",
+        "days": 30.1,
+        "equity": 106003.7,
+        "from_start_pct": 6.0
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-01-26",
+        "days": 30.0,
+        "equity": 94550.9,
+        "from_start_pct": -5.45
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-02-26",
+        "days": 30.8,
+        "equity": 104647.74,
+        "from_start_pct": 4.65
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-03-28",
+        "days": 30.1,
+        "equity": 106252.84,
+        "from_start_pct": 6.25
+      },
+      {
+        "type": "PASS",
+        "when": "2026-04-20",
+        "days": 23.0,
+        "equity": 111019.77,
+        "from_start_pct": 11.02
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-05-20",
+        "days": 30.1,
+        "equity": 102830.78,
+        "from_start_pct": 2.83
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-13",
+        "days": 24.0,
+        "equity": 110697.0,
+        "from_start_pct": 10.7
+      },
+      {
+        "type": "PASS",
+        "when": "2026-07-02",
+        "days": 18.9,
+        "equity": 110753.27,
+        "from_start_pct": 10.75
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-08-01",
+        "days": 30.1,
+        "equity": 103604.1,
+        "from_start_pct": 3.6
+      }
+    ],
+    "n_trades": 597
+  },
+  "refine_83_max45d": {
+    "label": "refine_83_max45",
+    "passes": 4,
+    "fails": 6,
+    "attempts": 10,
+    "pass_rate": 0.4,
+    "pass_days": [
+      22.2,
+      36.9,
+      15.0,
+      16.0
+    ],
+    "median_pass_days": 19.1,
+    "max_pass_days": 36.9,
+    "min_pass_days": 15.0,
+    "fail_reasons": {
+      "time_limit": 4,
+      "stuck": 2
+    },
+    "events": [
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-10-13",
+        "days": 45.8,
+        "equity": 100641.63,
+        "from_start_pct": 0.64
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-11-27",
+        "days": 45.2,
+        "equity": 94504.77,
+        "from_start_pct": -5.5
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-01-11",
+        "days": 45.2,
+        "equity": 102951.77,
+        "from_start_pct": 2.95
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2026-02-20",
+        "days": 39.8,
+        "equity": 94168.5,
+        "from_start_pct": -5.83
+      },
+      {
+        "type": "PASS",
+        "when": "2026-03-14",
+        "days": 22.2,
+        "equity": 110564.07,
+        "from_start_pct": 10.56
+      },
+      {
+        "type": "PASS",
+        "when": "2026-04-20",
+        "days": 36.9,
+        "equity": 110127.42,
+        "from_start_pct": 10.13
+      },
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2026-06-05",
+        "days": 45.9,
+        "equity": 107719.52,
+        "from_start_pct": 7.72
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-20",
+        "days": 15.0,
+        "equity": 110298.67,
+        "from_start_pct": 10.3
+      },
+      {
+        "type": "PASS",
+        "when": "2026-07-06",
+        "days": 16.0,
+        "equity": 110620.27,
+        "from_start_pct": 10.62
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2026-08-06",
+        "days": 31.0,
+        "equity": 94648.96,
+        "from_start_pct": -5.35
+      }
+    ],
+    "n_trades": 597
+  },
+  "refine_83_max60d": {
+    "label": "refine_83_max60",
+    "passes": 6,
+    "fails": 4,
+    "attempts": 10,
+    "pass_rate": 0.6,
+    "pass_days": [
+      15.0,
+      40.1,
+      41.0,
+      45.8,
+      16.1,
+      16.0
+    ],
+    "median_pass_days": 28.1,
+    "max_pass_days": 45.8,
+    "min_pass_days": 15.0,
+    "fail_reasons": {
+      "time_limit": 1,
+      "stuck": 3
+    },
+    "events": [
+      {
+        "type": "FAIL",
+        "reason": "time_limit",
+        "when": "2025-10-27",
+        "days": 60.1,
+        "equity": 100539.39,
+        "from_start_pct": 0.54
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2025-12-03",
+        "days": 37.0,
+        "equity": 94600.87,
+        "from_start_pct": -5.4
+      },
+      {
+        "type": "PASS",
+        "when": "2025-12-18",
+        "days": 15.0,
+        "equity": 110487.42,
+        "from_start_pct": 10.49
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2026-01-28",
+        "days": 40.8,
+        "equity": 94117.45,
+        "from_start_pct": -5.88
+      },
+      {
+        "type": "PASS",
+        "when": "2026-03-09",
+        "days": 40.1,
+        "equity": 110130.64,
+        "from_start_pct": 10.13
+      },
+      {
+        "type": "PASS",
+        "when": "2026-04-19",
+        "days": 41.0,
+        "equity": 110714.28,
+        "from_start_pct": 10.71
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-04",
+        "days": 45.8,
+        "equity": 110145.95,
+        "from_start_pct": 10.15
+      },
+      {
+        "type": "PASS",
+        "when": "2026-06-20",
+        "days": 16.1,
+        "equity": 110298.67,
+        "from_start_pct": 10.3
+      },
+      {
+        "type": "PASS",
+        "when": "2026-07-06",
+        "days": 16.0,
+        "equity": 110620.27,
+        "from_start_pct": 10.62
+      },
+      {
+        "type": "FAIL",
+        "reason": "stuck",
+        "when": "2026-08-06",
+        "days": 31.0,
+        "equity": 94648.96,
+        "from_start_pct": -5.35
+      }
+    ],
+    "n_trades": 597
+  }
+}
