@@ -66,6 +66,7 @@ class DashboardServer:
         return {
             "market": market,
             "capital": pm.capital,
+            "equity": getattr(pm, "equity", pm.capital),
             "initial_capital": pm.initial_capital,
             "open_positions": open_positions,
             "closed_positions": closed_positions[-10:],
@@ -84,6 +85,15 @@ class DashboardServer:
 
     def get_trades(self, limit: int = 20) -> list[dict]:
         engine = self.load_engine()
+        # Persisted closed trades + any in-memory open events this process saw
+        history = list(engine.position_manager.trade_history)
+        opens = [
+            {**p, "type": "open", "status": "open"}
+            for p in engine.position_manager.open_positions.values()
+        ]
+        combined = history + opens
+        if combined:
+            return combined[-limit:]
         return engine.trades[-limit:]
 
     def get_analysis(self) -> dict[str, Any]:

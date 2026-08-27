@@ -40,12 +40,77 @@ def test_short_pnl_and_capital():
         tp_price=90.0,
         strategy_info={},
     )
-    assert pm.capital == 100_000 - 1000.0
+    # Equity model: capital unchanged while position is open
+    assert pm.capital == 100_000
 
     closed = pm.close_position("s1", exit_price=90.0, exit_reason="take_profit")
     assert closed is not None
     assert closed["pnl"] == 100.0  # (100-90)*10
     assert abs(pm.capital - (100_000 + 100.0)) < 1e-6
+
+
+def test_capital_repair_from_negative_notional_reservation():
+    """Old model left capital negative after large BTC notionals — repair on load."""
+    import json
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        state_dir = Path(tmp)
+        (state_dir / "state.json").write_text(json.dumps({
+            "capital": -90365.47,
+            "initial_capital": 100000,
+            "open_positions": {
+                "t1": {
+                    "id": "t1",
+                    "asset": "BTC/USD",
+                    "side": "long",
+                    "entry_price": 78849.0,
+                    "position_size": 2.414,
+                    "entry_value": 190365.47,
+                    "stop_loss": 78641.0,
+                    "take_profit": 79263.0,
+                    "open_time": 1.0,
+                    "strategy_info": {},
+                    "status": "open",
+                    "pnl": 0,
+                    "pnl_pct": 0,
+                    "current_price": 78850.0,
+                }
+            },
+            "closed_positions": [],
+            "trade_history": [],
+        }))
+        pm = PositionManager(initial_capital=100000, state_dir=state_dir)
+        assert abs(pm.capital - 100000) < 1e-6
+        assert "t1" in pm.open_positions
+        closed = pm.close_position("t1", exit_price=79263.0, exit_reason="take_profit")
+        assert closed["pnl"] > 0
+        assert pm.capital > 100000
+
+
+def test_structure_break_disabled_by_default():
+    engine = SMCEngine(SMCConfig())
+    position = {
+        "entry_price": 100.0,
+        "stop_loss": 90.0,
+        "take_profit": 120.0,
+        "side": "long",
+        "open_time": 0,
+    }
+    # Recent low is >0.5% under entry — would have been structure_break before
+    candles = [_candle(i, 100, 101, 99.0, 100) for i in range(12)]
+    candles[-3] = _candle(10, 100, 101, 99.4, 100)  # low < entry*0.995
+    assert engine.check_exit_conditions(position, candles, 100.0) is None
+
+
+def test_position_size_uses_positive_capital_only():
+    pm = PositionManager(initial_capital=100_000)
+    pm.capital = -50_000
+    assert pm.calculate_position_size(100.0, 99.0, risk_pct=0.5) == 0
+    pm.capital = 100_000
+    size = pm.calculate_position_size(100.0, 99.0, risk_pct=0.5)
+    assert abs(size - 500.0) < 1e-9  # risk $500 / $1
 
 
 def test_detect_bullish_fvg_three_candles():

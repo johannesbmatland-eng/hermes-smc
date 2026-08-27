@@ -26,9 +26,12 @@ DEFAULT_CONFIG = {
     },
     "trend_filter": {
         "enabled": True,
-        "method": "ema_and_structure",  # 'ema' or 'ema_and_structure'
+        "method": "ema_majority",  # ema_majority | ema_and_structure
         "ema_period": 50,
         "min_bos_since_start": 1,
+    },
+    "exits": {
+        "structure_break": False,
     },
     "fvq_detection": {
         "min_candles_since_fvg": 50,  # don't trade very old FVGs
@@ -434,15 +437,22 @@ class TrendAnalyzer:
         result["details"]["lh_count_1h"] = len(structure_1h.get("lh", []))
         result["details"]["ll_count_1h"] = len(structure_1h.get("ll", []))
 
-        # Trend filter: long needs bullish+HH/HL, short needs bearish+LH/LL
+        # Trend filter: long needs bullish EMA majority; short needs bearish.
+        # Optional: also require HH/HL or LH/LL structure confirmation.
         trend_filter_enabled = config.get("trend_filter", {}).get("enabled", True)
+        method = config.get("trend_filter", {}).get("method", "ema_majority")
         if trend_filter_enabled:
-            result["trend_filter_pass_long"] = (
-                result["overall"] == "bullish" and result["details"]["confirmed_uptrend"]
-            )
-            result["trend_filter_pass_short"] = (
-                result["overall"] == "bearish" and result["details"]["confirmed_downtrend"]
-            )
+            if method == "ema_and_structure":
+                result["trend_filter_pass_long"] = (
+                    result["overall"] == "bullish" and result["details"]["confirmed_uptrend"]
+                )
+                result["trend_filter_pass_short"] = (
+                    result["overall"] == "bearish" and result["details"]["confirmed_downtrend"]
+                )
+            else:
+                # ema_majority (default): structure is informational only
+                result["trend_filter_pass_long"] = result["overall"] == "bullish"
+                result["trend_filter_pass_short"] = result["overall"] == "bearish"
             result["trend_filter_pass"] = (
                 result["trend_filter_pass_long"] or result["trend_filter_pass_short"]
             )

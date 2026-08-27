@@ -63,6 +63,9 @@ class PaperTradingEngine(SMCEngine):
             return None
 
         fvgs = self._detect_fvg_full(candles_5m)
+        # Only trade FVGs that have fully closed (exclude forming candle)
+        last_closed_idx = len(candles_5m) - 2
+        fvgs = [f for f in fvgs if f["end_candle"] <= last_closed_idx]
         trend_result = self._analyze_trend_full(candles_5m, candles_15m, candles_1h)
 
         side = None
@@ -74,10 +77,14 @@ class PaperTradingEngine(SMCEngine):
             side = "short"
             candidate_fvgs = [f for f in fvgs if f["unmitigated"] and f["type"] == "bearish"]
         else:
-            logger.debug("Trend filter not passed")
+            logger.info(
+                "Skip entry: trend filter not passed "
+                f"(overall={trend_result.get('overall')})"
+            )
             return None
 
         if not candidate_fvgs:
+            logger.debug("Skip entry: no unmitigated FVGs for side=%s", side)
             return None
 
         min_age = self.config.get("fvq_detection.min_candles_since_fvg", 50)
@@ -112,6 +119,10 @@ class PaperTradingEngine(SMCEngine):
         position_size = self._calculate_position_size(entry_price, sl_price)
 
         if position_size <= 0:
+            logger.warning(
+                "Skip entry: position_size=0 (capital=%.2f). Check equity accounting.",
+                self.position_manager.capital,
+            )
             return None
 
         logger.info(
@@ -224,12 +235,18 @@ class PaperTradingEngine(SMCEngine):
         result["details"]["confirmed_downtrend"] = confirmed_downtrend
 
         if self.config.get("trend_filter.enabled", True):
-            result["trend_filter_pass_long"] = (
-                result["overall"] == "bullish" and confirmed_uptrend
-            )
-            result["trend_filter_pass_short"] = (
-                result["overall"] == "bearish" and confirmed_downtrend
-            )
+            method = self.config.get("trend_filter.method", "ema_majority")
+            if method == "ema_and_structure":
+                result["trend_filter_pass_long"] = (
+                    result["overall"] == "bullish" and confirmed_uptrend
+                )
+                result["trend_filter_pass_short"] = (
+                    result["overall"] == "bearish" and confirmed_downtrend
+                )
+            else:
+                # ema_majority: allow trades when EMA bias is clear
+                result["trend_filter_pass_long"] = result["overall"] == "bullish"
+                result["trend_filter_pass_short"] = result["overall"] == "bearish"
             result["trend_filter_pass"] = (
                 result["trend_filter_pass_long"] or result["trend_filter_pass_short"]
             )
@@ -406,7 +423,11 @@ class PaperTradingEngine(SMCEngine):
 
         # Skip forming candle: [-3]=touch candle, [-2]=locked confirmation candle
         if len(candles_5m) >= 3 and method in ["engulfing", "engulfing_or_ifvg"]:
-            touch = candles_5m[-3]
+            touch_idx = len(candles_5m) - 3
+            # FVG must be fully formed before the touch candle
+            if fvg.get("end_candle", -1) >= touch_idx:
+                return None
+            touch = candles_5m[touch_idx]
             confirm = candles_5m[-2]
             if self._candle_touches_fvg(touch, fvg) and self._is_body_engulfing(
                 touch, confirm, side
@@ -474,14 +495,11 @@ class PaperTradingEngine(SMCEngine):
         return entry_price + (risk_distance * rr)
 
     def _calculate_position_size(self, entry_price: float, sl_price: float) -> float:
-        """Calculate position size based on risk % (works for long and short)."""
+        """Calculate position size based on risk % of realized equity."""
         risk_pct = self.config.get("risk.risk_pct_per_trade", 0.5)
-        risk_amount = self.position_manager.capital * (risk_pct / 100)
-        price_risk = abs(entry_price - sl_price)
-        if price_risk <= 0:
-            return 0
-        size = risk_amount / price_risk
-        return max(0, size)
+        return self.position_manager.calculate_position_size(
+            entry_price, sl_price, risk_pct=risk_pct
+        )
 
     def _ema_series(self, candles: list[dict], period: int) -> list[dict]:
         """Build EMA series aligned to candle timestamps (for chart)."""
@@ -602,14 +620,14 @@ class PaperTradingEngine(SMCEngine):
                 "id": "trend",
                 "label": "Trend filter",
                 "status": "pass",
-                "detail": "Bullish — EMA + HH/HL aligned for longs",
+                "detail": "Bullish — EMA majority aligned for longs",
             })
         elif ema_pass_short:
             checklist.append({
                 "id": "trend",
                 "label": "Trend filter",
                 "status": "pass",
-                "detail": "Bearish — EMA + LH/LL aligned for shorts",
+                "detail": "Bearish — EMA majority aligned for shorts",
             })
         else:
             checklist.append({

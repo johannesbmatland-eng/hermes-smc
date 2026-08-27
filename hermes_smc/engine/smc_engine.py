@@ -34,8 +34,11 @@ DEFAULT_STRATEGY = {
     },
     "trend_filter": {
         "enabled": True,
-        "method": "ema_and_structure",
+        "method": "ema_majority",  # ema_majority | ema_and_structure
         "ema_period": 50,
+    },
+    "exits": {
+        "structure_break": False,  # SL/TP only — avoid killing FVG pullback entries
     },
     "fvq_detection": {
         "min_candles_since_fvg": 50,
@@ -125,12 +128,56 @@ class PositionManager:
             self.open_positions = data.get("open_positions", {})
             self.closed_positions = data.get("closed_positions", [])
             self.trade_history = data.get("trade_history", [])
+            self._repair_capital_accounting()
             logger.info(
                 f"Restored state: capital={self.capital:.2f} "
                 f"open={len(self.open_positions)} closed={len(self.closed_positions)}"
             )
         except Exception as e:
             logger.error(f"Failed to load state ({f}): {e}")
+
+    def _repair_capital_accounting(self):
+        """
+        Migrate from old notional-reservation model to equity/PnL model.
+
+        Old model subtracted full entry notional from capital on open (often
+        driving capital negative on BTC). New model keeps capital as realized
+        equity (initial + closed PnL) and only applies PnL on close.
+        """
+        reserved = sum(
+            float(p.get("entry_value", p["entry_price"] * p["position_size"]))
+            for p in self.open_positions.values()
+        )
+        closed_pnl = sum(float(p.get("pnl", 0) or 0) for p in self.closed_positions)
+        expected = self.initial_capital + closed_pnl
+
+        if reserved > 0:
+            reconstructed = self.capital + reserved
+            if self.capital < 0 or abs(reconstructed - expected) < max(1.0, abs(expected) * 0.01):
+                logger.warning(
+                    f"Repairing capital accounting: {self.capital:.2f} → {expected:.2f} "
+                    f"(reserved notional was {reserved:.2f})"
+                )
+                self.capital = expected
+                self.save_state()
+        elif self.capital < 0:
+            logger.warning(f"Repairing negative capital: {self.capital:.2f} → {expected:.2f}")
+            self.capital = expected
+            self.save_state()
+
+    @property
+    def equity(self) -> float:
+        """Realized capital plus unrealized PnL on open positions."""
+        unrealized = 0.0
+        for p in self.open_positions.values():
+            entry = p["entry_price"]
+            size = p["position_size"]
+            price = p.get("current_price", entry)
+            if p.get("side", "long") == "short":
+                unrealized += (entry - price) * size
+            else:
+                unrealized += (price - entry) * size
+        return self.capital + unrealized
 
     def save_state(self):
         """Persist full trading state to disk (atomic write)."""
@@ -158,13 +205,12 @@ class PositionManager:
         risk_pct: float = 0.5,
     ) -> float:
         """
-        Calculate position size based on risk percentage.
-        Risk = (entry - stop_loss) / entry * position_size
-        position_size = risk_amount / (entry - stop_loss)
+        Calculate position size based on risk percentage of account equity.
+        position_size = risk_amount / |entry - stop_loss|
         """
-        risk_amount = self.capital * (risk_pct / 100)
+        risk_amount = max(0.0, self.capital) * (risk_pct / 100)
         price_risk = abs(entry_price - stop_loss_price)
-        if price_risk <= 0:
+        if price_risk <= 0 or risk_amount <= 0:
             return 0
         size = risk_amount / price_risk
         return max(0, size)
@@ -229,7 +275,8 @@ class PositionManager:
             "current_price": entry_price,
         }
         self.open_positions[trade_id] = position
-        self.capital -= entry_price * position_size
+        # Paper equity model: do not reserve full notional (BTC size can exceed cash).
+        # Capital stays as realized equity; only PnL is applied on close.
         self.save_state()
         return position
 
@@ -263,8 +310,8 @@ class PositionManager:
         position["pnl_pct"] = pnl_pct
         position["status"] = "closed"
 
-        # Return reserved notional + PnL (works for long and short)
-        self.capital += position["entry_value"] + pnl
+        # Equity model: apply realized PnL only
+        self.capital += pnl
 
         # Move to closed
         self.closed_positions.append(position)
@@ -524,14 +571,18 @@ class SMCEngine:
         elif side == "short" and current_price <= tp_price:
             return "take_profit"
 
-        # Check market structure break (BOS against us)
-        if len(candles_5m) >= 10:
+        # Optional structure break (off by default — FVG pullback lows often
+        # sit under entry and would close valid trades before SL/TP).
+        if self.config.get("exits.structure_break", False) and len(candles_5m) >= 10:
+            open_time = position.get("open_time", 0)
+            # Only candles strictly after entry count
+            post = [c for c in candles_5m[-10:-1] if c.get("timestamp", 0) > open_time]
             if side == "long":
-                recent_lows = [c["low"] for c in candles_5m[-10:-1]]
+                recent_lows = [c["low"] for c in post]
                 if recent_lows and min(recent_lows) < entry_price * 0.995:
                     return "structure_break"
             else:
-                recent_highs = [c["high"] for c in candles_5m[-10:-1]]
+                recent_highs = [c["high"] for c in post]
                 if recent_highs and max(recent_highs) > entry_price * 1.005:
                     return "structure_break"
 
