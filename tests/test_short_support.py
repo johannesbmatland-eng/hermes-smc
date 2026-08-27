@@ -301,15 +301,18 @@ def test_paper_engine_short_sl_tp_helpers():
     assert size > 0
 
 
-def test_be_trail_default_hard_tp_at_three_r():
+def test_prop_default_fixed_tp_at_1_15r():
     engine = PaperTradingEngine(SMCConfig())
+    assert engine.config.get("exits.mode") == "fixed_tp"
     entry, sl = 100.0, 99.0
     tp = engine._calculate_smc_tp(entry, sl, side="long")
-    assert abs(tp - 103.0) < 1e-9  # tp_rr: 3 → 3R hard TP
+    # fixed_tp uses risk.rr_target (1.2 on prop profile)
+    assert abs(tp - 101.2) < 1e-9
 
 
-def test_be_trail_tp_none_when_tp_rr_zero():
+def test_fixed_tp_none_when_tp_rr_zero():
     engine = PaperTradingEngine(SMCConfig())
+    engine.config._config["exits"]["mode"] = "be_trail"
     engine.config._config["exits"]["tp_rr"] = 0
     entry, sl = 100.0, 99.0
     tp = engine._calculate_smc_tp(entry, sl, side="long")
@@ -319,6 +322,8 @@ def test_be_trail_tp_none_when_tp_rr_zero():
 def test_rr_two_makes_one_percent_from_half_percent_risk():
     engine = PaperTradingEngine(SMCConfig())
     engine.config._config["exits"]["mode"] = "fixed_tp"
+    engine.config._config["exits"]["tp_rr"] = 2.0
+    engine.config._config["risk"]["rr_target"] = 2.0
     entry, sl = 100.0, 99.0  # 1.0 price risk
     tp = engine._calculate_smc_tp(entry, sl, side="long")
     assert abs(tp - 102.0) < 1e-9  # 1:2 RR
@@ -344,6 +349,7 @@ def test_be_at_one_r_then_trail_no_hard_tp():
     engine = SMCEngine(SMCConfig())
     engine.config._config["exits"]["mode"] = "be_trail"
     engine.config._config["exits"]["be_at_rr"] = 1.0
+    engine.config._config["exits"]["trail_after_be"] = True
     engine.config._config["exits"]["trail_rr"] = 1.0
     engine.config._config["exits"]["tp_rr"] = 0
 
@@ -372,9 +378,36 @@ def test_be_at_one_r_then_trail_no_hard_tp():
     assert engine.check_exit_conditions(position, candles, 101.0) == "trailing_stop"
 
 
-def test_smart_defaults_be_at_1_5r_trail_and_3r_tp():
+def test_prop_defaults_fixed_tp_no_trail():
+    """Prop profile: fixed 1.2R TP, no BE/trail by default."""
     engine = SMCEngine(SMCConfig())
-    # Defaults: be_at 1.5, trail 1.0, tp 3.0
+    assert engine.config.get("exits.mode") == "fixed_tp"
+    assert engine.config.get("exits.trail_after_be") is False
+    assert abs(float(engine.config.get("exits.tp_rr")) - 1.2) < 1e-9
+
+    position = {
+        "entry_price": 100.0,
+        "stop_loss": 99.0,
+        "take_profit": 101.2,
+        "side": "long",
+        "initial_stop_loss": 99.0,
+        "open_time": 1.0,
+    }
+    candles = [_candle(i, 100, 101, 99.5, 100) for i in range(12)]
+
+    # Mid-range: no BE move under fixed_tp without trail
+    assert engine.check_exit_conditions(position, candles, 100.8) is None
+    assert position.get("be_moved") is not True
+    assert engine.check_exit_conditions(position, candles, 101.2) == "take_profit"
+
+
+def test_optional_be_trail_1_5r_and_3r_tp():
+    engine = SMCEngine(SMCConfig())
+    engine.config._config["exits"]["mode"] = "be_trail"
+    engine.config._config["exits"]["be_at_rr"] = 1.5
+    engine.config._config["exits"]["trail_after_be"] = True
+    engine.config._config["exits"]["trail_rr"] = 1.0
+    engine.config._config["exits"]["tp_rr"] = 3.0
     position = {
         "entry_price": 100.0,
         "stop_loss": 99.0,
@@ -539,3 +572,39 @@ def test_ema_series_length():
     series = engine._ema_series(candles, 50)
     assert len(series) == 80 - 50 + 1
     assert "time" in series[0] and "value" in series[0]
+
+
+def test_prop_risk_gates_daily_and_drawdown(tmp_path):
+    """Daily loss / MDD halt entries and persist across reload."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    state_dir = tmp_path / "state"
+    pm = PositionManager(initial_capital=100_000, state_dir=state_dir)
+    ny = ZoneInfo("America/New_York")
+    ts = datetime(2026, 6, 15, 10, 0, tzinfo=ny).timestamp()
+
+    pm.sync_risk_day(ts)
+    ok, _ = pm.risk_allows_new_entry(1.25, max_daily_loss_pct=2.0, max_drawdown_pct=6.0, ts=ts)
+    assert ok is True
+
+    # Realize a loss that leaves insufficient daily budget for another 1.25% risk
+    pm.note_realized_pnl(-1_300.0, ts)  # -1.3%
+    ok, reason = pm.risk_allows_new_entry(1.25, max_daily_loss_pct=2.0, max_drawdown_pct=6.0, ts=ts)
+    assert ok is False
+    assert reason and "daily" in reason
+
+    pm.save_state()
+    pm2 = PositionManager(initial_capital=100_000, state_dir=state_dir)
+    assert pm2.day_key == pm.day_key
+    assert abs(pm2.day_realized_pnl - (-1_300.0)) < 1e-6
+    ok2, _ = pm2.risk_allows_new_entry(1.25, max_daily_loss_pct=2.0, max_drawdown_pct=6.0, ts=ts)
+    assert ok2 is False
+
+    # Drawdown gate: equity peak high, capital crushed
+    pm3 = PositionManager(initial_capital=100_000)
+    pm3.equity_peak = 100_000
+    pm3.capital = 93_000  # 7% DD from peak
+    ok3, reason3 = pm3.risk_allows_new_entry(1.0, max_daily_loss_pct=2.0, max_drawdown_pct=6.0, ts=ts)
+    assert ok3 is False
+    assert reason3 and "drawdown" in reason3

@@ -1,0 +1,438 @@
+{
+  "tag": "okx_BTCUSDT_365d_2025-08-27_2026-08-27",
+  "days": 365,
+  "months": 11.990801576872535,
+  "market": {
+    "start": "2025-08-27T13:25:00+00:00",
+    "end": "2026-08-27T13:20:00+00:00",
+    "btc_start": 111321.6,
+    "btc_end": 79368.1,
+    "btc_pct": -28.7,
+    "monthly_btc": [
+      {
+        "month": "2025-08",
+        "pct": -2.72
+      },
+      {
+        "month": "2025-09",
+        "pct": 5.36
+      },
+      {
+        "month": "2025-10",
+        "pct": -3.9
+      },
+      {
+        "month": "2025-11",
+        "pct": -17.55
+      },
+      {
+        "month": "2025-12",
+        "pct": -3.02
+      },
+      {
+        "month": "2026-01",
+        "pct": -10.16
+      },
+      {
+        "month": "2026-02",
+        "pct": -14.95
+      },
+      {
+        "month": "2026-03",
+        "pct": 1.95
+      },
+      {
+        "month": "2026-04",
+        "pct": 11.81
+      },
+      {
+        "month": "2026-05",
+        "pct": -3.49
+      },
+      {
+        "month": "2026-06",
+        "pct": -20.43
+      },
+      {
+        "month": "2026-07",
+        "pct": 7.27
+      },
+      {
+        "month": "2026-08",
+        "pct": 26.2
+      }
+    ]
+  },
+  "elapsed_sec": 234.4,
+  "results": {
+    "short_only": {
+      "trades": 135,
+      "wins": 78,
+      "losses": 57,
+      "win_rate_pct": 57.78,
+      "total_pnl": 61402.77,
+      "total_account_pct": 61.403,
+      "per_month_simple_pct": 5.121,
+      "max_dd_pct": 6.106,
+      "worst_day_pct": -1.35,
+      "halted_days": 49,
+      "months": [
+        {
+          "month": "2025-08",
+          "pnl": -2681.78,
+          "pct": -2.682,
+          "trades": 2,
+          "wins": 0,
+          "win_rate_pct": 0.0
+        },
+        {
+          "month": "2025-09",
+          "pnl": -597.37,
+          "pct": -0.597,
+          "trades": 7,
+          "wins": 3,
+          "win_rate_pct": 42.9
+        },
+        {
+          "month": "2025-10",
+          "pnl": -1656.12,
+          "pct": -1.656,
+          "trades": 10,
+          "wins": 4,
+          "win_rate_pct": 40.0
+        },
+        {
+          "month": "2025-11",
+          "pnl": 3837.63,
+          "pct": 3.838,
+          "trades": 8,
+          "wins": 5,
+          "win_rate_pct": 62.5
+        },
+        {
+          "month": "2025-12",
+          "pnl": 3107.82,
+          "pct": 3.108,
+          "trades": 13,
+          "wins": 7,
+          "win_rate_pct": 53.8
+        },
+        {
+          "month": "2026-01",
+          "pnl": 637.9,
+          "pct": 0.638,
+          "trades": 17,
+          "wins": 8,
+          "win_rate_pct": 47.1
+        },
+        {
+          "month": "2026-02",
+          "pnl": 11233.85,
+          "pct": 11.234,
+          "trades": 12,
+          "wins": 9,
+          "win_rate_pct": 75.0
+        },
+        {
+          "month": "2026-03",
+          "pnl": 7114.84,
+          "pct": 7.115,
+          "trades": 13,
+          "wins": 8,
+          "win_rate_pct": 61.5
+        },
+        {
+          "month": "2026-04",
+          "pnl": 9641.96,
+          "pct": 9.642,
+          "trades": 14,
+          "wins": 9,
+          "win_rate_pct": 64.3
+        },
+        {
+          "month": "2026-05",
+          "pnl": 10410.3,
+          "pct": 10.41,
+          "trades": 14,
+          "wins": 9,
+          "win_rate_pct": 64.3
+        },
+        {
+          "month": "2026-06",
+          "pnl": 17971.53,
+          "pct": 17.972,
+          "trades": 13,
+          "wins": 10,
+          "win_rate_pct": 76.9
+        },
+        {
+          "month": "2026-07",
+          "pnl": -976.12,
+          "pct": -0.976,
+          "trades": 7,
+          "wins": 3,
+          "win_rate_pct": 42.9
+        },
+        {
+          "month": "2026-08",
+          "pnl": 3358.33,
+          "pct": 3.358,
+          "trades": 5,
+          "wins": 3,
+          "win_rate_pct": 60.0
+        }
+      ],
+      "profit_factor": 1.682,
+      "passes": false,
+      "risk_ok": false,
+      "period_months": 11.990801576872535,
+      "name": "short_only"
+    },
+    "long_only": {
+      "trades": 131,
+      "wins": 62,
+      "losses": 69,
+      "win_rate_pct": 47.33,
+      "total_pnl": 6025.17,
+      "total_account_pct": 6.025,
+      "per_month_simple_pct": 0.502,
+      "max_dd_pct": 11.839,
+      "worst_day_pct": -1.35,
+      "halted_days": 61,
+      "months": [
+        {
+          "month": "2025-08",
+          "pnl": -1350.0,
+          "pct": -1.35,
+          "trades": 1,
+          "wins": 0,
+          "win_rate_pct": 0.0
+        },
+        {
+          "month": "2025-09",
+          "pnl": 5004.8,
+          "pct": 5.005,
+          "trades": 16,
+          "wins": 9,
+          "win_rate_pct": 56.2
+        },
+        {
+          "month": "2025-10",
+          "pnl": -1522.06,
+          "pct": -1.522,
+          "trades": 12,
+          "wins": 5,
+          "win_rate_pct": 41.7
+        },
+        {
+          "month": "2025-11",
+          "pnl": -122.57,
+          "pct": -0.123,
+          "trades": 11,
+          "wins": 5,
+          "win_rate_pct": 45.5
+        },
+        {
+          "month": "2025-12",
+          "pnl": 6642.08,
+          "pct": 6.642,
+          "trades": 15,
+          "wins": 9,
+          "win_rate_pct": 60.0
+        },
+        {
+          "month": "2026-01",
+          "pnl": -3302.11,
+          "pct": -3.302,
+          "trades": 11,
+          "wins": 4,
+          "win_rate_pct": 36.4
+        },
+        {
+          "month": "2026-02",
+          "pnl": -3706.8,
+          "pct": -3.707,
+          "trades": 7,
+          "wins": 2,
+          "win_rate_pct": 28.6
+        },
+        {
+          "month": "2026-03",
+          "pnl": 2934.46,
+          "pct": 2.934,
+          "trades": 11,
+          "wins": 6,
+          "win_rate_pct": 54.5
+        },
+        {
+          "month": "2026-04",
+          "pnl": -2045.07,
+          "pct": -2.045,
+          "trades": 8,
+          "wins": 3,
+          "win_rate_pct": 37.5
+        },
+        {
+          "month": "2026-05",
+          "pnl": -2869.45,
+          "pct": -2.869,
+          "trades": 13,
+          "wins": 5,
+          "win_rate_pct": 38.5
+        },
+        {
+          "month": "2026-06",
+          "pnl": 3766.62,
+          "pct": 3.767,
+          "trades": 6,
+          "wins": 4,
+          "win_rate_pct": 66.7
+        },
+        {
+          "month": "2026-07",
+          "pnl": -1771.0,
+          "pct": -1.771,
+          "trades": 10,
+          "wins": 4,
+          "win_rate_pct": 40.0
+        },
+        {
+          "month": "2026-08",
+          "pnl": 4366.25,
+          "pct": 4.366,
+          "trades": 10,
+          "wins": 6,
+          "win_rate_pct": 60.0
+        }
+      ],
+      "profit_factor": 1.062,
+      "passes": false,
+      "risk_ok": false,
+      "period_months": 11.990801576872535,
+      "name": "long_only"
+    },
+    "both_sides": {
+      "trades": 241,
+      "wins": 123,
+      "losses": 118,
+      "win_rate_pct": 51.04,
+      "total_pnl": 45176.73,
+      "total_account_pct": 45.177,
+      "per_month_simple_pct": 3.768,
+      "max_dd_pct": 12.918,
+      "worst_day_pct": -1.35,
+      "halted_days": 98,
+      "months": [
+        {
+          "month": "2025-08",
+          "pnl": -2681.78,
+          "pct": -2.682,
+          "trades": 2,
+          "wins": 0,
+          "win_rate_pct": 0.0
+        },
+        {
+          "month": "2025-09",
+          "pnl": 2689.43,
+          "pct": 2.689,
+          "trades": 22,
+          "wins": 11,
+          "win_rate_pct": 50.0
+        },
+        {
+          "month": "2025-10",
+          "pnl": -6219.12,
+          "pct": -6.219,
+          "trades": 20,
+          "wins": 7,
+          "win_rate_pct": 35.0
+        },
+        {
+          "month": "2025-11",
+          "pnl": 5002.69,
+          "pct": 5.003,
+          "trades": 18,
+          "wins": 10,
+          "win_rate_pct": 55.6
+        },
+        {
+          "month": "2025-12",
+          "pnl": 12729.69,
+          "pct": 12.73,
+          "trades": 26,
+          "wins": 16,
+          "win_rate_pct": 61.5
+        },
+        {
+          "month": "2026-01",
+          "pnl": -4977.09,
+          "pct": -4.977,
+          "trades": 23,
+          "wins": 9,
+          "win_rate_pct": 39.1
+        },
+        {
+          "month": "2026-02",
+          "pnl": 3893.97,
+          "pct": 3.894,
+          "trades": 17,
+          "wins": 9,
+          "win_rate_pct": 52.9
+        },
+        {
+          "month": "2026-03",
+          "pnl": 11939.32,
+          "pct": 11.939,
+          "trades": 23,
+          "wins": 14,
+          "win_rate_pct": 60.9
+        },
+        {
+          "month": "2026-04",
+          "pnl": 3070.67,
+          "pct": 3.071,
+          "trades": 20,
+          "wins": 10,
+          "win_rate_pct": 50.0
+        },
+        {
+          "month": "2026-05",
+          "pnl": 4107.35,
+          "pct": 4.107,
+          "trades": 26,
+          "wins": 13,
+          "win_rate_pct": 50.0
+        },
+        {
+          "month": "2026-06",
+          "pnl": 16869.48,
+          "pct": 16.869,
+          "trades": 15,
+          "wins": 11,
+          "win_rate_pct": 73.3
+        },
+        {
+          "month": "2026-07",
+          "pnl": -3390.6,
+          "pct": -3.391,
+          "trades": 17,
+          "wins": 7,
+          "win_rate_pct": 41.2
+        },
+        {
+          "month": "2026-08",
+          "pnl": 2142.72,
+          "pct": 2.143,
+          "trades": 12,
+          "wins": 6,
+          "win_rate_pct": 50.0
+        }
+      ],
+      "profit_factor": 1.245,
+      "passes": false,
+      "risk_ok": false,
+      "period_months": 11.990801576872535,
+      "name": "both_sides"
+    }
+  }
+}
