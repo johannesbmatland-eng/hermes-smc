@@ -95,6 +95,21 @@ class PaperTradingEngine(SMCEngine):
             )
             return None
 
+        allowed = self.config.get("entry.allowed_sides", ["long", "short"])
+        if isinstance(allowed, str):
+            allowed = [allowed]
+        if side not in set(allowed):
+            logger.info(f"Skip entry: side={side} not in allowed_sides={allowed}")
+            return None
+
+        # Optional hard RSI band (in addition to long_max/short_min)
+        rsi_band = self.config.get("rsi.entry_band") or None
+        if rsi is not None and isinstance(rsi_band, (list, tuple)) and len(rsi_band) == 2:
+            lo, hi = float(rsi_band[0]), float(rsi_band[1])
+            if not (lo <= rsi <= hi):
+                logger.info(f"Skip entry: RSI {rsi:.1f} outside band [{lo}, {hi}]")
+                return None
+
         session_cfg = self.config.get("sessions", {}) or {}
         if isinstance(session_cfg, dict) and session_cfg.get("filter_entries", True):
             sess = active_session(config=session_cfg)
@@ -266,6 +281,18 @@ class PaperTradingEngine(SMCEngine):
                 )
                 result["trend_filter_pass_short"] = (
                     result["overall"] == "bearish" and confirmed_downtrend
+                )
+            elif method == "ema_unanimous":
+                # All three TFs must agree
+                result["trend_filter_pass_long"] = bullish == 3
+                result["trend_filter_pass_short"] = bearish == 3
+            elif method == "ema_1h_15m":
+                # Require higher-timeframe alignment (ignore 5m noise)
+                result["trend_filter_pass_long"] = (
+                    result["trend_1h"] == "bullish" and result["trend_15m"] == "bullish"
+                )
+                result["trend_filter_pass_short"] = (
+                    result["trend_1h"] == "bearish" and result["trend_15m"] == "bearish"
                 )
             else:
                 # ema_majority: allow trades when EMA bias is clear
@@ -441,8 +468,7 @@ class PaperTradingEngine(SMCEngine):
 
         Long: curr must be bullish, larger body, and cover prev body.
         Short: curr must be bearish, larger body, and cover prev body.
-        Touch candle color does not matter.
-        Crypto-friendly: open may equal previous close.
+        Optional quality gates via entry.min_engulf_body_ratio / min_engulf_body_pct.
         """
         prev_top = max(prev["open"], prev["close"])
         prev_bot = min(prev["open"], prev["close"])
@@ -451,16 +477,23 @@ class PaperTradingEngine(SMCEngine):
         prev_body = abs(prev["close"] - prev["open"])
         curr_body = abs(curr["close"] - curr["open"])
 
+        min_ratio = float(self.config.get("entry.min_engulf_body_ratio", 1.0) or 1.0)
+        min_pct = float(self.config.get("entry.min_engulf_body_pct", 0.0) or 0.0)
+        if prev_body <= 0:
+            return False
+        if curr_body < prev_body * min_ratio:
+            return False
+        if min_pct > 0 and (curr_body / curr["close"]) < min_pct:
+            return False
+
         if side == "long":
             return (
                 curr["close"] > curr["open"]
-                and curr_body > prev_body
                 and curr_top > prev_top
                 and curr_bot <= prev_bot
             )
         return (
             curr["close"] < curr["open"]
-            and curr_body > prev_body
             and curr_bot < prev_bot
             and curr_top >= prev_top
         )
@@ -1077,6 +1110,18 @@ class PaperTradingEngine(SMCEngine):
             return
 
         if time.time() - self.last_trade_time < self.config.get("entry.cooldown_seconds", 300):
+            return
+
+        risk_pct = float(self.config.get("risk.risk_pct_per_trade", 0.5))
+        max_daily = float(self.config.get("risk.max_daily_loss_pct", 2.0))
+        max_dd = float(self.config.get("risk.max_drawdown_pct", 6.0))
+        ok_risk, reason = self.position_manager.risk_allows_new_entry(
+            risk_pct=risk_pct,
+            max_daily_loss_pct=max_daily,
+            max_drawdown_pct=max_dd,
+        )
+        if not ok_risk:
+            logger.info(f"Skip entry: risk gate — {reason}")
             return
 
         signal = self.detect_entry_signal(candles_5m, candles_15m, candles_1h, candles_1m)

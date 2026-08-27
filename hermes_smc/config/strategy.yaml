@@ -10,7 +10,7 @@ timeframes:
 
 trend_filter:
   enabled: true
-  method: "ema_majority"   # EMA majority across 5m/15m/1h (structure is informational)
+  method: "ema_majority"   # EMA majority across 5m/15m/1h
   ema_period: 50
 
 fvq_detection:
@@ -21,38 +21,41 @@ entry:
   confirmation: "engulfing_or_ifvg"
   pullback_depth_pct: 0.5
   max_open_positions: 1
-  cooldown_seconds: 300
-  engulf_lookback: 2      # bearish FVG-touch → engulf on 1st or 2nd next candle
+  cooldown_seconds: 120
+  engulf_lookback: 2
+  allowed_sides: ["short"]          # 6m: shorts dominate longs
+  min_engulf_body_ratio: 1.5        # stronger engulf → higher WR/PF
+  min_engulf_body_pct: 0.0
 
 rsi:
   enabled: true
   period: 14
-  long_max: 65            # no longs when RSI above this
-  short_min: 35           # no shorts when RSI below this
+  long_max: 55
+  short_min: 45
 
-# Contiguous KZP-style sessions (America/New_York).
-# Each window ends exactly when the next starts — no Off-session gaps.
+# Contiguous sessions (NY). Only ASIA + LNDN enabled for prop profile.
 sessions:
   timezone: "America/New_York"
-  filter_entries: true    # only open trades inside enabled windows
+  filter_entries: true
   windows:
-    - { name: "ASIA", start: "20:00", end: "02:00", enabled: true }   # → LNDN
-    - { name: "LNDN", start: "02:00", end: "09:30", enabled: true }   # → NYAM
-    - { name: "NYAM", start: "09:30", end: "13:30", enabled: true }   # → NYPM
-    - { name: "NYPM", start: "13:30", end: "20:00", enabled: true }   # → ASIA
+    - { name: "ASIA", start: "20:00", end: "02:00", enabled: true }
+    - { name: "LNDN", start: "02:00", end: "09:30", enabled: true }
+    - { name: "NYAM", start: "09:30", end: "13:30", enabled: false }
+    - { name: "NYPM", start: "13:30", end: "20:00", enabled: false }
 
 exits:
   structure_break: false
-  mode: "be_trail"       # fixed_tp | be_trail | trail_only
-  be_at_rr: 1.5          # BE after 1.5R (avoids BTC noise scratch at 1R)
-  trail_after_be: true   # then trail favorable extreme
-  trail_rr: 1.0          # trail distance = 1R behind peak/trough
-  tp_rr: 3.0             # hard TP at 3R (~1.5% account at 0.5% risk)
-  be_buffer_pct: 0.0001  # tiny BE buffer past entry
+  mode: "fixed_tp"       # hard TP for higher winrate / prop stability
+  be_at_rr: 0.55
+  trail_after_be: false
+  trail_rr: 1.0
+  tp_rr: 1.2             # 1.2R take-profit
+  be_buffer_pct: 0.0001
 
 risk:
-  risk_pct_per_trade: 0.5
-  rr_target: 2.0          # used for BE trigger alignment / legacy fixed TP
-  rr_alternative: 3.0
-  # SL just beyond FVG zone edge (gap), NOT under candle-1's low
+  risk_pct_per_trade: 1.35
+  rr_target: 1.2
+  rr_alternative: 1.5
   sl_buffer_pct: 0.0003
+  max_daily_loss_pct: 2.0    # prop-style daily halt
+  max_drawdown_pct: 6.0      # prop-style max DD halt

@@ -1,0 +1,40 @@
+{
+  "selected": "short_strong_engulf_1.5",
+  "period": "2026-02-28 → 2026-08-27 (~6m OKX BTC/USDT)",
+  "caps": {"max_daily_loss_pct": 2.0, "max_dd_pct": 6.0},
+  "summary": {
+    "win_rate_pct": 63.64,
+    "per_month_simple_pct": 6.955,
+    "total_account_pct": 41.728,
+    "max_dd_pct": 3.996,
+    "worst_day_pct": -1.35,
+    "trades": 66,
+    "profit_factor": 2.05,
+    "risk_ok": true
+  },
+  "months": [
+    {"month": "2026-03", "pct": 6.248, "trades": 13, "win_rate_pct": 61.5},
+    {"month": "2026-04", "pct": 8.467, "trades": 14, "win_rate_pct": 64.3},
+    {"month": "2026-05", "pct": 9.141, "trades": 14, "win_rate_pct": 64.3},
+    {"month": "2026-06", "pct": 15.781, "trades": 13, "win_rate_pct": 76.9},
+    {"month": "2026-07", "pct": -0.857, "trades": 7, "win_rate_pct": 42.9},
+    {"month": "2026-08", "pct": 2.949, "trades": 5, "win_rate_pct": 60.0}
+  ],
+  "config": {
+    "allowed_sides": ["short"],
+    "sessions": ["ASIA", "LNDN"],
+    "exits.mode": "fixed_tp",
+    "exits.tp_rr": 1.2,
+    "risk.risk_pct_per_trade": 1.35,
+    "entry.min_engulf_body_ratio": 1.5,
+    "entry.cooldown_seconds": 120,
+    "trend_filter.method": "ema_majority"
+  },
+  "all_green_alternative": {
+    "name": "prop_short_asia_lndn_1.15R",
+    "win_rate_pct": 61.11,
+    "per_month_simple_pct": 5.293,
+    "max_dd_pct": 4.907,
+    "note": "All 6 months positive; slightly lower monthly return"
+  }
+}
