@@ -1,11 +1,10 @@
 {
   "mode": "paper",
   "live_orders": false,
-  "hermes": false,
   "metrics": {
     "profit": 1526.71,
     "profit_pct": 1.527,
-    "profit_per_month": 1709.53,
+    "profit_per_month": 1712.2,
     "winrate": 66.67,
     "expectancy": 317.06,
     "max_dd_pct": 1.6,
@@ -21,8 +20,6 @@
     "final_equity": 101526.71
   },
   "sources": {
-    "BTC/USD": "kraken_long:721"
-  },
-  "bars": 721,
-  "generated_at": 1787842504.8797615
+    "BTC/USD": "cache:BTC_USD_1h_720.npz"
+  }
 }
