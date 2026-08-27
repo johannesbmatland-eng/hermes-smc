@@ -33,10 +33,10 @@ DEFAULT_CONFIG = {
     "exits": {
         "structure_break": False,
         "mode": "be_trail",
-        "be_at_rr": 2.0,
+        "be_at_rr": 1.0,
         "trail_after_be": True,
         "trail_rr": 1.0,
-        "tp_rr": 5.0,
+        "tp_rr": 0,
         "be_buffer_pct": 0.0001,
     },
     "fvq_detection": {
