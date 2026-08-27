@@ -140,6 +140,7 @@ class DashboardServer:
                 "confirmation": info.get("confirmation"),
                 "session": info.get("session"),
                 "trend": info.get("trend"),
+                "rsi_at_entry": p.get("rsi_at_entry", info.get("rsi_at_entry")),
                 "sl_mode": p.get("sl_mode", "initial"),
                 "be_moved": p.get("be_moved", False),
                 "initial_stop_loss": p.get("initial_stop_loss"),
@@ -199,7 +200,16 @@ class DashboardServer:
         if price is None:
             price = position.get("current_price") or position["entry_price"]
 
-        closed = pm.close_position(trade_id, float(price), exit_reason="manual")
+        exit_rsi = None
+        candles = getattr(engine, "last_candles_5m", None) or []
+        if candles and hasattr(engine, "_calc_rsi"):
+            exit_rsi = engine._calc_rsi(
+                candles, int(engine.config.get("rsi.period", 14))
+            )
+
+        closed = pm.close_position(
+            trade_id, float(price), exit_reason="manual", rsi_at_exit=exit_rsi
+        )
         if not closed:
             return {"ok": False, "error": "Close failed"}
 
@@ -210,6 +220,7 @@ class DashboardServer:
             "side": closed.get("side"),
             "reason": "manual",
             "price": price,
+            "rsi_at_exit": exit_rsi,
             "timestamp": time.time(),
         })
         logger.info(
@@ -733,7 +744,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             <div class="grid" id="analytics_highlights" style="margin-bottom:12px"></div>
             <div class="grid">
                 <div>
-                    <div class="card-title">By session (UTC)</div>
+                    <div class="card-title">By session (NY)</div>
                     <div id="analytics_sessions"><p style="color:var(--muted);font-size:0.85rem">No closed trades yet</p></div>
                 </div>
                 <div>
@@ -743,6 +754,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 <div>
                     <div class="card-title">By weekday</div>
                     <div id="analytics_weekdays"><p style="color:var(--muted);font-size:0.85rem">No closed trades yet</p></div>
+                </div>
+                <div>
+                    <div class="card-title">By RSI at entry</div>
+                    <div id="analytics_rsi"><p style="color:var(--muted);font-size:0.85rem">No closed trades yet</p></div>
                 </div>
             </div>
         </div>
@@ -939,8 +954,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             const sess = t.session ? (' · ' + t.session) : '';
             const rMult = t.r_multiple != null ? (' · R ' + Number(t.r_multiple).toFixed(2)) : '';
             const slMode = t.sl_mode ? (' · SL ' + t.sl_mode) : '';
+            const rsiIn = t.rsi_at_entry != null ? (' · RSI ' + Number(t.rsi_at_entry).toFixed(1)) : '';
             document.getElementById('live_meta').textContent =
-                (t.id ? t.id.substring(0, 8) + '…' : '') + conf + rr + sess + rMult + slMode;
+                (t.id ? t.id.substring(0, 8) + '…' : '') + conf + rr + sess + rMult + slMode + rsiIn;
 
             const wrap = document.getElementById('live_pnl_wrap');
             wrap.className = 'live-pnl ' + (positive ? 'positive' : 'negative');
@@ -1049,6 +1065,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             const conditions = [].concat(a.by_trend || [], a.by_confirmation || [], a.by_side || []);
             document.getElementById('analytics_conditions').innerHTML = renderAnalyticsTable(conditions);
             document.getElementById('analytics_weekdays').innerHTML = renderAnalyticsTable(a.by_weekday);
+            document.getElementById('analytics_rsi').innerHTML = renderAnalyticsTable(a.by_rsi_entry);
         }
 
         async function refresh() {
@@ -1171,7 +1188,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
                 const tradesContainer = document.getElementById('trades_container');
                 if (trades.trades && trades.trades.length > 0) {
-                    tradesContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Type</th><th>Side</th><th>Session</th><th>Entry</th><th>PnL $</th><th>Acct %</th><th>R</th><th>Reason</th><th>Time</th></tr></thead><tbody>' +
+                    tradesContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Type</th><th>Side</th><th>Session</th><th>Entry</th><th>RSI in</th><th>RSI out</th><th>PnL $</th><th>Acct %</th><th>R</th><th>Reason</th><th>Time</th></tr></thead><tbody>' +
                         trades.trades.map(t => {
                             const ts = t.timestamp || t.open_time || t.exit_time;
                             const timeLabel = ts ? new Date(ts * 1000).toLocaleTimeString() : '--';
@@ -1179,6 +1196,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                             const acct = t.pnl_account_pct != null ? t.pnl_account_pct : null;
                             const r = t.r_multiple != null ? Number(t.r_multiple).toFixed(2) : '--';
                             const sess = t.session || (t.strategy_info && t.strategy_info.session) || '--';
+                            const info = t.strategy_info || {};
+                            const rsiIn = t.rsi_at_entry != null ? t.rsi_at_entry : info.rsi_at_entry;
+                            const rsiOut = t.rsi_at_exit != null ? t.rsi_at_exit : info.rsi_at_exit;
+                            const fmtRsi = (v) => v != null && !isNaN(v) ? Number(v).toFixed(1) : '--';
                             return `
                             <tr>
                                 <td>${t.id.substring(0, 8)}...</td>
@@ -1186,6 +1207,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                                 <td class="side-${t.side || ''}">${t.side || '--'}</td>
                                 <td>${sess}</td>
                                 <td>${t.entry_price ? t.entry_price.toFixed(2) : '--'}</td>
+                                <td>${fmtRsi(rsiIn)}</td>
+                                <td>${fmtRsi(rsiOut)}</td>
                                 <td class="${(t.pnl || 0) >= 0 ? 'positive' : 'negative'}">${t.pnl != null ? formatSignedCurrency(t.pnl) : '--'}</td>
                                 <td class="${(acct || 0) >= 0 ? 'positive' : 'negative'}">${acct != null ? ((acct >= 0 ? '+' : '') + Number(acct).toFixed(2) + '%') : '--'}</td>
                                 <td>${r}</td>

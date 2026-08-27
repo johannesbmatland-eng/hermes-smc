@@ -67,12 +67,10 @@ DEFAULT_STRATEGY = {
         "timezone": "America/New_York",
         "filter_entries": True,
         "windows": [
-            {"name": "ASIA", "start": "20:00", "end": "00:00", "enabled": True},
-            {"name": "LNDN", "start": "02:00", "end": "05:00", "enabled": True},
-            {"name": "NYAM", "start": "09:30", "end": "11:00", "enabled": True},
-            {"name": "NYL", "start": "12:00", "end": "13:00", "enabled": False},
-            {"name": "NYPM", "start": "13:30", "end": "16:00", "enabled": True},
-            {"name": "RTH", "start": "09:30", "end": "16:00", "enabled": False},
+            {"name": "ASIA", "start": "20:00", "end": "02:00", "enabled": True},
+            {"name": "LNDN", "start": "02:00", "end": "09:30", "enabled": True},
+            {"name": "NYAM", "start": "09:30", "end": "13:30", "enabled": True},
+            {"name": "NYPM", "start": "13:30", "end": "20:00", "enabled": True},
         ],
     },
     "risk": {
@@ -308,6 +306,8 @@ class PositionManager:
             "be_moved": False,
             "sl_mode": "initial",
         }
+        if isinstance(strategy_info, dict) and strategy_info.get("rsi_at_entry") is not None:
+            position["rsi_at_entry"] = strategy_info["rsi_at_entry"]
         self.open_positions[trade_id] = position
         # Paper equity model: do not reserve full notional (BTC size can exceed cash).
         # Capital stays as realized equity; only PnL is applied on close.
@@ -342,6 +342,7 @@ class PositionManager:
         trade_id: str,
         exit_price: float,
         exit_reason: str = "manual",
+        rsi_at_exit: float | None = None,
     ) -> dict | None:
         """Close an open position and record results."""
         if trade_id not in self.open_positions:
@@ -367,6 +368,17 @@ class PositionManager:
         position["r_multiple"] = r_mult
         position["status"] = "closed"
 
+        if rsi_at_exit is not None:
+            rsi_val = round(float(rsi_at_exit), 2)
+            position["rsi_at_exit"] = rsi_val
+            info = position.setdefault("strategy_info", {})
+            if isinstance(info, dict):
+                info["rsi_at_exit"] = rsi_val
+        # Preserve entry RSI on the top-level for easy analytics/UI access
+        info = position.get("strategy_info") or {}
+        if position.get("rsi_at_entry") is None and isinstance(info, dict):
+            if info.get("rsi_at_entry") is not None:
+                position["rsi_at_entry"] = info["rsi_at_entry"]
         # Equity model: apply realized PnL only
         self.capital += pnl
 
@@ -768,11 +780,19 @@ class SMCEngine:
             exit_reason = self.check_exit_conditions(position, candles_5m, current_price)
             if exit_reason:
                 logger.info(f"Closing position {trade_id}: {exit_reason}")
-                self.position_manager.close_position(trade_id, current_price, exit_reason)
+                exit_rsi = None
+                if hasattr(self, "_calc_rsi"):
+                    exit_rsi = self._calc_rsi(
+                        candles_5m, int(self.config.get("rsi.period", 14))
+                    )
+                self.position_manager.close_position(
+                    trade_id, current_price, exit_reason, rsi_at_exit=exit_rsi
+                )
                 self.trades.append({
                     "id": trade_id,
                     "type": "close",
                     "reason": exit_reason,
+                    "rsi_at_exit": exit_rsi,
                     "timestamp": time.time(),
                 })
 

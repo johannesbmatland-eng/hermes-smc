@@ -30,17 +30,16 @@ rsi:
   long_max: 65            # no longs when RSI above this
   short_min: 35           # no shorts when RSI below this
 
-# KZP [TFO] killzones (America/New_York)
+# Contiguous KZP-style sessions (America/New_York).
+# Each window ends exactly when the next starts — no Off-session gaps.
 sessions:
   timezone: "America/New_York"
   filter_entries: true    # only open trades inside enabled windows
   windows:
-    - { name: "ASIA", start: "20:00", end: "00:00", enabled: true }
-    - { name: "LNDN", start: "02:00", end: "05:00", enabled: true }
-    - { name: "NYAM", start: "09:30", end: "11:00", enabled: true }
-    - { name: "NYL",  start: "12:00", end: "13:00", enabled: false }
-    - { name: "NYPM", start: "13:30", end: "16:00", enabled: true }
-    - { name: "RTH",  start: "09:30", end: "16:00", enabled: false }
+    - { name: "ASIA", start: "20:00", end: "02:00", enabled: true }   # → LNDN
+    - { name: "LNDN", start: "02:00", end: "09:30", enabled: true }   # → NYAM
+    - { name: "NYAM", start: "09:30", end: "13:30", enabled: true }   # → NYPM
+    - { name: "NYPM", start: "13:30", end: "20:00", enabled: true }   # → ASIA
 
 exits:
   structure_break: false

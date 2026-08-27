@@ -164,6 +164,7 @@ class PaperTradingEngine(SMCEngine):
             "position_size": position_size,
             "confirmation": confirmation,
             "trend_info": trend_result,
+            "rsi": rsi,
             "timestamp": time.time(),
         }
 
@@ -1056,13 +1057,19 @@ class PaperTradingEngine(SMCEngine):
             exit_reason = self.check_exit_conditions(position, candles_5m, current_price)
             if exit_reason:
                 logger.info(f"Closing {trade_id}: {exit_reason} @ {current_price:.2f}")
-                self.position_manager.close_position(trade_id, current_price, exit_reason)
+                exit_rsi = self._calc_rsi(
+                    candles_5m, int(self.config.get("rsi.period", 14))
+                )
+                self.position_manager.close_position(
+                    trade_id, current_price, exit_reason, rsi_at_exit=exit_rsi
+                )
                 self.trades.append({
                     "id": trade_id,
                     "type": "close",
                     "side": position.get("side"),
                     "reason": exit_reason,
                     "price": current_price,
+                    "rsi_at_exit": exit_rsi,
                     "timestamp": time.time(),
                 })
 
@@ -1082,6 +1089,7 @@ class PaperTradingEngine(SMCEngine):
                 signal.get("trend_info"),
                 signal.get("confirmation"),
                 session_config=self.config.get("sessions", {}) or {},
+                rsi=signal.get("rsi"),
             )
 
             self.position_manager.open_position(
@@ -1121,6 +1129,7 @@ class PaperTradingEngine(SMCEngine):
                 "sl_price": signal["sl_price"],
                 "tp_price": signal["tp_price"],
                 "confirmation": signal["confirmation"],
+                "rsi_at_entry": signal.get("rsi"),
                 "timestamp": time.time(),
             })
 

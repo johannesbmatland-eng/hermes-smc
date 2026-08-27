@@ -7,17 +7,15 @@ from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
-# KZP [TFO] killzones — times in America/New_York (as on the indicator)
+# Contiguous KZP-style sessions — each ends when the next begins (NY time)
 DEFAULT_SESSIONS = {
     "timezone": "America/New_York",
     "filter_entries": True,
     "windows": [
-        {"name": "ASIA", "start": "20:00", "end": "00:00", "enabled": True},
-        {"name": "LNDN", "start": "02:00", "end": "05:00", "enabled": True},
-        {"name": "NYAM", "start": "09:30", "end": "11:00", "enabled": True},
-        {"name": "NYL", "start": "12:00", "end": "13:00", "enabled": False},
-        {"name": "NYPM", "start": "13:30", "end": "16:00", "enabled": True},
-        {"name": "RTH", "start": "09:30", "end": "16:00", "enabled": False},
+        {"name": "ASIA", "start": "20:00", "end": "02:00", "enabled": True},
+        {"name": "LNDN", "start": "02:00", "end": "09:30", "enabled": True},
+        {"name": "NYAM", "start": "09:30", "end": "13:30", "enabled": True},
+        {"name": "NYPM", "start": "13:30", "end": "20:00", "enabled": True},
     ],
 }
 
@@ -122,6 +120,11 @@ def enrich_trade_meta(
     )
     out["side"] = out.get("side") or info.get("side") or "unknown"
 
+    if out.get("rsi_at_entry") is None and info.get("rsi_at_entry") is not None:
+        out["rsi_at_entry"] = info.get("rsi_at_entry")
+    if out.get("rsi_at_exit") is None and info.get("rsi_at_exit") is not None:
+        out["rsi_at_exit"] = info.get("rsi_at_exit")
+
     pnl = float(out.get("pnl") or 0)
     entry = float(out.get("entry_price") or 0)
     sl = float(out.get("stop_loss") or 0)
@@ -204,6 +207,12 @@ def build_analytics(
     by_side = _bucket_stats(enriched, "side")
     by_exit = _bucket_stats(enriched, "exit_reason")
 
+    for t in enriched:
+        t["rsi_entry_bucket"] = rsi_bucket(t.get("rsi_at_entry"))
+        t["rsi_exit_bucket"] = rsi_bucket(t.get("rsi_at_exit"))
+    by_rsi_entry = _bucket_stats(enriched, "rsi_entry_bucket")
+    by_rsi_exit = _bucket_stats(enriched, "rsi_exit_bucket")
+
     best_session = by_session[0] if by_session else None
     best_weekday = by_weekday[0] if by_weekday else None
     best_condition = None
@@ -232,6 +241,8 @@ def build_analytics(
         "by_confirmation": by_confirmation,
         "by_side": by_side,
         "by_exit_reason": by_exit,
+        "by_rsi_entry": by_rsi_entry,
+        "by_rsi_exit": by_rsi_exit,
         "best_session": best_session,
         "best_weekday": best_weekday,
         "best_condition": best_condition,
@@ -250,6 +261,7 @@ def build_entry_context(
     trend_info: dict | None,
     confirmation: str | None,
     session_config: dict | None = None,
+    rsi: float | None = None,
 ) -> dict:
     """Snapshot market context stored on the position at entry."""
     trend_info = trend_info or {}
@@ -257,7 +269,7 @@ def build_entry_context(
     tz_name = _session_cfg(session_config)["timezone"]
     now = datetime.now(tz=ZoneInfo(tz_name))
     ts = now.timestamp()
-    return {
+    ctx = {
         "session": session_from_ts(ts, session_config),
         "weekday": weekday_from_ts(ts, session_config),
         "trend": trend_info.get("overall", "unknown"),
@@ -270,3 +282,24 @@ def build_entry_context(
         "local_time": now.strftime("%H:%M"),
         "timezone": tz_name,
     }
+    if rsi is not None:
+        ctx["rsi_at_entry"] = round(float(rsi), 2)
+    return ctx
+
+
+def rsi_bucket(rsi: float | None) -> str:
+    """Coarse RSI bucket for analytics (entry or exit)."""
+    if rsi is None:
+        return "unknown"
+    v = float(rsi)
+    if v < 30:
+        return "RSI <30"
+    if v < 40:
+        return "RSI 30-40"
+    if v < 50:
+        return "RSI 40-50"
+    if v < 60:
+        return "RSI 50-60"
+    if v < 70:
+        return "RSI 60-70"
+    return "RSI ≥70"

@@ -113,19 +113,57 @@ def test_kzp_session_windows_ny_time():
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
-    assert _in_window(20 * 60, "20:00", "00:00") is True
-    assert _in_window(0, "20:00", "00:00") is False
-    assert _in_window(3 * 60, "02:00", "05:00") is True
-    assert _in_window(9 * 60 + 45, "09:30", "11:00") is True
+    # Contiguous: ASIA 20:00→02:00, LNDN 02:00→09:30, NYAM 09:30→13:30, NYPM 13:30→20:00
+    assert _in_window(20 * 60, "20:00", "02:00") is True
+    assert _in_window(0, "20:00", "02:00") is True   # midnight still ASIA
+    assert _in_window(3 * 60, "02:00", "09:30") is True
+    assert _in_window(7 * 60, "02:00", "09:30") is True  # former gap → LNDN
+    assert _in_window(9 * 60 + 45, "09:30", "13:30") is True
+    assert _in_window(12 * 60, "09:30", "13:30") is True  # former NYL → NYAM
+    assert _in_window(15 * 60, "13:30", "20:00") is True
+    assert _in_window(18 * 60, "13:30", "20:00") is True  # former evening gap → NYPM
 
     asia = datetime(2026, 3, 10, 21, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
     assert session_from_ts(asia) == "ASIA"
     lndn = datetime(2026, 3, 10, 3, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
     assert session_from_ts(lndn) == "LNDN"
-    off = datetime(2026, 3, 10, 7, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
-    assert session_from_ts(off) == "Off-session"
-    assert active_session(off) is None
+    mid = datetime(2026, 3, 10, 7, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
+    assert session_from_ts(mid) == "LNDN"
+    assert active_session(mid) == "LNDN"
     assert active_session(asia) == "ASIA"
+    # Boundaries: end exclusive / next start inclusive
+    at_lndn_start = datetime(2026, 3, 10, 2, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
+    assert session_from_ts(at_lndn_start) == "LNDN"
+    at_nyam = datetime(2026, 3, 10, 9, 30, tzinfo=ZoneInfo("America/New_York")).timestamp()
+    assert session_from_ts(at_nyam) == "NYAM"
+
+
+def test_rsi_recorded_on_open_and_close():
+    from hermes_smc.engine.smc_engine import PositionManager
+    from hermes_smc.engine.analytics import enrich_trade_meta, rsi_bucket
+
+    pm = PositionManager(initial_capital=100_000)
+    pos = pm.open_position(
+        trade_id="r1",
+        asset="BTC/USD",
+        side="long",
+        entry_price=100.0,
+        position_size=1.0,
+        sl_price=99.0,
+        tp_price=103.0,
+        strategy_info={"rsi_at_entry": 48.5, "session": "NYAM", "confirmation": "engulfing_5m"},
+    )
+    assert pos["rsi_at_entry"] == 48.5
+    closed = pm.close_position("r1", 102.0, exit_reason="take_profit", rsi_at_exit=61.2)
+    assert closed["rsi_at_exit"] == 61.2
+    assert closed["strategy_info"]["rsi_at_exit"] == 61.2
+    assert closed["strategy_info"]["rsi_at_entry"] == 48.5
+
+    enriched = enrich_trade_meta(closed)
+    assert enriched["rsi_at_entry"] == 48.5
+    assert enriched["rsi_at_exit"] == 61.2
+    assert rsi_bucket(48.5) == "RSI 40-50"
+    assert rsi_bucket(61.2) == "RSI 60-70"
 
 
 def test_capital_repair_from_negative_notional_reservation():
