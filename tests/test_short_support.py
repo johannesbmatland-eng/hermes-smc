@@ -16,12 +16,14 @@ def test_position_manager_sl_tp_long_vs_short():
     fvg_top = 102.0
 
     sl_long = pm.calculate_sl_price(entry, fvg_bottom, side="long", fvg_top=fvg_top)
-    tp_long = pm.calculate_tp_price(entry, sl_long, rr_target=0.5, side="long")
+    tp_long = pm.calculate_tp_price(entry, sl_long, rr_target=2.0, side="long")
     assert sl_long < fvg_bottom
     assert tp_long > entry
+    # 1:2 RR: reward == 2 * risk
+    assert abs((tp_long - entry) - 2 * (entry - sl_long)) < 1e-9
 
     sl_short = pm.calculate_sl_price(entry, fvg_bottom, side="short", fvg_top=fvg_top)
-    tp_short = pm.calculate_tp_price(entry, sl_short, rr_target=0.5, side="short")
+    tp_short = pm.calculate_tp_price(entry, sl_short, rr_target=2.0, side="short")
     assert sl_short > fvg_top
     assert tp_short < entry
 
@@ -118,10 +120,12 @@ def test_paper_engine_short_sl_tp_helpers():
 
 def test_bearish_engulfing_confirmation():
     engine = PaperTradingEngine(SMCConfig())
+    # [-3] touch bull, [-2] larger bear engulf, [-1] forming
     candles = [
         _candle(1, 100, 101, 99, 100),
-        _candle(2, 100, 103, 99.5, 102.5),  # bullish prev
-        _candle(3, 103, 103.2, 98, 98.5),   # bearish engulfing
+        _candle(2, 100, 103, 99.5, 102.5),  # touch (bull) into FVG
+        _candle(3, 102.5, 103.2, 98, 98.5),  # larger bear engulf (locked)
+        _candle(4, 98.5, 99, 98, 98.2),      # forming
     ]
     fvg = {"top": 103.0, "bottom": 99.0, "type": "bearish"}
     conf = engine._check_smc_confirmation(candles, None, fvg, side="short")
@@ -129,15 +133,25 @@ def test_bearish_engulfing_confirmation():
 
 
 def test_crypto_bullish_engulfing_when_open_equals_prev_close():
-    """BTC often opens at previous close — must still count as engulfing."""
+    """Bear touches FVG, larger bull locks (open may equal prev close)."""
     engine = PaperTradingEngine(SMCConfig())
+    fvg = {"top": 78773.3, "bottom": 78750.0, "type": "bullish"}
     candles = [
-        _candle(1, 78773.3, 78773.3, 78763.3, 78765.0),  # small bear
-        _candle(2, 78765.0, 78827.1, 78764.9, 78827.1),  # big bull, open == prev close
+        _candle(1, 78780, 78790, 78770, 78775),
+        _candle(2, 78773.3, 78773.3, 78760.0, 78765.0),  # bear touches FVG
+        _candle(3, 78765.0, 78827.1, 78764.9, 78827.1),  # larger bull locks
+        _candle(4, 78827.1, 78830, 78820, 78825),        # forming
     ]
-    fvg = {"top": 78806.3, "bottom": 78773.3, "type": "bullish"}
-    assert engine._is_body_engulfing(candles[0], candles[1], "long") is True
+    assert engine._candle_touches_fvg(candles[1], fvg) is True
+    assert engine._is_body_engulfing(candles[1], candles[2], "long") is True
     assert engine._check_smc_confirmation(candles, None, fvg, side="long") == "engulfing_5m"
+
+
+def test_rr_two_makes_one_percent_from_half_percent_risk():
+    engine = PaperTradingEngine(SMCConfig())
+    entry, sl = 100.0, 99.0  # 1.0 price risk
+    tp = engine._calculate_smc_tp(entry, sl, side="long")
+    assert abs(tp - 102.0) < 1e-9  # 1:2 RR
 
 
 def test_exit_conditions_short():

@@ -27,7 +27,8 @@ Boten handlar **long og short** pa BTC/USD nar SMC-monsteret stemmer:
    dei når wick fyller gapet.
 3. **Pullback**: ventar pa at prisen trekkjer seg tilbake inn i gapet.
 4. **Bekreftelse**: engulfing-candle eller IFVG.
-5. **Risk**: 0.5 % per trade, SL/TP spegla for begge retningar.
+5. **Risk**: 0.5 % risiko per trade, TP på **1:2 RR** (ca. 1 % gevinst når trade vinn).
+   Entry: bear candle treff FVG → større bull candle lokkar → inn, SL under FVG.
 6. Maks 1 open posisjon, 5 min cooldown.
 
 Detaljar/parametre: [`hermes_smc/config/strategy.yaml`](hermes_smc/config/strategy.yaml)

@@ -25,6 +25,6 @@ entry:
 
 risk:
   risk_pct_per_trade: 0.5
-  rr_target: 0.5
-  rr_alternative: 0.333
+  rr_target: 2.0          # 1:2 RR → risk 0.5% to make 1%
+  rr_alternative: 3.0     # optional 1:3
   sl_buffer_pct: 0.002

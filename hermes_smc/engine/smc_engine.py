@@ -49,8 +49,8 @@ DEFAULT_STRATEGY = {
     },
     "risk": {
         "risk_pct_per_trade": 0.5,
-        "rr_target": 0.5,       # 1/2 RR
-        "rr_alternative": 0.333,
+        "rr_target": 2.0,       # 1:2 RR → 0.5% risk makes 1%
+        "rr_alternative": 3.0,
         "sl_buffer_pct": 0.002,
     },
 }
@@ -190,7 +190,7 @@ class PositionManager:
         self,
         entry_price: float,
         sl_price: float,
-        rr_target: float = 0.5,
+        rr_target: float = 2.0,
         side: str = "long",
     ) -> float:
         """Calculate take profit price based on RR target (mirrored for shorts)."""
@@ -404,7 +404,7 @@ class SMCEngine:
         tp_price = self.position_manager.calculate_tp_price(
             entry_price,
             sl_price,
-            self.config.get("risk.rr_target", 0.5),
+            self.config.get("risk.rr_target", 2.0),
             side=side,
         )
 
@@ -440,42 +440,48 @@ class SMCEngine:
         side: str = "long",
     ) -> str | None:
         """
-        Check for entry confirmation (mirrored for shorts):
-        - Body engulfing candle on 5m (crypto-friendly: open may equal prev close)
-        - IFVG-like structure on 5m
+        Locked-candle confirmation:
+        touch candle ([-3]) hits FVG, confirm candle ([-2]) is larger engulf and closed.
         """
         confirmation_method = self.config.get("entry.confirmation", "engulfing_or_ifvg")
 
-        if len(candles_5m) >= 2 and confirmation_method in ["engulfing", "engulfing_or_ifvg"]:
-            c1 = candles_5m[-2]
-            c2 = candles_5m[-1]
-            prev_top = max(c1["open"], c1["close"])
-            prev_bot = min(c1["open"], c1["close"])
-            curr_top = max(c2["open"], c2["close"])
-            curr_bot = min(c2["open"], c2["close"])
+        if len(candles_5m) >= 3 and confirmation_method in ["engulfing", "engulfing_or_ifvg"]:
+            touch = candles_5m[-3]
+            confirm = candles_5m[-2]
+            prev_top = max(touch["open"], touch["close"])
+            prev_bot = min(touch["open"], touch["close"])
+            curr_top = max(confirm["open"], confirm["close"])
+            curr_bot = min(confirm["open"], confirm["close"])
+            prev_body = abs(touch["close"] - touch["open"])
+            curr_body = abs(confirm["close"] - confirm["open"])
+            touches = touch["low"] <= fvg["top"] and touch["high"] >= fvg["bottom"]
 
             if side == "long":
                 if (
-                    c2["close"] > c2["open"]
-                    and c1["close"] < c1["open"]
+                    touches
+                    and confirm["close"] > confirm["open"]
+                    and touch["close"] < touch["open"]
+                    and curr_body > prev_body
                     and curr_top > prev_top
                     and curr_bot <= prev_bot
                 ):
                     return "engulfing_5m"
             else:
                 if (
-                    c2["close"] < c2["open"]
-                    and c1["close"] > c1["open"]
+                    touches
+                    and confirm["close"] < confirm["open"]
+                    and touch["close"] > touch["open"]
+                    and curr_body > prev_body
                     and curr_bot < prev_bot
                     and curr_top >= prev_top
                 ):
                     return "engulfing_5m"
 
         if confirmation_method in ["ifvg", "engulfing_or_ifvg"]:
-            if len(candles_5m) >= 3:
-                c0 = candles_5m[-3]
-                c1 = candles_5m[-2]
-                c2 = candles_5m[-1]
+            if len(candles_5m) >= 4:
+                c0 = candles_5m[-4]
+                c1 = candles_5m[-3]
+                c2 = candles_5m[-2]
 
                 if side == "long":
                     if c1["high"] > c0["high"] and c2["low"] > c1["low"]:

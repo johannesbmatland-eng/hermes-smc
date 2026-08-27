@@ -42,8 +42,8 @@ DEFAULT_CONFIG = {
     },
     "risk": {
         "risk_pct_per_trade": 0.5,
-        "rr_target": 0.5,  # 1/2 RR default
-        "rr_alternative": 0.333,  # 1/3 RR
+        "rr_target": 2.0,  # 1:2 RR → 0.5% risk makes 1%
+        "rr_alternative": 3.0,
         "sl_buffer_pct": 0.002,  # 0.2% SL buffer below FVG
     },
     "paper_trading": {

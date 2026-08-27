@@ -53,12 +53,15 @@ class PaperTradingEngine(SMCEngine):
         candles_1m: list[dict] | None = None,
     ) -> dict | None:
         """
-        Detect SMC entry signal (long or short) with full ICT concepts:
-        - Unmitigated FVG (bullish for long, bearish for short)
-        - Pullback into FVG
-        - Confirmation: engulfing on 5m OR IFVG on 1m
-        - Trend filter: EMA + structure on 1h/15m
+        Entry rule (long example):
+        1) Trend OK + unmitigated bullish FVG
+        2) Bear candle touches the FVG
+        3) Next candle locks as a larger bull engulfing candle
+        4) Enter at locked candle close; SL under FVG; TP at 1:2 RR (0.5%→1%)
         """
+        if len(candles_5m) < 3:
+            return None
+
         fvgs = self._detect_fvg_full(candles_5m)
         trend_result = self._analyze_trend_full(candles_5m, candles_15m, candles_1h)
 
@@ -77,16 +80,33 @@ class PaperTradingEngine(SMCEngine):
         if not candidate_fvgs:
             return None
 
-        best_fvg = self._find_best_fvg(candidate_fvgs, candles_5m)
-        if not best_fvg:
+        min_age = self.config.get("fvq_detection.min_candles_since_fvg", 50)
+        recent = []
+        for f in candidate_fvgs:
+            age = len(candles_5m) - f["end_candle"]
+            if age <= min_age:
+                recent.append({**f, "age_candles": age})
+        if not recent:
             return None
 
-        confirmation = self._check_smc_confirmation(candles_5m, candles_1m, best_fvg, side=side)
-        if not confirmation:
+        # Prefer most recent FVG that the locked bear/bull touch+engulf setup confirms
+        recent.sort(key=lambda f: f.get("age_candles", 999))
+        best_fvg = None
+        confirmation = None
+        for fvg in recent:
+            confirmation = self._check_smc_confirmation(
+                candles_5m, candles_1m, fvg, side=side
+            )
+            if confirmation:
+                best_fvg = fvg
+                break
+
+        if not best_fvg or not confirmation:
             logger.debug("No confirmation signal")
             return None
 
-        entry_price = candles_5m[-1]["close"]
+        # Enter at the locked confirmation candle close (not the forming candle)
+        entry_price = candles_5m[-2]["close"]
         sl_price = self._calculate_smc_sl(entry_price, best_fvg, side=side)
         tp_price = self._calculate_smc_tp(entry_price, sl_price, side=side)
         position_size = self._calculate_position_size(entry_price, sl_price)
@@ -335,31 +355,36 @@ class PaperTradingEngine(SMCEngine):
 
         return best
 
+    def _candle_touches_fvg(self, candle: dict, fvg: dict) -> bool:
+        """True if candle wick overlaps the FVG zone."""
+        return candle["low"] <= fvg["top"] and candle["high"] >= fvg["bottom"]
+
     def _is_body_engulfing(self, prev: dict, curr: dict, side: str) -> bool:
         """
-        Body engulfing (crypto-friendly).
+        User rule (long): bear candle touches FVG, then a larger bull candle locks.
 
-        Current candle body must fully cover the previous body.
-        On 24/7 markets open often equals previous close, so we use <= / >=
-        instead of strict inequalities.
+        Current bull body must be bigger than previous bear body and cover it.
+        Crypto-friendly: open may equal previous close.
         """
         prev_top = max(prev["open"], prev["close"])
         prev_bot = min(prev["open"], prev["close"])
         curr_top = max(curr["open"], curr["close"])
         curr_bot = min(curr["open"], curr["close"])
+        prev_body = abs(prev["close"] - prev["open"])
+        curr_body = abs(curr["close"] - curr["open"])
 
         if side == "long":
-            # Prev bearish, curr bullish, curr body covers prev body
             return (
                 curr["close"] > curr["open"]
                 and prev["close"] < prev["open"]
+                and curr_body > prev_body
                 and curr_top > prev_top
                 and curr_bot <= prev_bot
             )
-        # Short: prev bullish, curr bearish
         return (
             curr["close"] < curr["open"]
             and prev["close"] > prev["open"]
+            and curr_body > prev_body
             and curr_bot < prev_bot
             and curr_top >= prev_top
         )
@@ -371,11 +396,21 @@ class PaperTradingEngine(SMCEngine):
         fvg: dict,
         side: str = "long",
     ) -> str | None:
-        """Check for SMC entry confirmation (bullish for long, bearish for short)."""
+        """
+        Confirmation after FVG touch:
+        - Use last two *closed* candles (skip still-forming candle[-1])
+        - Bear (or bull for short) must have touched the FVG
+        - Next locked candle engulfs and is larger → enter
+        """
         method = self.config.get("entry.confirmation", "engulfing_or_ifvg")
 
-        if len(candles_5m) >= 2 and method in ["engulfing", "engulfing_or_ifvg"]:
-            if self._is_body_engulfing(candles_5m[-2], candles_5m[-1], side):
+        # Skip forming candle: [-3]=touch candle, [-2]=locked confirmation candle
+        if len(candles_5m) >= 3 and method in ["engulfing", "engulfing_or_ifvg"]:
+            touch = candles_5m[-3]
+            confirm = candles_5m[-2]
+            if self._candle_touches_fvg(touch, fvg) and self._is_body_engulfing(
+                touch, confirm, side
+            ):
                 return "engulfing_5m"
 
         if candles_1m and method in ["ifvg", "engulfing_or_ifvg"]:
@@ -433,7 +468,7 @@ class PaperTradingEngine(SMCEngine):
     ) -> float:
         """Calculate TP with configured RR, mirrored for shorts."""
         risk_distance = abs(entry_price - sl_price)
-        rr = self.config.get("risk.rr_target", 0.5)
+        rr = self.config.get("risk.rr_target", 2.0)
         if side == "short":
             return entry_price - (risk_distance * rr)
         return entry_price + (risk_distance * rr)
@@ -506,14 +541,25 @@ class PaperTradingEngine(SMCEngine):
             nearest_fvg = min(candidate_fvgs, key=lambda f: f.get("age_candles", 999))
 
         price_in_fvg = False
-        if nearest_fvg:
-            price_in_fvg = nearest_fvg["bottom"] <= current_price <= nearest_fvg["top"]
-
         confirmation = None
-        if nearest_fvg and side and price_in_fvg:
-            confirmation = self._check_smc_confirmation(
-                candles_5m, candles_1m, nearest_fvg, side=side
+        touch = candles_5m[-3] if len(candles_5m) >= 3 else None
+        locked = candles_5m[-2] if len(candles_5m) >= 2 else None
+        if nearest_fvg and side and touch and locked:
+            # Prefer confirmation on nearest, else any recent candidate FVG
+            for fvg in ([nearest_fvg] + [f for f in candidate_fvgs if f is not nearest_fvg]):
+                confirmation = self._check_smc_confirmation(
+                    candles_5m, candles_1m, fvg, side=side
+                )
+                if confirmation:
+                    nearest_fvg = fvg
+                    break
+            price_in_fvg = (
+                nearest_fvg["bottom"] <= current_price <= nearest_fvg["top"]
+                or self._candle_touches_fvg(touch, nearest_fvg)
+                or self._candle_touches_fvg(locked, nearest_fvg)
             )
+        elif nearest_fvg:
+            price_in_fvg = nearest_fvg["bottom"] <= current_price <= nearest_fvg["top"]
 
         open_count = len(self.position_manager.open_positions)
         max_open = self.config.get("entry.max_open_positions", 1)
@@ -658,7 +704,7 @@ class PaperTradingEngine(SMCEngine):
             })
 
         # Confirmation
-        if side and price_in_fvg:
+        if side and nearest_fvg:
             if confirmation:
                 checklist.append({
                     "id": "confirmation",
@@ -666,20 +712,28 @@ class PaperTradingEngine(SMCEngine):
                     "status": "pass",
                     "detail": confirmation,
                 })
+            elif touch and self._candle_touches_fvg(touch, nearest_fvg):
+                checklist.append({
+                    "id": "confirmation",
+                    "label": "Entry confirmation",
+                    "status": "wait",
+                    "detail": "Bear touched FVG — waiting for larger bull candle to lock",
+                })
+                waiting.append("Waiting for larger bull engulf to lock")
             else:
                 checklist.append({
                     "id": "confirmation",
                     "label": "Entry confirmation",
                     "status": "wait",
-                    "detail": "Need engulfing (5m) or IFVG (1m)",
+                    "detail": "Need bear touch on FVG, then larger bull candle lock",
                 })
-                waiting.append("Waiting for engulfing / IFVG confirmation")
+                waiting.append("Waiting for bear-touch + bull engulf lock")
         else:
             checklist.append({
                 "id": "confirmation",
                 "label": "Entry confirmation",
                 "status": "wait",
-                "detail": "Armed after price enters FVG",
+                "detail": "Armed after FVG touch + engulf lock",
             })
 
         if open_count > 0:
@@ -819,7 +873,7 @@ class PaperTradingEngine(SMCEngine):
         if signal and signal["position_size"] > 0:
             trade_id = str(uuid.uuid4())
             side = signal.get("side", "long")
-            fill_price = current_price
+            fill_price = signal["entry_price"]
             fill_size = signal["position_size"]
 
             self.position_manager.open_position(
@@ -869,5 +923,5 @@ class PaperTradingEngine(SMCEngine):
                 f"PAPER TRADE OPEN: {trade_id[:8]}... | "
                 f"{side.upper()} {fill_size:.6f} BTC @ {fill_price:.2f} USD | "
                 f"SL: {signal['sl_price']:.2f} | TP: {signal['tp_price']:.2f} | "
-                f"Risk: 0.5% | Confirmation: {signal['confirmation']}"
+                f"Risk: 0.5% | RR 1:2 | Confirmation: {signal['confirmation']}"
             )
