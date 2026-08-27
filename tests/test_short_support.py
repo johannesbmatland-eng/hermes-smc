@@ -46,16 +46,42 @@ def test_short_pnl_and_capital():
     assert abs(pm.capital - (100_000 + 100.0)) < 1e-6
 
 
-def test_detect_bearish_fvg():
-    # Gap down: prev low above current high
+def test_detect_bullish_fvg_three_candles():
+    # Last low does not overlap first high
     candles = [
-        _candle(1, 100, 101, 99, 100),
-        _candle(2, 100, 100.5, 98, 99),
-        _candle(3, 95, 96, 94, 95),  # high 96 < prev low 98 → bearish FVG
+        _candle(1, 100, 101, 99, 100.5),   # first high = 101
+        _candle(2, 101, 106, 100.8, 105),  # impulse
+        _candle(3, 105, 107, 102.5, 106),  # last low = 102.5 > 101
+    ]
+    fvgs = MarketStructureDetector.detect_fvg(candles)
+    bullish = [f for f in fvgs if f["type"] == "bullish"]
+    assert len(bullish) == 1
+    assert bullish[0]["bottom"] == 101
+    assert bullish[0]["top"] == 102.5
+
+
+def test_detect_bearish_fvg():
+    # Last high does not overlap first low
+    candles = [
+        _candle(1, 100, 101, 99, 99.5),    # first low = 99
+        _candle(2, 99, 99.2, 94, 95),      # impulse
+        _candle(3, 95, 97.5, 93, 94),      # last high = 97.5 < 99
     ]
     fvgs = MarketStructureDetector.detect_fvg(candles)
     bearish = [f for f in fvgs if f["type"] == "bearish"]
-    assert len(bearish) >= 1
+    assert len(bearish) == 1
+    assert bearish[0]["top"] == 99
+    assert bearish[0]["bottom"] == 97.5
+
+
+def test_no_fvg_when_wicks_overlap():
+    candles = [
+        _candle(1, 100, 105, 99, 104),
+        _candle(2, 104, 106, 103, 105),
+        _candle(3, 105, 107, 104, 106),  # last low 104 overlaps first high 105
+    ]
+    fvgs = MarketStructureDetector.detect_fvg(candles)
+    assert fvgs == []
 
 
 def test_paper_engine_short_sl_tp_helpers():

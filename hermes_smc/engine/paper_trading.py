@@ -6,6 +6,7 @@ import time
 import uuid
 from typing import Any
 
+from .core import MarketStructureDetector
 from .smc_engine import SMCEngine, SMCConfig, PositionManager
 
 logger = logging.getLogger(__name__)
@@ -112,48 +113,11 @@ class PaperTradingEngine(SMCEngine):
         }
 
     def _detect_fvg_full(self, candles: list[dict]) -> list[dict]:
-        """Detect all FVGs with full ICT definition."""
-        fvgs = []
-
-        for i in range(2, len(candles)):
-            c_current = candles[i]
-            c_prev = candles[i - 1]
-
-            # Bullish FVG: current low > previous high (gap up)
-            if c_current["low"] > c_prev["high"]:
-                fvg_top = c_current["high"]
-                fvg_bottom = c_prev["low"]
-                fvgs.append({
-                    "type": "bullish",
-                    "top": fvg_top,
-                    "bottom": fvg_bottom,
-                    "mid": (fvg_top + fvg_bottom) / 2,
-                    "start_candle": i - 1,
-                    "end_candle": i,
-                    "timestamp": c_prev["timestamp"],
-                    "size_pct": (fvg_top - fvg_bottom) / fvg_bottom * 100,
-                    "unmitigated": True,
-                })
-
-            # Bearish FVG: current high < previous low (gap down)
-            elif c_current["high"] < c_prev["low"]:
-                fvg_top = c_prev["high"]
-                fvg_bottom = c_current["low"]
-                fvgs.append({
-                    "type": "bearish",
-                    "top": fvg_top,
-                    "bottom": fvg_bottom,
-                    "mid": (fvg_top + fvg_bottom) / 2,
-                    "start_candle": i - 1,
-                    "end_candle": i,
-                    "timestamp": c_prev["timestamp"],
-                    "size_pct": (fvg_top - fvg_bottom) / fvg_bottom * 100,
-                    "unmitigated": True,
-                })
-
+        """Detect 3-candle FVGs (same ICT definition as MarketStructureDetector)."""
+        fvgs = MarketStructureDetector.detect_fvg(candles)
         for fvg in fvgs:
-            fvg["unmitigated"] = self._check_fvg_unmitigated(candles, fvg)
-
+            if fvg["bottom"] > 0:
+                fvg["size_pct"] = (fvg["top"] - fvg["bottom"]) / fvg["bottom"] * 100
         return fvgs
 
     def _check_fvg_unmitigated(self, candles: list[dict], fvg: dict) -> bool:
@@ -415,20 +379,20 @@ class PaperTradingEngine(SMCEngine):
         recent = candles_1m[-10:]
 
         for i in range(2, len(recent)):
-            c_prev = recent[i - 1]
-            c_curr = recent[i]
+            c_first = recent[i - 2]
+            c_last = recent[i]
 
             if side == "long":
-                # Bullish IFVG-like: strong impulsive move up
-                if c_curr["low"] > c_prev["high"]:
-                    move_size = (c_curr["high"] - c_prev["low"]) / c_prev["low"]
-                    if move_size > 0.003 and c_curr["low"] >= fvg_5m["bottom"]:
+                # Bullish 3-candle IFVG: last low does not overlap first high
+                if c_last["low"] > c_first["high"]:
+                    move_size = (c_last["low"] - c_first["high"]) / c_first["high"]
+                    if move_size > 0.003 and c_last["low"] >= fvg_5m["bottom"]:
                         return "ifvg_1m_bullish"
             else:
-                # Bearish IFVG-like: strong impulsive move down
-                if c_curr["high"] < c_prev["low"]:
-                    move_size = (c_prev["high"] - c_curr["low"]) / c_prev["high"]
-                    if move_size > 0.003 and c_curr["high"] <= fvg_5m["top"]:
+                # Bearish 3-candle IFVG: last high does not overlap first low
+                if c_last["high"] < c_first["low"]:
+                    move_size = (c_first["low"] - c_last["high"]) / c_first["low"]
+                    if move_size > 0.003 and c_last["high"] <= fvg_5m["top"]:
                         return "ifvg_1m_bearish"
 
         return None

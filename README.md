@@ -21,7 +21,8 @@ Koyrer 24/7 pa Railway med paper trading (100 000 USD demo-kapital).
 Boten handlar **long og short** pa BTC/USD nar SMC-monsteret stemmer:
 
 1. **Trend-filter**: 1t og 15m ma vise klar trend (EMA50 + HH/HL for long, LH/LL for short).
-2. **FVG (Fair Value Gap)**: bullish gap for kjop, bearish gap for sal.
+2. **FVG (Fair Value Gap)**: 3 candles der wick på fyrste og siste ikkje overlappar
+   (bullish: siste low over fyrste high; bearish: siste high under fyrste low).
 3. **Pullback**: ventar pa at prisen trekkjer seg tilbake inn i gapet.
 4. **Bekreftelse**: engulfing-candle eller IFVG.
 5. **Risk**: 0.5 % per trade, SL/TP spegla for begge retningar.

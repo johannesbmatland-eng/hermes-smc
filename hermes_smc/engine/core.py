@@ -114,40 +114,49 @@ class MarketStructureDetector:
 
     @staticmethod
     def detect_fvg(candles: list[dict]) -> list[dict]:
-        """Detect Fair Value Gaps (FVGs) in candle data."""
+        """
+        Detect 3-candle Fair Value Gaps (ICT).
+
+        Candle 1 = first, candle 2 = impulse, candle 3 = last.
+        Bullish: last low does not overlap first high (last.low > first.high).
+        Bearish: last high does not overlap first low (last.high < first.low).
+        The gap zone is the imbalance between those two wicks.
+        """
         fvgs = []
         for i in range(2, len(candles)):
-            # Bullish FVG: current candle's low > previous candle's high
-            if candles[i]["low"] > candles[i - 1]["high"]:
-                fvg_top = candles[i]["high"]
-                fvg_bottom = candles[i - 1]["low"]
+            c_first = candles[i - 2]
+            c_last = candles[i]
+
+            # Bullish FVG: last low above first high (no wick overlap)
+            if c_last["low"] > c_first["high"]:
+                fvg_bottom = c_first["high"]
+                fvg_top = c_last["low"]
                 fvgs.append({
                     "type": "bullish",
                     "top": fvg_top,
                     "bottom": fvg_bottom,
                     "mid": (fvg_top + fvg_bottom) / 2,
-                    "start_candle": i - 1,
+                    "start_candle": i - 2,
                     "end_candle": i,
-                    "timestamp": candles[i - 1]["timestamp"],
-                    "unmitigated": True,  # will be updated below
+                    "timestamp": c_first["timestamp"],
+                    "unmitigated": True,
                 })
 
-            # Bearish FVG: current candle's high < previous candle's low
-            elif candles[i]["high"] < candles[i - 1]["low"]:
-                fvg_top = candles[i - 1]["high"]
-                fvg_bottom = candles[i]["low"]
+            # Bearish FVG: last high below first low (no wick overlap)
+            elif c_last["high"] < c_first["low"]:
+                fvg_top = c_first["low"]
+                fvg_bottom = c_last["high"]
                 fvgs.append({
                     "type": "bearish",
                     "top": fvg_top,
                     "bottom": fvg_bottom,
                     "mid": (fvg_top + fvg_bottom) / 2,
-                    "start_candle": i - 1,
+                    "start_candle": i - 2,
                     "end_candle": i,
-                    "timestamp": candles[i - 1]["timestamp"],
+                    "timestamp": c_first["timestamp"],
                     "unmitigated": True,
                 })
 
-        # Determine which FVGs are still unmitigated (price hasn't traded into them)
         for fvg in fvgs:
             fvg["unmitigated"] = MarketStructureDetector._is_fvg_unmitigated(candles, fvg)
 
