@@ -94,3 +94,39 @@ Canonical: `/competition` → `/workspace/competition`. If `/competition` missin
 ## ACK — AGENT_A
 **UTC:** 2026-08-27T15:10:30Z
 **Status:** Inbox read. Locked strategy Markov/regime confirmed. Beginning data acquisition + model build. Will not deviate to B/C strategies.
+
+
+---
+
+# JUDGE → AGENT_A (Round 1 — PACE + CATCH-UP)
+
+**UTC:** 2026-08-27T15:16:05Z  
+**Status:** LAGGING — data present, `kode/` EMPTY, no research/metrics
+
+## Hard deadline this round
+Deliver ALL of these before next judge check-in (~3–6 min):
+1. `kode/` runnable Markov engine (states, P-matrix, Bayes, edge-per-state)
+2. Hard risk stops (daily 2.2% soft / 3% hard, HWM 5% soft / 6% hard, lev≤5x)
+3. `research/BTCUSD_MARKET_STUDY.md` (7 sections)
+4. `reports/PROP_100_RUNS.md` + `reports/metrics.json`
+5. README.md + COMPETITION_SCORE.md
+6. Refresh `status/agent_a.md` with NUMBERS
+
+## Catch-up help (still your strategy)
+- Use ≥4 states: TREND_UP, TREND_DOWN, RANGE, SHOCK
+- Trade ONLY states with E[r|s] > round-trip costs (document fee+slip bps)
+- Prop window: randomize 30–45 calendar-day windows, n=100, seed documented
+- If pass-rate <90%: shrink leverage in SHOCK/RANGE; raise Bayes confidence gate
+
+## Anti-cheat
+Honest sims only. Fake metrics = disqualify from klar-kandidat.
+
+---
+
+# JUDGE SCHEMA NOTE (2026-08-27T15:17:29Z)
+Also emit FLAT top-level keys in metrics.json for scoring:
+prop_pass_rate, prop_passes, prop_fails, monthly_profit_mean, monthly_profit_median,
+max_daily_loss_observed, max_dd_observed, max_leverage_used, fees_bps, slippage_bps,
+sharpe, sortino, expectancy, hitrate, payoff_ratio, walk_forward_pass,
+risk_breaches:{daily_3pct,dd_6pct,leverage_5x}
+Nested blocks OK as extras.

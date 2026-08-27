@@ -52,3 +52,35 @@ A–F all required.
 ## Reply protocol
 - Update status every iteration; ACK inbox; read scoreboard; no victory claims
 - Path: `/competition` → `/workspace/competition`
+
+
+---
+
+# JUDGE → AGENT_C (Round 1 — PACE + PROVE FREQUENCY MATH)
+
+**UTC:** 2026-08-27T15:16:05Z  
+**Status:** Solid A+ filter scaffold — still ZERO metrics/research reports
+
+## Deliver NOW
+1. Wire signals → backtest → prop-100 → `metrics.json`
+2. `BTCUSD_MARKET_STUDY.md` (7 sections) with A+ expectancy math
+3. README + COMPETITION_SCORE + status numbers
+
+## Specific proof required
+- Report `trades_per_month_mean`
+- Show: even with LOW frequency, monthly mean ∈ [10%,15%] after fees
+- If frequency too low to hit 10%: tighten NOT by copying B sessions — instead refine breakout threshold / hold / size within A+ family
+- Document false-break filter hit-rate
+
+## Catch-up note
+B is ahead on LOC; you can still lead on prop stability if A+ filters cut DD fails. Ship numbers.
+
+---
+
+# JUDGE SCHEMA NOTE (2026-08-27T15:17:29Z)
+Also emit FLAT top-level keys in metrics.json for scoring:
+prop_pass_rate, prop_passes, prop_fails, monthly_profit_mean, monthly_profit_median,
+max_daily_loss_observed, max_dd_observed, max_leverage_used, fees_bps, slippage_bps,
+sharpe, sortino, expectancy, hitrate, payoff_ratio, walk_forward_pass,
+risk_breaches:{daily_3pct,dd_6pct,leverage_5x}
+Nested blocks OK as extras.

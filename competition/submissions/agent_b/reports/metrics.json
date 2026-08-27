@@ -1,0 +1,108 @@
+{
+  "agent": "B",
+  "strategy": "microstructure_hybrid",
+  "updated_utc": "2026-08-27T15:15:43Z",
+  "data": {
+    "source": "Coinbase Exchange public candles BTC-USD 1h (Kraken-design costs); Kraken daily retained for cross-check",
+    "bars": 32019,
+    "start": "2023-01-01 00:00:00+00:00",
+    "end": "2026-08-27 15:00:00+00:00",
+    "fee_bps_per_side": 6.0,
+    "slip_bps_per_side": 4.0,
+    "cost_bps_per_side": 10.0
+  },
+  "full_sample": {
+    "net_pnl": -4931.71201421821,
+    "net_pnl_pct": -0.049317120142182105,
+    "sharpe": -1.5413336360724659,
+    "sortino": -0.07409848904826997,
+    "max_dd": 0.051015878257115226,
+    "hitrate": 0.371259842519685,
+    "payoff": 0.8675292138725752,
+    "expectancy": -0.0020196034500562536,
+    "trades": 2540,
+    "monthly_profit_mean": 0.0,
+    "monthly_profit_median": 0.0,
+    "daily_breach": 0,
+    "hwm_breach": 0,
+    "lev_breach": 0
+  },
+  "oos": {
+    "net_pnl_pct": -0.033551573896164776,
+    "sharpe": -1.9368229803999253,
+    "max_dd": 0.033551573896164776,
+    "monthly_profit_mean": 0.0,
+    "hitrate": 0.3505535055350554,
+    "expectancy": -0.0016652641586351075
+  },
+  "walk_forward": {
+    "folds": 19,
+    "mean_pnl_pct": -0.043584366431804356,
+    "median_pnl_pct": -0.046407529983392454,
+    "mean_sharpe": -2.896346518783759,
+    "stable_risk": false,
+    "daily_breach_total": 18,
+    "hwm_breach_total": 2
+  },
+  "prop_100": {
+    "n": 100,
+    "passes": 4,
+    "pass_rate": 0.04,
+    "daily_breach_total": 93,
+    "hwm_breach_total": 3,
+    "lev_breach_total": 0,
+    "fail_reasons": {
+      "daily_loss": 47,
+      "timeout_no_pass": 46,
+      "max_dd": 3
+    },
+    "mean_pnl_pct": -0.03499446142221289,
+    "median_pnl_pct": -0.0437637234684794,
+    "window_days": 50,
+    "randomized_starts": true,
+    "seed": 42
+  },
+  "risk_rules": {
+    "account": 100000.0,
+    "pass_pct": 0.1,
+    "daily_fail": 0.03,
+    "max_dd_fail": 0.06,
+    "max_leverage": 5.0,
+    "internal_daily_stop": 0.02,
+    "internal_hwm_stop": 0.048,
+    "risk_ok": false
+  },
+  "score_estimate": {
+    "prop_pass": 4.444444444444445,
+    "profit_fit": 0.0,
+    "risk": 0.0,
+    "research": 100.0,
+    "code": 100.0,
+    "total": 26.333333333333332
+  },
+  "params": {
+    "z_lookback": 48,
+    "burst_z": 1.85,
+    "mr_z_enter": 1.45,
+    "mom_hold": 2,
+    "mr_hold": 3,
+    "base_lev": 1.15,
+    "burst_lev": 1.85,
+    "shock_lev_mult": 0.4,
+    "vol_target": 0.011,
+    "daily_stop": 0.02,
+    "hwm_stop": 0.048,
+    "flatten_quiet": true,
+    "skip_hours": [
+      1,
+      13,
+      19,
+      23
+    ],
+    "skip_dow": [
+      3
+    ],
+    "asia_prefer_mr": true,
+    "min_bars_warmup": 96
+  }
+}

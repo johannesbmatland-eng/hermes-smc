@@ -118,13 +118,105 @@ def code_score(agent_dir: Path) -> float:
     return score
 
 
+def _normalize_metrics(raw: dict) -> dict:
+    """Accept flat judge schema OR nested agent schemas (e.g. prop_100.pass_rate)."""
+    out = dict(raw)
+    prop = raw.get("prop_100") if isinstance(raw.get("prop_100"), dict) else {}
+    full = raw.get("full_sample") if isinstance(raw.get("full_sample"), dict) else {}
+    wf = raw.get("walk_forward") if isinstance(raw.get("walk_forward"), dict) else {}
+    risk = raw.get("risk_rules") if isinstance(raw.get("risk_rules"), dict) else {}
+    data = raw.get("data") if isinstance(raw.get("data"), dict) else {}
+
+    if out.get("prop_pass_rate") is None:
+        out["prop_pass_rate"] = prop.get("pass_rate")
+        if out["prop_pass_rate"] is None and prop.get("passes") is not None and prop.get("n"):
+            out["prop_pass_rate"] = float(prop["passes"]) / float(prop["n"])
+    if out.get("prop_passes") is None:
+        out["prop_passes"] = prop.get("passes")
+    if out.get("prop_fails") is None and prop.get("n") is not None and prop.get("passes") is not None:
+        out["prop_fails"] = int(prop["n"]) - int(prop["passes"])
+
+    if out.get("monthly_profit_mean") is None:
+        out["monthly_profit_mean"] = full.get("monthly_profit_mean")
+    if out.get("monthly_profit_median") is None:
+        out["monthly_profit_median"] = full.get("monthly_profit_median")
+
+    if out.get("sharpe") is None:
+        out["sharpe"] = full.get("sharpe")
+    if out.get("sortino") is None:
+        out["sortino"] = full.get("sortino")
+    if out.get("expectancy") is None:
+        out["expectancy"] = full.get("expectancy")
+    if out.get("hitrate") is None:
+        out["hitrate"] = full.get("hitrate")
+    if out.get("payoff_ratio") is None:
+        out["payoff_ratio"] = full.get("payoff") or full.get("payoff_ratio")
+    if out.get("max_dd_observed") is None:
+        out["max_dd_observed"] = full.get("max_dd") or full.get("max_dd_observed")
+    if out.get("max_daily_loss_observed") is None:
+        out["max_daily_loss_observed"] = full.get("max_daily_loss") or full.get("max_daily_loss_observed")
+    if out.get("max_leverage_used") is None:
+        out["max_leverage_used"] = (
+            raw.get("max_leverage_used")
+            or risk.get("max_leverage_used")
+            or risk.get("max_leverage")
+        )
+
+    if out.get("fees_bps") is None:
+        out["fees_bps"] = raw.get("fees_bps") or data.get("fee_bps_per_side") or data.get("fees_bps")
+    if out.get("slippage_bps") is None:
+        out["slippage_bps"] = (
+            raw.get("slippage_bps") or data.get("slip_bps_per_side") or data.get("slippage_bps")
+        )
+
+    breaches = out.get("risk_breaches") if isinstance(out.get("risk_breaches"), dict) else {}
+    if not breaches:
+        breaches = {
+            "daily_3pct": int(
+                prop.get("daily_breach_total")
+                or full.get("daily_breach")
+                or wf.get("daily_breach_total")
+                or 0
+            ),
+            "dd_6pct": int(
+                prop.get("hwm_breach_total")
+                or full.get("hwm_breach")
+                or wf.get("hwm_breach_total")
+                or 0
+            ),
+            "leverage_5x": int(prop.get("lev_breach_total") or full.get("lev_breach") or 0),
+        }
+    out["risk_breaches"] = breaches
+
+    if out.get("walk_forward_pass") is None:
+        if "walk_forward_pass" in raw:
+            out["walk_forward_pass"] = bool(raw.get("walk_forward_pass"))
+        elif wf:
+            # stable_risk true AND mean fold pnl not collapsing hard
+            stable = bool(wf.get("stable_risk"))
+            mean_pnl = _safe_float(wf.get("mean_pnl_pct"), -1.0) or -1.0
+            out["walk_forward_pass"] = stable and mean_pnl > -0.02
+        else:
+            out["walk_forward_pass"] = False
+
+    # Explicit risk_ok false from agent overrides breach zeros on full_sample only
+    if risk.get("risk_ok") is False:
+        # ensure risk component fails even if agent zeroed full_sample breaches
+        if breaches.get("daily_3pct", 0) == 0 and breaches.get("dd_6pct", 0) == 0:
+            breaches["daily_3pct"] = max(1, int(prop.get("daily_breach_total") or 1))
+            out["risk_breaches"] = breaches
+
+    return out
+
+
 def load_agent(letter: str) -> AgentScore | None:
     agent = f"agent_{letter}"
     d = SUBS / agent
     metrics_path = d / "reports" / "metrics.json"
     if not metrics_path.exists():
         return None
-    raw = json.loads(metrics_path.read_text(encoding="utf-8"))
+    raw_in = json.loads(metrics_path.read_text(encoding="utf-8"))
+    raw = _normalize_metrics(raw_in)
     rate = _safe_float(raw.get("prop_pass_rate"))
     # allow 90 meaning 90% or 0.90
     if rate is not None and rate > 1.5:
@@ -208,13 +300,26 @@ def fmt_pct(x: float | None) -> str:
 def render(scores: list[AgentScore]) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     ranked = sorted(scores, key=lambda s: s.total, reverse=True)
-    leader = ranked[0].agent if ranked else "NONE"
+    # Leader requires real competitive score floor (not just code stubs / failing economics)
+    leader = "NONE"
+    leader_why = "no agent above score floor with viable metrics"
+    if ranked and ranked[0].total >= 40.0 and ranked[0].prop_pass_rate is not None:
+        leader = ranked[0].agent
+        leader_why = (
+            f"highest score {ranked[0].total:.1f}; prop={ranked[0].prop_pass_rate:.1%}"
+        )
+    elif ranked:
+        leader_why = (
+            f"top raw score AGENT_{ranked[0].agent}={ranked[0].total:.1f} below leader floor "
+            f"(need ≥40 with prop metrics)"
+        )
     klar_list = [s.agent for s in ranked if s.klar]
     lines = [
         "# SCOREBOARD — BTCUSD PROP-BOT COMPETITION",
         "",
         f"**Updated:** {now} (UTC)",
         f"**Leader:** AGENT_{leader}" if leader != "NONE" else "**Leader:** NONE",
+        f"**Leader why:** {leader_why}",
         f"**Klar-kandidat:** {', '.join('AGENT_'+k for k in klar_list) if klar_list else 'NONE'}",
         "**Final winner:** NOT DECLARED (user has not said STOPP)",
         "",

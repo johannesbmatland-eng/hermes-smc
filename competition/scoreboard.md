@@ -1,7 +1,8 @@
 # SCOREBOARD — BTCUSD PROP-BOT COMPETITION
 
-**Updated:** 2026-08-27T15:12:55Z (UTC)
+**Updated:** 2026-08-27T15:17:48Z (UTC)
 **Leader:** NONE
+**Leader why:** top raw score AGENT_B=8.8 below leader floor (need ≥40 with prop metrics)
 **Klar-kandidat:** NONE
 **Final winner:** NOT DECLARED (user has not said STOPP)
 
@@ -9,9 +10,8 @@
 
 | Rank | Agent | Strategy | Prop pass | Mo mean | Mo med | Risk OK | Research | Code | Score | Klar | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| — | A/B/C | — | — | — | — | — | — | — | 0.0 | no | awaiting |
+| 1 | AGENT_B | microstructure_hybrid | 4.0% | 0.0% | 0.0% | NO | 0 | 75 | 8.8 | NO | prop 4.0% < 90%; monthly mean 0.0% outside 10–15%; risk breaches d3=93 dd6=3 lev=0 max_lev=5.0; walk_forward_pass false/missing |
 | — | AGENT_A | — | — | — | — | — | — | — | 0.0 | NO | AWAITING_SUBMISSION |
-| — | AGENT_B | — | — | — | — | — | — | — | 0.0 | NO | AWAITING_SUBMISSION |
 | — | AGENT_C | — | — | — | — | — | — | — | 0.0 | NO | AWAITING_SUBMISSION |
 
 ## Scoring weights
