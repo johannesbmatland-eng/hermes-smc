@@ -426,9 +426,11 @@ class PaperTradingEngine(SMCEngine):
 
     def _is_body_engulfing(self, prev: dict, curr: dict, side: str) -> bool:
         """
-        User rule (long): bear candle touches FVG, then a larger bull candle locks.
+        FVG-touch candle (any color) engulfed by a larger directional candle.
 
-        Current bull body must be bigger than previous bear body and cover it.
+        Long: curr must be bullish, larger body, and cover prev body.
+        Short: curr must be bearish, larger body, and cover prev body.
+        Touch candle color does not matter.
         Crypto-friendly: open may equal previous close.
         """
         prev_top = max(prev["open"], prev["close"])
@@ -441,14 +443,12 @@ class PaperTradingEngine(SMCEngine):
         if side == "long":
             return (
                 curr["close"] > curr["open"]
-                and prev["close"] < prev["open"]
                 and curr_body > prev_body
                 and curr_top > prev_top
                 and curr_bot <= prev_bot
             )
         return (
             curr["close"] < curr["open"]
-            and prev["close"] > prev["open"]
             and curr_body > prev_body
             and curr_bot < prev_bot
             and curr_top >= prev_top
@@ -464,8 +464,8 @@ class PaperTradingEngine(SMCEngine):
         """
         Confirmation after FVG touch:
         - Skip still-forming candle[-1]; last closed is the potential engulf lock
-        - Bear (bull for short) touches FVG
-        - One of the next N closed candles (default 2) engulfs that touch
+        - Any candle that touches the FVG
+        - 1st or 2nd following closed candle engulfs that touch (bull for long / bear for short)
         """
         method = self.config.get("entry.confirmation", "engulfing_or_ifvg")
         lookback = int(self.config.get("entry.engulf_lookback", 2) or 2)
@@ -482,13 +482,6 @@ class PaperTradingEngine(SMCEngine):
                 if fvg.get("end_candle", -1) >= touch_idx:
                     continue
                 touch = candles_5m[touch_idx]
-                if side == "long":
-                    # Touch candle must be bearish into bullish FVG
-                    if touch["close"] >= touch["open"]:
-                        continue
-                else:
-                    if touch["close"] <= touch["open"]:
-                        continue
                 if self._candle_touches_fvg(touch, fvg) and self._is_body_engulfing(
                     touch, confirm, side
                 ):
@@ -870,15 +863,15 @@ class PaperTradingEngine(SMCEngine):
                     "status": "wait",
                     "detail": f"FVG touched — waiting for engulf on next {lookback} candle(s)",
                 })
-                waiting.append(f"Waiting for bull engulf within {lookback} candles")
+                waiting.append(f"Waiting for engulf within {lookback} candles")
             else:
                 checklist.append({
                     "id": "confirmation",
                     "label": "Entry confirmation",
                     "status": "wait",
-                    "detail": f"Need bear touch on FVG, then engulf within {lookback} candles",
+                    "detail": f"Need FVG touch, then engulf within {lookback} candles",
                 })
-                waiting.append("Waiting for bear-touch + bull engulf lock")
+                waiting.append("Waiting for FVG-touch + engulf lock")
         else:
             checklist.append({
                 "id": "confirmation",

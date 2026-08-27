@@ -412,6 +412,22 @@ def test_rsi_blocks_short_when_oversold():
     assert engine._rsi_allows_side("long", rsi) is True
 
 
+def test_engulf_allows_bullish_touch_candle():
+    """Touch candle may be bullish; next larger bull still engulfs into long."""
+    engine = PaperTradingEngine(SMCConfig())
+    fvg = {"top": 100.5, "bottom": 100.0, "type": "bullish", "end_candle": 0}
+    candles = [
+        _candle(1, 101, 102, 100.8, 101.5),
+        _candle(2, 100.1, 100.4, 99.95, 100.35),  # bullish but touches FVG
+        _candle(3, 100.1, 101.2, 100.05, 101.1),  # larger bull engulfs touch body
+        _candle(4, 101.1, 101.3, 101.0, 101.2),   # forming
+    ]
+    assert engine._candle_touches_fvg(candles[1], fvg) is True
+    assert candles[1]["close"] > candles[1]["open"]  # touch is bullish
+    assert engine._is_body_engulfing(candles[1], candles[2], "long") is True
+    assert engine._check_smc_confirmation(candles, None, fvg, side="long") == "engulfing_5m"
+
+
 def test_ema_series_length():
     engine = PaperTradingEngine(SMCConfig())
     candles = [_candle(1_700_000_000 + i * 300, 100, 101, 99, 100 + i * 0.01) for i in range(80)]
