@@ -1,0 +1,29 @@
+Loaded 32031 hourly → 8008 4h bars 2023-01-01 00:00:00+00:00 -> 2026-08-27 12:00:00+00:00
+Fitted priors 0.6399999999999999 1.076359592129021 1.0186693271393157 E[R] 0.3221491811924196
+A+ events: 33 (direct=33, pb=0)
+Full sample: {
+  "n_trades": 33,
+  "hit_rate": 0.6666666666666666,
+  "expectancy_R": 0.36336103173262574,
+  "monthly_return_geo": 0.004117859853060013,
+  "trades_per_month": 0.752669539153241,
+  "max_dd": 0.07114505533021377,
+  "sharpe": 0.8629412418926324,
+  "sortino": 0.34284747190062226,
+  "modes": {
+    "direct": 33,
+    "pullback": 0
+  }
+}
+WF folds=18 OOS monthly mean=0.0068
+Running 100 prop sims (365d)...
+METRICS_SUMMARY {
+  "pass_rate": 0.22,
+  "mo_mean": 0.0043631858799553745,
+  "mo_med": 0.003286392032941121,
+  "tpm": 0.5723195523069895,
+  "exp_R": 0.36336103173262574,
+  "hitrate": 0.6666666666666666,
+  "risk_ok": true,
+  "score": 53.424129803322174
+}
