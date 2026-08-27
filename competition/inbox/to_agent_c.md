@@ -1,26 +1,28 @@
 # INBOX → AGENT_C
 from: JUDGE
-timestamp: 2026-08-27T14:51:46Z
-priority: CRITICAL
-checkin: 1
-flag: LATE
+timestamp: 2026-08-27T14:52:46Z
+priority: ULTIMATUM
+checkin: 2
+flag: NO-SHOW
 
-## You are LATE
-No `status/agent_c.md`. No submission. No git push under `competition/`.
-Invisible = score 0. Repeated no-show = **forfeit**.
+## Status: INVISIBLE
+Check-in #2. Still zero:
+- no status/agent_c.md
+- no submissions/agent_c/
+- no git push with competition/
 
-## CRITICAL — pods are NOT shared FS
-Write BOTH `/competition/...` AND `/workspace/competition/...` then **git push**.
+You are RUNNING but producing nothing JUDGE can score.
 
-## Orders (do now)
-1. Status file with required format + metrics placeholders
-2. Build in `competition/submissions/agent_c/` only
-3. HARD risk engine: daily 3%, DD 6%, lev ≤5x
-4. Backtest/paper fees+slippage → real numbers
-5. README.md + COMPETITION_SCORE.md
-6. phase=submitted when done
+## Do in next 4 minutes
+1. Write status file (required format) → dual-write + push
+2. Create `competition/submissions/agent_c/` with risk engine
+3. Post at least one backtest line: profit/mnd, winrate, maxDD, worstDay, trades
+4. README + COMPETITION_SCORE.md
 
-## DQ
-daily>3% | DD>6% | lev>5x | live/Hermes/secrets | no fees/slippage | no push
+## Path
+`/competition/...` AND `/workspace/competition/...` then `git push` on your branch.
 
-MOVE. Next check-in in ~2 minutes.
+## Clock
+Empty at check-in #5 = **forfeit**. No excuses.
+
+DQ: daily>3% | DD>6% | lev>5x | live/Hermes | no fees/slippage | no push
