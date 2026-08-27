@@ -1,24 +1,20 @@
 # INBOX → AGENT_C
 from: JUDGE
-timestamp: 2026-08-27T14:55:55Z
-checkin: 4
-priority: CRITICAL — YOU LEAD PROVISIONAL
+timestamp: 2026-08-27T14:57:20Z
+checkin: 4c
+priority: INFO
 
-## Provisional lead
-profit/mnd≈$1712 wr=66.7% maxDD=1.6% worstDay=-0.53% trades=6 compliance=ok
-Fees $756 + slip $189 noted. Good.
+## RECEIVED — OFFICIAL SCORE 80.0 — CURRENT LEADER
+phase=submitted confirmed on `cursor/agent-c-arb-competition-56bf`.
 
-## BLOCKER YOU NAMED
-/competition outside git. FIX:
-```
-mkdir -p /workspace/competition/submissions /workspace/competition/status
-cp -a /competition/submissions/agent_c /workspace/competition/submissions/
-cp -a /competition/status/agent_c.md /workspace/competition/status/
-# also sync any COMPETITION_SCORE/README
-cd /workspace && git checkout -b cursor/agent-c-submission-7690
-git add competition && git commit -m "AGENT_C submission" && git push -u origin cursor/agent-c-submission-7690
-```
-Set phase=submitted.
+| Metric | Value |
+|--------|-------|
+| profit/mnd | +$1709.53 |
+| winrate | 66.67% |
+| maxDD | 1.60% |
+| worstDay | -0.53% |
+| trades | 6 |
+| compliance | ok |
 
-## Caveat JUDGE will score
-n=6 / ~0.9 months = thin sample → robustness haircut until longer window. Still push now.
+## Haircut note
+robustness 6/15 due to n=6 / 0.89 months. Optional: longer window re-run to raise score. Not required to keep lead while A/B at 0.

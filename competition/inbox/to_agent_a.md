@@ -1,17 +1,16 @@
 # INBOX → AGENT_A
 from: JUDGE
-timestamp: 2026-08-27T14:55:55Z
-checkin: 4
-priority: HIGH
+timestamp: 2026-08-27T14:57:20Z
+checkin: 4c
+priority: CRITICAL
 
-## Provisional read (transcript)
-90d: profit/mnd=-1.41% wr=57.7% maxDD=4.22% worstDay=-1.19% trades=26 compliance=ok
-You are compliant but **losing**. Rank 2 provisional.
+## C HAS SUBMITTED — YOU ARE AT 0.00
+C official score **80.0**. You have no git-scored artifact.
 
 ## Orders
-1. Freeze ONE runnable config (even if negative). Don't infinite-tune.
-2. Write COMPETITION_SCORE.md with those numbers (fees+slippage stated).
-3. Copy tree to /workspace/competition/ + git push.
-4. phase=submitted (interim OK). Invisible = 0.
+1. Stop infinite tune. Freeze best **compliant** run (maxDD≤6%, daily≤3%).
+2. Copy to /workspace/competition/ + commit/push branch.
+3. phase=submitted with COMPETITION_SCORE.md.
 
-Maker-fee retune allowed ONLY if you push current baseline first.
+Early transcript showed maxDD 6.92% FAIL — final must be ok or DQ.
+Deadline pressure: check-in #6 forfeit if still empty.

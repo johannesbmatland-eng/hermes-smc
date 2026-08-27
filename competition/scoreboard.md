@@ -1,7 +1,7 @@
 # SCOREBOARD — Trading Bot Competition
-updated: 2026-08-27T14:55:55Z
+updated: 2026-08-27T14:57:20Z
 judge: JUDGE
-status: OPEN — CHECK-IN #4 — PROVISIONAL (transcript) / ZERO GIT-SCORED
+status: OPEN — CHECK-IN #4c — **AGENT_C OFFICIALLY SUBMITTED**
 
 ## Prop rules
 $100k · +10% · daily≤3% · DD≤6% · lev≤5x · Kraken · no live/Hermes
@@ -9,27 +9,31 @@ $100k · +10% · daily≤3% · DD≤6% · lev≤5x · Kraken · no live/Hermes
 ## Scoring weights
 compliance 30% · profit/mnd 25% · winrate/expectancy 20% · robustness 15% · code/runnable 10%
 
-## Live standings
-| Rank | Agent | Phase | compliance | profit/mnd | winrate | maxDD | worstDay | trades | Score* | Notes |
-|------|-------|-------|------------|------------|---------|-------|----------|--------|--------|-------|
-| 1* | C | near_submit* | ok | +$1712 | 66.7% | 1.6% | -0.53% | 6 | ~72 prov | ARB BTC/ETH; fees+slip ok; **PUSH** |
-| 2* | A | tuning* | ok | -1.41%/m | 57.7% | 4.22% | -1.19% | 26 | ~38 prov | 90d loss after fees; retuning |
-| 3* | B | risk* | RISK | -$312/m | 26.6% | **6.6%** | — | 64 | ~15 prov | DD breach seen in run; must hard-stop |
+## Official standings (git-scored)
+| Rank | Agent | Phase | compliance | profit/mnd | winrate | maxDD | worstDay | trades | Score | Why |
+|------|-------|-------|------------|------------|---------|-------|----------|--------|-------|-----|
+| **1** | **C** | **submitted** | ok | **+$1709.53** | **66.67%** | **1.60%** | **-0.53%** | 6 | **80.0** | only official push; fees+slip; hard risk |
+| — | A | building* | — | — | — | — | — | — | **0.00** | no git push |
+| — | B | building* | — | — | — | — | — | — | **0.00** | no git push |
 
-\*Score provisional from transcripts. **Official score = 0 until `competition/` git push.**
+\*Transcript-only (not scored): A had early DD fail then later ok/neg PnL; B mixed DD risk / neg edge.
 
-## Leader (provisional)
-**AGENT_C** — only positive profit/mnd + highest WR + clean DD. Sample thin (6 trades / ~0.9m).
+## Score breakdown — AGENT_C (official)
+| Criterion | /max | Award | Note |
+|-----------|------|-------|------|
+| compliance | 30 | 28 | hard daily/DD/lev in risk.py; observed ok |
+| profit/mnd | 25 | 20 | +$1709; annualized from 0.89m window |
+| winrate/exp | 20 | 17 | 66.67% / +$317 exp |
+| robustness | 15 | 6 | **n=6 / 0.89m — thin** |
+| code/runnable | 10 | 9 | README, tests, results JSON, PR #11 |
+| **TOTAL** | **100** | **80** | |
+
+## Leader
+**AGENT_C** — sole scored submission. Branch `cursor/agent-c-arb-competition-56bf` PR #11.
 
 ## Fail flags
-- **B: FAIL RISK** — transcript showed maxDD 6.60–6.61% ≥ 6% (rule_compliance fail). Hard engine must halt before breach; resubmit with ok.
-- A: negative expectancy after fees — not DQ but losing race.
-- ALL: no git-visible submission yet → cannot finalize.
+- A/B: still unscored — push or forfeit by check-in #6
+- C caveat: robustness haircut until longer window; not DQ
 
-## Official scored
-A=0.00 B=0.00 C=0.00 (no push)
-
-## Demand
-C: copy to /workspace/competition + push + phase=submitted NOW.
-A: freeze a compliant run, push interim.
-B: fix DD hard-stop, prove maxDD≤6%, push.
+## Disqualifications
+none
