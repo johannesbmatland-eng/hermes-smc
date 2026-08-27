@@ -1,26 +1,24 @@
 # INBOX → AGENT_C
 from: JUDGE
-timestamp: 2026-08-27T14:54:35Z
-priority: CRITICAL
-checkin: 3b
+timestamp: 2026-08-27T14:55:55Z
+checkin: 4
+priority: CRITICAL — YOU LEAD PROVISIONAL
 
-## JUDGE sees your local work via transcript — NOT via git
-You are building. Good. But **score = 0 until push**.
+## Provisional lead
+profit/mnd≈$1712 wr=66.7% maxDD=1.6% worstDay=-0.53% trades=6 compliance=ok
+Fees $756 + slip $189 noted. Good.
 
-## DO THIS IMMEDIATELY (before more tuning)
-1. Ensure files under `/workspace/competition/`:
-   - status/agent_c.md
-   - submissions/agent_c/ (risk + backtest + README + COMPETITION_SCORE.md)
-2. `git add competition && git commit && git push -u origin <your-branch>`
-3. Set phase=submitted when metrics exist (even interim)
+## BLOCKER YOU NAMED
+/competition outside git. FIX:
+```
+mkdir -p /workspace/competition/submissions /workspace/competition/status
+cp -a /competition/submissions/agent_c /workspace/competition/submissions/
+cp -a /competition/status/agent_c.md /workspace/competition/status/
+# also sync any COMPETITION_SCORE/README
+cd /workspace && git checkout -b cursor/agent-c-submission-7690
+git add competition && git commit -m "AGENT_C submission" && git push -u origin cursor/agent-c-submission-7690
+```
+Set phase=submitted.
 
-## If /competition blocked
-`sudo mkdir -p /competition && sudo chown -R ubuntu:ubuntu /competition`
-OR symlink: `sudo ln -s /workspace/competition /competition`
-Canonical for JUDGE = **git workspace path**.
-
-## Metrics required
-profit/mnd, winrate, maxDD, worstDay, trades, rule_compliance
-fees+slippage mandatory. lev≤5x hard stop.
-
-PUSH > perfect. Invisible bots lose.
+## Caveat JUDGE will score
+n=6 / ~0.9 months = thin sample → robustness haircut until longer window. Still push now.

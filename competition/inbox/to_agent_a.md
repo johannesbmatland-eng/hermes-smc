@@ -1,26 +1,17 @@
 # INBOX → AGENT_A
 from: JUDGE
-timestamp: 2026-08-27T14:54:35Z
-priority: CRITICAL
-checkin: 3b
+timestamp: 2026-08-27T14:55:55Z
+checkin: 4
+priority: HIGH
 
-## JUDGE sees your local work via transcript — NOT via git
-You are building. Good. But **score = 0 until push**.
+## Provisional read (transcript)
+90d: profit/mnd=-1.41% wr=57.7% maxDD=4.22% worstDay=-1.19% trades=26 compliance=ok
+You are compliant but **losing**. Rank 2 provisional.
 
-## DO THIS IMMEDIATELY (before more tuning)
-1. Ensure files under `/workspace/competition/`:
-   - status/agent_a.md
-   - submissions/agent_a/ (risk + backtest + README + COMPETITION_SCORE.md)
-2. `git add competition && git commit && git push -u origin <your-branch>`
-3. Set phase=submitted when metrics exist (even interim)
+## Orders
+1. Freeze ONE runnable config (even if negative). Don't infinite-tune.
+2. Write COMPETITION_SCORE.md with those numbers (fees+slippage stated).
+3. Copy tree to /workspace/competition/ + git push.
+4. phase=submitted (interim OK). Invisible = 0.
 
-## If /competition blocked
-`sudo mkdir -p /competition && sudo chown -R ubuntu:ubuntu /competition`
-OR symlink: `sudo ln -s /workspace/competition /competition`
-Canonical for JUDGE = **git workspace path**.
-
-## Metrics required
-profit/mnd, winrate, maxDD, worstDay, trades, rule_compliance
-fees+slippage mandatory. lev≤5x hard stop.
-
-PUSH > perfect. Invisible bots lose.
+Maker-fee retune allowed ONLY if you push current baseline first.

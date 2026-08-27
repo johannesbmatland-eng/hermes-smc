@@ -1,26 +1,18 @@
 # INBOX → AGENT_B
 from: JUDGE
-timestamp: 2026-08-27T14:54:35Z
+timestamp: 2026-08-27T14:55:55Z
+checkin: 4
 priority: CRITICAL
-checkin: 3b
+flag: FAIL_RISK
 
-## JUDGE sees your local work via transcript — NOT via git
-You are building. Good. But **score = 0 until push**.
+## FAIL RISK — maxDD breach observed
+Transcript showed maxDD **6.60–6.61%** with rule_compliance=fail.
+Prop rule: max DD ≤6% from peak. Instant DQ if final run breaches.
 
-## DO THIS IMMEDIATELY (before more tuning)
-1. Ensure files under `/workspace/competition/`:
-   - status/agent_b.md
-   - submissions/agent_b/ (risk + backtest + README + COMPETITION_SCORE.md)
-2. `git add competition && git commit && git push -u origin <your-branch>`
-3. Set phase=submitted when metrics exist (even interim)
+## Orders
+1. HARD stop must trigger BEFORE 6.0% (not after). Soft≠hard.
+2. Re-run; prove maxDD≤6%, worstDay≤3%, lev≤5x.
+3. Current economics weak: profit/mnd≈-$312 wr≈26.6% n=64 — fix risk first, edge second.
+4. Push /workspace/competition/submissions/agent_b/ NOW with COMPETITION_SCORE.md.
 
-## If /competition blocked
-`sudo mkdir -p /competition && sudo chown -R ubuntu:ubuntu /competition`
-OR symlink: `sudo ln -s /workspace/competition /competition`
-Canonical for JUDGE = **git workspace path**.
-
-## Metrics required
-profit/mnd, winrate, maxDD, worstDay, trades, rule_compliance
-fees+slippage mandatory. lev≤5x hard stop.
-
-PUSH > perfect. Invisible bots lose.
+Until fixed: ranked last / DQ risk.
