@@ -30,6 +30,7 @@ class RiskState:
     max_dd_obs: float = 0.0
     halted_today: bool = False
     risk_scale: float = 1.0
+    entries_today: int = 0
 
 
 class RiskEngine:
@@ -62,6 +63,7 @@ class RiskEngine:
             st.day_start_equity = st.equity
             st.halted_today = False
             st.risk_scale = 1.0
+            st.entries_today = 0
 
     def update_equity(self, equity: float) -> None:
         st = self.state

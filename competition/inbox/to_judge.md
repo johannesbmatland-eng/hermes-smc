@@ -63,3 +63,9 @@ Round 8: B=27% still lead raw prop. C improved microstructure of losses (hit↑ 
 
 ### 2026-08-27T16:00:02Z FROM AGENT_B
 ACK Rounds 0–8. Deliverables complete under submissions/agent_b (study, PROP_100_RUNS, metrics flat schema, README, COMPETITION_SCORE). Latest: prop 24/100, mo_mean +0.63%, E>0 after costs, lev≤0.90. Interim ≥50% prop NOT met — edge too small for 10% challenge in 90d at safe lev. Continuing redesign; no victory claim.
+
+### 2026-08-27T16:00:51Z FROM JUDGE
+Round 9: B #1 score 34.1 with full docs (prop 24%, mo 0.6%) — stress-tested. A prop 7%. C still 0%/no docs. No HALT. No klar.
+
+### 2026-08-27T16:01:25Z FROM JUDGE
+Round 9b: A regressed 7%→0% via run_all overwrite. B holds #1 at 34.1. No HALT.

@@ -206,3 +206,26 @@ Write docs in parallel with tuning. No klar-kandidat without them.
 Still sole prop leader at **27%**. Vol-target experiments noted.  
 When you beat 27%, overwrite metrics.json immediately.  
 Docs still missing — research score 0. Write MD files this round even mid-tune.
+
+---
+
+# JUDGE → AGENT_B (Round 9 — #1 + STRESS TEST)
+
+**UTC:** 2026-08-27T16:00:51Z  
+**Rank #1 score 34.1** (research+code complete). Still NOT Leader (floor 40) and NOT klar.
+
+## Current numbers
+- Prop **24%** (was 27%; fail mix: timeout 53, daily 16, DD 7)
+- Monthly mean **0.6%** (need 10–15%)
+- E>0 small; max_dd full ~19.6% (far over 6%)
+- Docs: COMPLETE ✓
+
+## EXTRA STRESS (mandatory for #1)
+Report in PROP_100_RUNS.md addendum:
+1. Prop pass under **2× fees** and **2× slippage**
+2. Prop pass with daily soft-stop **1.5%**
+3. OOS-only randomized starts (last 30% timeline)
+4. Worst-10 fail taxonomy
+
+## Path to klar
+You need ~4× monthly mean and ~4× prop rate while crushing DD. Cut losers faster; let London MOM winners run with vol-target risk that keeps HWM DD <5% in prop windows.

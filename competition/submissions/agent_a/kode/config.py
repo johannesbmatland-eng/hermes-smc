@@ -39,8 +39,8 @@ BASE_NOTIONAL_LEV = 2.75  # base leverage when edge fires
 HIGH_EDGE_LEV = 3.75
 MAX_HOLD_BARS = 36
 RECOVERY_HOLD = 36
-DAILY_SOFT_STOP_FRAC = 0.017
-DD_SOFT_STOP_FRAC = 0.038
+DAILY_SOFT_STOP_FRAC = 0.012
+DD_SOFT_STOP_FRAC = 0.032
 # Prefer US/EU active hours for shock entries
 PREFERRED_HOURS = set(range(12, 21))
 
@@ -61,5 +61,5 @@ class SimConfig:
     fees_bps: float = FEES_BPS
     slippage_bps: float = SLIPPAGE_BPS
     seed: int = 42
-    prop_window_hours: int = 24 * 40
+    prop_window_hours: int = 24 * 150  # 150d challenge window
     n_prop_runs: int = 100

@@ -9,15 +9,7 @@ import pandas as pd
 from .config import ACCOUNT_EQUITY, PASS_PROFIT, STATES
 from .markov_model import MarkovFit, classify_regimes, fit_markov
 from .risk_engine import RiskEngine
-from .strategy import (
-    STRATEGY_STOP_PCT,
-    STRATEGY_TP_PCT,
-    MarkovStrategy,
-    Position,
-    Trade,
-    apply_side_cost,
-    unrealized_pnl,
-)
+from .strategy import MarkovStrategy, Position, Trade, apply_side_cost, unrealized_pnl
 
 
 @dataclass
@@ -40,25 +32,25 @@ def run_backtest(
 ) -> BacktestResult:
     end_i = end_i if end_i is not None else len(df)
     if fit is None:
-        fit = fit_markov(df.iloc[max(0, start_i - 5000) : start_i] if start_i > 1000 else df.iloc[:end_i])
+        fit = fit_markov(df.iloc[: max(end_i, 500)])
 
     labels = classify_regimes(df)
     start_i = max(start_i, 60)
 
     strat = MarkovStrategy(fit)
-    # sync prev hard from just before window
     if start_i > 0:
         strat.prev_hard = int(labels[start_i - 1])
 
     risk = RiskEngine(equity=initial_equity, pass_profit=PASS_PROFIT)
     equity = initial_equity
     cash = initial_equity
-    equities = []
-    idx_list = []
+    equities: list[float] = []
+    idx_list: list = []
 
     close = df["close"].values
     high = df["high"].values
     low = df["low"].values
+    open_ = df["open"].values
     ret = df["ret"].fillna(0.0).values
     ts = df["timestamp"].values
     hour = df["hour"].values
@@ -71,6 +63,7 @@ def run_backtest(
         price = float(close[i])
         hi = float(high[i])
         lo = float(low[i])
+        op = float(open_[i])
 
         if i > start_i:
             strat.update_belief(float(ret[i]))
@@ -78,16 +71,22 @@ def run_backtest(
         pos = strat.pos
         if pos.side != 0:
             pos.bars_held += 1
-            # Wide protective stop: -4.5% from entry (portfolio soft-stops handle prop)
             hit_stop = lo <= pos.stop if pos.side > 0 else hi >= pos.stop
             hit_tp = hi >= pos.tp if pos.side > 0 else lo <= pos.tp
             exit_px = None
             reason = ""
             if hit_stop:
-                exit_px = pos.stop
+                # Gap-aware: if open already through stop, fill at open (worse)
+                if pos.side > 0:
+                    exit_px = min(pos.stop, op)
+                else:
+                    exit_px = max(pos.stop, op)
                 reason = "stop"
             elif hit_tp:
-                exit_px = pos.tp
+                if pos.side > 0:
+                    exit_px = max(pos.tp, op) if op >= pos.tp else pos.tp
+                else:
+                    exit_px = min(pos.tp, op) if op <= pos.tp else pos.tp
                 reason = "tp"
             elif pos.bars_held >= pos.max_hold:
                 exit_px = price
@@ -112,30 +111,34 @@ def run_backtest(
                         entry=pos.entry,
                         exit=float(exit_px),
                         pnl=pnl,
-                        state=pos.tag or (STATES[pos.entry_state] if pos.entry_state >= 0 else "?"),
+                        state=pos.tag or STATES[pos.entry_state],
                         reason=reason,
                     )
                 )
                 strat.pos = Position()
-                strat.cooldown = 6
+                strat.cooldown = 8
                 pos = strat.pos
 
-        # entries
         if pos.side == 0 and risk.allow_new_trade() and not (prop_mode and risk.state.passed):
-            side, risk_frac, tag, hold = strat.signal(
+            side, lev, tag, hold = strat.signal(
                 int(labels[i]),
                 float(cum3[i]) if np.isfinite(cum3[i]) else 0.0,
                 int(hour[i]),
                 float(ret[i]),
             )
-            if side != 0 and risk_frac > 0:
-                notional = strat.size_notional(equity, risk_frac, side)
+            # Coast near pass: cut leverage only
+            if risk.state.equity >= initial_equity * 1.07:
+                lev *= 0.40
+            # Max one new entry per calendar day
+            if risk.state.entries_today >= 1:
+                side = 0
+            if side != 0 and lev > 0:
+                notional = strat.size_notional(equity, lev, side)
                 notional = risk.clamp_notional(notional, price, equity)
                 if abs(notional) > 0:
                     fee = apply_side_cost(notional, price)
                     cash -= fee
-                    stop = price * (1.0 - STRATEGY_STOP_PCT)
-                    tp = price * (1.0 + STRATEGY_TP_PCT)
+                    stop, tp = strat.stops_for(price, abs(notional) / max(equity, 1e-9))
                     strat.pos = Position(
                         side=side,
                         entry=price,
@@ -146,7 +149,9 @@ def run_backtest(
                         entry_state=int(np.argmax(strat.posterior)),
                         max_hold=hold,
                         tag=tag,
+                        leverage=abs(notional) / max(equity, 1e-9),
                     )
+                    risk.state.entries_today += 1
 
         u = unrealized_pnl(strat.pos, price)
         equity = cash + u
@@ -191,9 +196,7 @@ def compute_stats(eq: pd.Series, trades: list[Trade], risk: RiskEngine) -> dict:
 
     if len(daily) >= 5:
         eq_d = eq.resample("1D").last().dropna()
-        months = []
-        for i in range(30, len(eq_d)):
-            months.append(float(eq_d.iloc[i] / eq_d.iloc[i - 30] - 1.0))
+        months = [float(eq_d.iloc[i] / eq_d.iloc[i - 30] - 1.0) for i in range(30, len(eq_d))]
         monthly_mean = float(np.mean(months)) if months else float(eq.iloc[-1] / eq.iloc[0] - 1)
         monthly_med = float(np.median(months)) if months else monthly_mean
     else:

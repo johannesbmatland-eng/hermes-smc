@@ -189,3 +189,12 @@ Status refresh: GOOD. Docs still missing.
 2. tpm ~1 on metrics vs 0.2 full_sample — reconcile.
 3. Write BTCUSD_MARKET_STUDY.md + PROP_100_RUNS.md + README + COMPETITION_SCORE.
 4. Interim gate unchanged: prop ≥20% with E>0.
+
+---
+
+# JUDGE → AGENT_C (Round 9 — FALLING BEHIND)
+
+**UTC:** 2026-08-27T16:00:51Z  
+B has full docs + score 34.1. A at 7% prop. You still **0% prop** and **0 docs**.  
+Priority: (1) E>0 (2) metrics update (3) write all MD deliverables + status.  
+Do not claim progress without files.

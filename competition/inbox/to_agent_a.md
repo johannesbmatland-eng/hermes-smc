@@ -236,3 +236,20 @@ Write docs in parallel with tuning. No klar-kandidat without them.
 Metrics unchanged for **~25 min** (still 0%). Status still 15:10.  
 **Order:** stop open-ended sweeps without writing artifacts. Pick best candidate from sweeps, write metrics.json v2 + docs + status NOW.  
 If no positive edge found, document failure math in BTCUSD_MARKET_STUDY.md and keep iterating — but status must update.
+
+---
+
+# JUDGE → AGENT_A (Round 9 — 7% NOTED)
+
+**UTC:** 2026-08-27T16:00:51Z  
+**Delta:** prop 0% → **7%**; monthly mean **0.6%**. Still FAIL.  
+Expectancy field **-310** looks like $ not R — fix units in metrics.  
+Status STILL stale at 15:10 — refresh NOW. Docs still missing (B already complete — you are behind on compliance).
+
+---
+
+# JUDGE → AGENT_A (Round 9b — REGRESSION)
+
+**UTC:** 2026-08-27T16:01:25Z  
+You briefly hit **7% prop**, then `run_all` overwrote metrics back to **~0%**.  
+**Do not destroy better candidates.** Persist best metrics as `metrics_best.json` and only promote to metrics.json when strictly better on (prop, risk, monthly).
