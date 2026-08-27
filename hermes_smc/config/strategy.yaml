@@ -24,6 +24,12 @@ entry:
   cooldown_seconds: 300
   engulf_lookback: 2      # bearish FVG-touch → engulf on 1st or 2nd next candle
 
+rsi:
+  enabled: true
+  period: 14
+  long_max: 65            # no longs when RSI above this
+  short_min: 35           # no shorts when RSI below this
+
 exits:
   structure_break: false
   mode: "be_trail"       # fixed_tp | be_trail | trail_only

@@ -84,6 +84,17 @@ class PaperTradingEngine(SMCEngine):
             )
             return None
 
+        rsi = self._calc_rsi(candles_5m, int(self.config.get("rsi.period", 14)))
+        if not self._rsi_allows_side(side, rsi):
+            long_max = self.config.get("rsi.long_max", 65)
+            short_min = self.config.get("rsi.short_min", 35)
+            logger.info(
+                f"Skip entry: RSI filter blocked {side} "
+                f"(rsi={rsi if rsi is not None else 'n/a'}, "
+                f"long_max={long_max}, short_min={short_min})"
+            )
+            return None
+
         if not candidate_fvgs:
             logger.debug("Skip entry: no unmitigated FVGs for side=%s", side)
             return None
@@ -269,6 +280,41 @@ class PaperTradingEngine(SMCEngine):
         for price in closes[period:]:
             ema = price * k + ema * (1 - k)
         return ema
+
+    def _calc_rsi(self, candles: list[dict], period: int = 14) -> float | None:
+        """Wilder RSI on closed candles (exclude still-forming last bar)."""
+        if len(candles) < period + 2:
+            return None
+        closes = [c["close"] for c in candles[:-1]]  # locked closes only
+        if len(closes) < period + 1:
+            return None
+        gains = []
+        losses = []
+        for i in range(1, len(closes)):
+            diff = closes[i] - closes[i - 1]
+            gains.append(max(diff, 0.0))
+            losses.append(max(-diff, 0.0))
+        avg_gain = sum(gains[:period]) / period
+        avg_loss = sum(losses[:period]) / period
+        for i in range(period, len(gains)):
+            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        if avg_loss == 0:
+            return 100.0
+        rs = avg_gain / avg_loss
+        return 100.0 - (100.0 / (1.0 + rs))
+
+    def _rsi_allows_side(self, side: str, rsi: float | None) -> bool:
+        """No long if RSI > long_max; no short if RSI < short_min."""
+        if not self.config.get("rsi.enabled", True):
+            return True
+        if rsi is None:
+            return False
+        if side == "long":
+            return rsi <= float(self.config.get("rsi.long_max", 65))
+        if side == "short":
+            return rsi >= float(self.config.get("rsi.short_min", 35))
+        return False
 
     def _analyze_structure(self, candles: list[dict]) -> dict:
         """Analyze market structure: BOS, HH/HL (uptrend) and LH/LL (downtrend)."""
@@ -677,6 +723,54 @@ class PaperTradingEngine(SMCEngine):
             })
             waiting.append("Waiting for clear trend (EMA + structure)")
 
+        # RSI filter — no long if overbought, no short if oversold
+        rsi_period = int(self.config.get("rsi.period", 14))
+        rsi_val = self._calc_rsi(candles_5m, rsi_period)
+        long_max = float(self.config.get("rsi.long_max", 65))
+        short_min = float(self.config.get("rsi.short_min", 35))
+        rsi_ok = self._rsi_allows_side(side, rsi_val) if side else False
+        if not self.config.get("rsi.enabled", True):
+            checklist.append({
+                "id": "rsi",
+                "label": "RSI filter",
+                "status": "pass",
+                "detail": "Disabled",
+            })
+        elif rsi_val is None:
+            checklist.append({
+                "id": "rsi",
+                "label": "RSI filter",
+                "status": "wait",
+                "detail": f"Need more candles for RSI({rsi_period})",
+            })
+            waiting.append("Waiting for RSI")
+        elif side == "long" and not rsi_ok:
+            checklist.append({
+                "id": "rsi",
+                "label": "RSI filter",
+                "status": "fail",
+                "detail": f"RSI {rsi_val:.1f} > {long_max:.0f} — no longs when overbought",
+            })
+            waiting.append(f"RSI too high for long ({rsi_val:.1f})")
+        elif side == "short" and not rsi_ok:
+            checklist.append({
+                "id": "rsi",
+                "label": "RSI filter",
+                "status": "fail",
+                "detail": f"RSI {rsi_val:.1f} < {short_min:.0f} — no shorts when oversold",
+            })
+            waiting.append(f"RSI too low for short ({rsi_val:.1f})")
+        else:
+            checklist.append({
+                "id": "rsi",
+                "label": "RSI filter",
+                "status": "pass" if side else "wait",
+                "detail": (
+                    f"RSI {rsi_val:.1f} OK for {side or 'flat'} "
+                    f"(long≤{long_max:.0f} / short≥{short_min:.0f})"
+                ),
+            })
+
         for tf_key, label in [("5m", "EMA 5m"), ("15m", "EMA 15m"), ("1h", "EMA 1h")]:
             tf_trend = trend.get(f"trend_{tf_key}", "neutral")
             ema_val = trend.get("details", {}).get(f"ema_{tf_key}")
@@ -795,7 +889,13 @@ class PaperTradingEngine(SMCEngine):
 
         if open_count > 0:
             phase = "Managing open position"
-        elif confirmation and side and open_count < max_open and cooldown_remaining <= 0:
+        elif (
+            confirmation
+            and side
+            and rsi_ok
+            and open_count < max_open
+            and cooldown_remaining <= 0
+        ):
             phase = f"Entry ready — {side.upper()}"
             waiting = [f"Ready to open {side}"]
         elif waiting:
@@ -837,6 +937,13 @@ class PaperTradingEngine(SMCEngine):
                 "ema_1h": trend.get("details", {}).get("ema_1h"),
                 "pass_long": ema_pass_long,
                 "pass_short": ema_pass_short,
+            },
+            "rsi": {
+                "period": rsi_period,
+                "value": rsi_val,
+                "long_max": long_max,
+                "short_min": short_min,
+                "allows_side": rsi_ok if side else None,
             },
             "structure": {
                 "confirmed_uptrend": trend.get("details", {}).get("confirmed_uptrend"),

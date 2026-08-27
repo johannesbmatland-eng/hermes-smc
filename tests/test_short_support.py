@@ -393,6 +393,25 @@ def test_analysis_snapshot_has_checklist_and_phase():
     assert "fvgs" in snap
 
 
+def test_rsi_blocks_long_when_overbought():
+    engine = PaperTradingEngine(SMCConfig())
+    # Strong up-only series → RSI near 100
+    candles = [_candle(i, 100 + i, 101 + i, 99 + i, 100 + i) for i in range(40)]
+    rsi = engine._calc_rsi(candles, 14)
+    assert rsi is not None and rsi > 65
+    assert engine._rsi_allows_side("long", rsi) is False
+    assert engine._rsi_allows_side("short", rsi) is True
+
+
+def test_rsi_blocks_short_when_oversold():
+    engine = PaperTradingEngine(SMCConfig())
+    candles = [_candle(i, 140 - i, 141 - i, 139 - i, 140 - i) for i in range(40)]
+    rsi = engine._calc_rsi(candles, 14)
+    assert rsi is not None and rsi < 35
+    assert engine._rsi_allows_side("short", rsi) is False
+    assert engine._rsi_allows_side("long", rsi) is True
+
+
 def test_ema_series_length():
     engine = PaperTradingEngine(SMCConfig())
     candles = [_candle(1_700_000_000 + i * 300, 100, 101, 99, 100 + i * 0.01) for i in range(80)]
