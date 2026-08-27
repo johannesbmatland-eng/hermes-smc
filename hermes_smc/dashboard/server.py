@@ -39,15 +39,51 @@ class DashboardServer:
         self.load_engine()
         self.engine._running = True
         asyncio.create_task(self._engine_loop())
+        asyncio.create_task(self._price_loop())
 
     async def _engine_loop(self):
-        """Background loop for the trading engine."""
+        """Background loop for the trading engine (candles + signals)."""
         while self.engine and self.engine._running and not self.engine._stopped:
             try:
                 await self.engine.run_tick()
             except Exception as e:
                 logger.error(f"Engine tick failed: {e}")
             await asyncio.sleep(10)
+
+    async def _price_loop(self):
+        """Fast live price + open-trade PnL / SL-TP checks (~2s)."""
+        while self.engine and self.engine._running and not self.engine._stopped:
+            try:
+                await self._refresh_live_price()
+            except Exception as e:
+                logger.error(f"Live price update failed: {e}")
+            await asyncio.sleep(2)
+
+    async def _refresh_live_price(self):
+        engine = self.engine
+        if not engine:
+            return
+        market = engine.config.get("market", "BTC/USD")
+        price = await engine.market_data.get_latest_price(market)
+        engine.last_price = price
+
+        for trade_id, position in list(engine.position_manager.open_positions.items()):
+            engine.position_manager.update_position_price(trade_id, price)
+            candles = engine.last_candles_5m or []
+            if not candles:
+                continue
+            exit_reason = engine.check_exit_conditions(position, candles, price)
+            if exit_reason:
+                logger.info(f"Live exit {trade_id}: {exit_reason} @ {price:.2f}")
+                engine.position_manager.close_position(trade_id, price, exit_reason)
+                engine.trades.append({
+                    "id": trade_id,
+                    "type": "close",
+                    "side": position.get("side"),
+                    "reason": exit_reason,
+                    "price": price,
+                    "timestamp": time.time(),
+                })
 
     def get_stats(self) -> dict[str, Any]:
         """Get current trading statistics."""
@@ -57,11 +93,48 @@ class DashboardServer:
         open_positions = list(pm.open_positions.values())
         closed_positions = pm.closed_positions
 
+        # Ensure open positions have fresh dollar PnL from last_price
+        price = engine.last_price
+        if price is not None:
+            for p in open_positions:
+                entry = p["entry_price"]
+                size = p["position_size"]
+                side = p.get("side", "long")
+                if side == "long":
+                    p["pnl"] = (price - entry) * size
+                    p["pnl_pct"] = (price - entry) / entry * 100
+                else:
+                    p["pnl"] = (entry - price) * size
+                    p["pnl_pct"] = (entry - price) / entry * 100
+                p["current_price"] = price
+
+        unrealized = sum(p.get("pnl", 0) or 0 for p in open_positions)
         total_pnl = sum(p.get("pnl", 0) for p in closed_positions)
         total_pnl_pct = sum(p.get("pnl_pct", 0) for p in closed_positions)
         win_count = sum(1 for p in closed_positions if p.get("pnl", 0) > 0)
         win_rate = win_count / len(closed_positions) if closed_positions else 0
         market = engine.config.get("market", "BTC/USD")
+
+        live_trade = None
+        if open_positions:
+            p = open_positions[0]
+            risk = abs(p["entry_price"] - p["stop_loss"])
+            reward = abs(p["take_profit"] - p["entry_price"])
+            live_trade = {
+                "id": p["id"],
+                "asset": p.get("asset", market),
+                "side": p.get("side", "long"),
+                "entry_price": p["entry_price"],
+                "stop_loss": p["stop_loss"],
+                "take_profit": p["take_profit"],
+                "position_size": p["position_size"],
+                "current_price": p.get("current_price", price),
+                "pnl": p.get("pnl", 0),
+                "pnl_pct": p.get("pnl_pct", 0),
+                "open_time": p.get("open_time"),
+                "rr": (reward / risk) if risk > 0 else None,
+                "confirmation": (p.get("strategy_info") or {}).get("confirmation"),
+            }
 
         return {
             "market": market,
@@ -72,6 +145,8 @@ class DashboardServer:
             "closed_positions": closed_positions[-10:],
             "total_pnl": total_pnl,
             "total_pnl_pct": total_pnl_pct,
+            "unrealized_pnl": unrealized,
+            "live_trade": live_trade,
             "win_rate": win_rate,
             "trade_count": len(closed_positions),
             "engine_status": "running" if (self.engine and self.engine._running) else "stopped",
@@ -120,6 +195,16 @@ class DashboardServer:
         ]
         analysis = engine.last_analysis or {}
         nearest = (analysis.get("fvgs") or {}).get("nearest")
+        levels = None
+        opens = list(engine.position_manager.open_positions.values())
+        if opens:
+            p = opens[0]
+            levels = {
+                "entry": p["entry_price"],
+                "stop_loss": p["stop_loss"],
+                "take_profit": p["take_profit"],
+                "side": p.get("side", "long"),
+            }
         return {
             "market": engine.config.get("market", "BTC/USD"),
             "timeframe": "5m",
@@ -127,6 +212,7 @@ class DashboardServer:
             "ema": engine.last_ema_5m,
             "fvg": nearest,
             "fvg_boxes": getattr(engine, "last_fvg_boxes", []) or [],
+            "levels": levels,
             "price": engine.last_price,
             "bias": analysis.get("bias"),
         }
@@ -327,6 +413,115 @@ class DashboardHandler(BaseHTTPRequestHandler):
         #refresh { font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
         .side-long { color: var(--green); text-transform: uppercase; font-weight: 600; }
         .side-short { color: var(--red); text-transform: uppercase; font-weight: 600; }
+        .live-trade {
+            display: none;
+            margin-bottom: 16px;
+            padding: 18px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background:
+                linear-gradient(120deg, rgba(91,156,255,0.12) 0%, transparent 42%),
+                linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+        }
+        .live-trade.active { display: block; }
+        .live-trade.profit {
+            border-color: rgba(62,207,142,0.45);
+            background:
+                linear-gradient(120deg, rgba(62,207,142,0.14) 0%, transparent 50%),
+                linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+        }
+        .live-trade.loss {
+            border-color: rgba(240,113,120,0.45);
+            background:
+                linear-gradient(120deg, rgba(240,113,120,0.14) 0%, transparent 50%),
+                linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+        }
+        .live-trade-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .live-trade-title {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .live-trade-side {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .live-pnl {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .live-pnl-usd {
+            font-size: 2.4rem;
+            font-weight: 700;
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+        }
+        .live-pnl-pct {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .live-pnl.positive .live-pnl-usd,
+        .live-pnl.positive .live-pnl-pct { color: var(--green); }
+        .live-pnl.negative .live-pnl-usd,
+        .live-pnl.negative .live-pnl-pct { color: var(--red); }
+        .live-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .live-metric {
+            background: rgba(0,0,0,0.22);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .live-metric .k {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+        .live-metric .v {
+            margin-top: 4px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .live-metric .v.entry { color: var(--blue); }
+        .live-metric .v.sl { color: var(--red); }
+        .live-metric .v.tp { color: var(--green); }
+        .chart-legend {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+        .chart-legend span::before {
+            content: '';
+            display: inline-block;
+            width: 14px;
+            height: 2px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .chart-legend .lg-entry::before { background: var(--blue); }
+        .chart-legend .lg-sl::before { background: var(--red); border-top: 1px dashed var(--red); height: 0; }
+        .chart-legend .lg-tp::before { background: var(--green); }
+        .chart-legend.hidden { display: none; }
     </style>
 </head>
 <body>
@@ -339,12 +534,39 @@ class DashboardHandler(BaseHTTPRequestHandler):
             <div class="price-pill" id="live_price">—</div>
         </header>
 
+        <div class="live-trade" id="live_trade">
+            <div class="live-trade-top">
+                <div>
+                    <div class="live-trade-title">Live trade</div>
+                    <div class="live-trade-side" id="live_side">—</div>
+                    <div style="color:var(--muted);font-size:0.82rem;margin-top:4px" id="live_meta">—</div>
+                </div>
+                <div class="live-pnl" id="live_pnl_wrap">
+                    <div class="live-pnl-usd" id="live_pnl_usd">$0.00</div>
+                    <div class="live-pnl-pct" id="live_pnl_pct">+0.00%</div>
+                </div>
+            </div>
+            <div class="live-metrics">
+                <div class="live-metric"><div class="k">Entry</div><div class="v entry" id="live_entry">—</div></div>
+                <div class="live-metric"><div class="k">Stop loss</div><div class="v sl" id="live_sl">—</div></div>
+                <div class="live-metric"><div class="k">Take profit</div><div class="v tp" id="live_tp">—</div></div>
+                <div class="live-metric"><div class="k">Mark</div><div class="v" id="live_mark">—</div></div>
+                <div class="live-metric"><div class="k">Size</div><div class="v" id="live_size">—</div></div>
+                <div class="live-metric"><div class="k">Equity</div><div class="v" id="live_equity">—</div></div>
+            </div>
+        </div>
+
         <div class="layout">
             <div class="card">
-                <div class="card-title">BTC/USD · 5m · FVG boxes</div>
+                <div class="card-title">BTC/USD · 5m · FVG + trade levels</div>
                 <div id="chart-wrap">
                     <div id="chart"></div>
                     <canvas id="fvg-overlay"></canvas>
+                </div>
+                <div class="chart-legend hidden" id="chart_legend">
+                    <span class="lg-entry">Entry</span>
+                    <span class="lg-sl">Stop loss</span>
+                    <span class="lg-tp">Take profit</span>
                 </div>
                 <div class="meta">
                     <span class="chip" id="chip_ema">EMA 50</span>
@@ -395,12 +617,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
             <div id="trades_container"><p style="color:var(--muted);font-size:0.85rem">No trades yet</p></div>
         </div>
 
-        <p id="refresh">Auto-refresh every 10s</p>
+        <p id="refresh">Live price every 2s · full scan every 10s</p>
     </div>
 
     <script>
         let chart, candleSeries, emaSeries, fvgBoxes = [], chartFitted = false;
         let fvgOverlay, fvgCtx;
+        let tradePriceLines = [];
+        let lastLevelsKey = '';
 
         function initChart() {
             const wrap = document.getElementById('chart-wrap');
@@ -450,6 +674,44 @@ class DashboardHandler(BaseHTTPRequestHandler):
             chart.subscribeCrosshairMove(() => drawFvgBoxes());
         }
 
+        function clearTradeLevels() {
+            for (const line of tradePriceLines) {
+                try { candleSeries.removePriceLine(line); } catch (e) {}
+            }
+            tradePriceLines = [];
+            lastLevelsKey = '';
+            document.getElementById('chart_legend').classList.add('hidden');
+        }
+
+        function updateTradeLevels(levels) {
+            if (!levels || levels.entry == null) {
+                clearTradeLevels();
+                return;
+            }
+            const key = [levels.entry, levels.stop_loss, levels.take_profit, levels.side].join('|');
+            if (key === lastLevelsKey && tradePriceLines.length) return;
+            clearTradeLevels();
+            lastLevelsKey = key;
+            const LineStyle = LightweightCharts.LineStyle;
+            const defs = [
+                { price: levels.entry, color: '#5b9cff', title: 'ENTRY', style: LineStyle.Solid, width: 2 },
+                { price: levels.stop_loss, color: '#f07178', title: 'SL', style: LineStyle.Dashed, width: 2 },
+                { price: levels.take_profit, color: '#3ecf8e', title: 'TP', style: LineStyle.Dashed, width: 2 },
+            ];
+            for (const d of defs) {
+                if (d.price == null || isNaN(d.price)) continue;
+                tradePriceLines.push(candleSeries.createPriceLine({
+                    price: Number(d.price),
+                    color: d.color,
+                    lineWidth: d.width,
+                    lineStyle: d.style,
+                    axisLabelVisible: true,
+                    title: d.title,
+                }));
+            }
+            document.getElementById('chart_legend').classList.remove('hidden');
+        }
+
         function drawFvgBoxes() {
             if (!fvgCtx || !candleSeries) return;
             const w = fvgOverlay.width;
@@ -472,7 +734,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 const active = box.unmitigated !== false;
                 const bull = box.type === 'bullish';
 
-                // nephew_sam_-style translucent zone
                 fvgCtx.fillStyle = bull
                     ? (active ? 'rgba(62, 207, 142, 0.22)' : 'rgba(62, 207, 142, 0.08)')
                     : (active ? 'rgba(240, 113, 120, 0.22)' : 'rgba(240, 113, 120, 0.08)');
@@ -484,7 +745,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 fvgCtx.fillRect(left, top, width, Math.max(height, 1));
                 fvgCtx.strokeRect(left, top, width, Math.max(height, 1));
 
-                // mid / CE line
                 const yMid = candleSeries.priceToCoordinate(box.mid);
                 if (yMid != null) {
                     fvgCtx.beginPath();
@@ -497,7 +757,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     fvgCtx.stroke();
                 }
 
-                // small label
                 fvgCtx.setLineDash([]);
                 fvgCtx.fillStyle = bull ? '#3ecf8e' : '#f07178';
                 fvgCtx.font = '10px IBM Plex Sans, sans-serif';
@@ -508,6 +767,50 @@ class DashboardHandler(BaseHTTPRequestHandler):
         function formatCurrency(value) {
             if (value == null || isNaN(value)) return '--';
             return '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatSignedCurrency(value) {
+            if (value == null || isNaN(value)) return '--';
+            const n = Number(value);
+            const sign = n > 0 ? '+' : (n < 0 ? '' : '');
+            return sign + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function renderLiveTrade(stats) {
+            const panel = document.getElementById('live_trade');
+            const t = stats.live_trade;
+            if (!t) {
+                panel.className = 'live-trade';
+                return;
+            }
+            const pnl = Number(t.pnl || 0);
+            const pnlPct = Number(t.pnl_pct || 0);
+            const positive = pnl >= 0;
+            panel.className = 'live-trade active ' + (positive ? 'profit' : 'loss');
+            document.getElementById('live_side').textContent =
+                (t.side || '').toUpperCase() + ' · ' + (t.asset || stats.market || 'BTC/USD');
+            document.getElementById('live_side').className =
+                'live-trade-side side-' + (t.side || 'long');
+            const conf = t.confirmation ? (' · ' + t.confirmation) : '';
+            const rr = t.rr != null ? (' · RR 1:' + Number(t.rr).toFixed(1)) : '';
+            document.getElementById('live_meta').textContent =
+                (t.id ? t.id.substring(0, 8) + '…' : '') + conf + rr;
+
+            const wrap = document.getElementById('live_pnl_wrap');
+            wrap.className = 'live-pnl ' + (positive ? 'positive' : 'negative');
+            document.getElementById('live_pnl_usd').textContent = formatSignedCurrency(pnl);
+            document.getElementById('live_pnl_pct').textContent =
+                (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%';
+
+            document.getElementById('live_entry').textContent = Number(t.entry_price).toFixed(2);
+            document.getElementById('live_sl').textContent = Number(t.stop_loss).toFixed(2);
+            document.getElementById('live_tp').textContent = Number(t.take_profit).toFixed(2);
+            document.getElementById('live_mark').textContent =
+                t.current_price != null ? Number(t.current_price).toFixed(2) : '—';
+            document.getElementById('live_size').textContent =
+                Number(t.position_size).toFixed(6) + ' BTC';
+            document.getElementById('live_equity').textContent =
+                formatCurrency(stats.equity != null ? stats.equity : (stats.capital + pnl));
         }
 
         function renderChecklist(items) {
@@ -542,10 +845,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     document.getElementById('live_price').textContent = formatCurrency(stats.price);
                 }
 
+                renderLiveTrade(stats);
+
                 document.getElementById('capital').textContent = formatCurrency(stats.capital);
-                document.getElementById('pnl').textContent = formatCurrency(stats.total_pnl);
-                const pnlPct = stats.total_pnl_pct || 0;
-                document.getElementById('pnl_pct').textContent = (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%';
+                const unrealized = stats.unrealized_pnl || 0;
+                const realized = stats.total_pnl || 0;
+                document.getElementById('pnl').textContent = formatSignedCurrency(realized + unrealized);
+                document.getElementById('pnl').className = 'stat-value ' + ((realized + unrealized) >= 0 ? 'positive' : 'negative');
+                const open = stats.live_trade;
+                const pnlPct = open ? (open.pnl_pct || 0) : (stats.total_pnl_pct || 0);
+                document.getElementById('pnl_pct').textContent = (pnlPct >= 0 ? '+' : '') + Number(pnlPct).toFixed(2) + '%';
                 document.getElementById('pnl_pct').className = 'stat-value ' + (pnlPct >= 0 ? 'positive' : 'negative');
                 document.getElementById('winrate').textContent = ((stats.win_rate || 0) * 100).toFixed(1) + '%';
                 document.getElementById('trades').textContent = stats.trade_count;
@@ -554,7 +863,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 document.getElementById('status_dot').className = 'status-dot ' + (stats.engine_status === 'running' ? 'running' : 'stopped');
                 document.getElementById('last_update').textContent = new Date((stats.last_update || Date.now()/1000) * 1000).toLocaleTimeString();
 
-                // Bot thinking
                 const phaseEl = document.getElementById('phase');
                 phaseEl.textContent = analysis.phase || 'Scanning…';
                 phaseEl.className = 'phase ' + (analysis.bias || 'neutral');
@@ -564,18 +872,32 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 document.getElementById('waiting').textContent = waiting;
                 renderChecklist(analysis.checklist || []);
 
-                // Chart
                 if (chartData.candles && chartData.candles.length) {
                     candleSeries.setData(chartData.candles);
                     if (chartData.ema && chartData.ema.length) {
                         emaSeries.setData(chartData.ema);
                     }
                     fvgBoxes = chartData.fvg_boxes || [];
+                    updateTradeLevels(chartData.levels || (stats.live_trade ? {
+                        entry: stats.live_trade.entry_price,
+                        stop_loss: stats.live_trade.stop_loss,
+                        take_profit: stats.live_trade.take_profit,
+                        side: stats.live_trade.side,
+                    } : null));
                     if (!chartFitted) {
                         chart.timeScale().fitContent();
                         chartFitted = true;
                     }
                     requestAnimationFrame(drawFvgBoxes);
+                } else if (stats.live_trade) {
+                    updateTradeLevels({
+                        entry: stats.live_trade.entry_price,
+                        stop_loss: stats.live_trade.stop_loss,
+                        take_profit: stats.live_trade.take_profit,
+                        side: stats.live_trade.side,
+                    });
+                } else {
+                    clearTradeLevels();
                 }
 
                 const ema = analysis.ema || {};
@@ -592,10 +914,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 biasChip.textContent = 'Bias ' + (analysis.bias || 'neutral');
                 biasChip.className = 'chip ' + (analysis.bias === 'long' || analysis.bias === 'short' ? 'on' : '');
 
-                // Positions
                 const posContainer = document.getElementById('open_positions_container');
                 if (positions.positions && positions.positions.length > 0) {
-                    posContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Asset</th><th>Side</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>PnL %</th></tr></thead><tbody>' +
+                    posContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Asset</th><th>Side</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>PnL $</th><th>PnL %</th></tr></thead><tbody>' +
                         positions.positions.map(p => `
                             <tr>
                                 <td>${p.id.substring(0, 8)}...</td>
@@ -605,6 +926,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                                 <td>${p.position_size.toFixed(6)}</td>
                                 <td>${p.stop_loss.toFixed(2)}</td>
                                 <td>${p.take_profit.toFixed(2)}</td>
+                                <td class="${(p.pnl || 0) >= 0 ? 'positive' : 'negative'}">${formatSignedCurrency(p.pnl || 0)}</td>
                                 <td class="${p.pnl_pct >= 0 ? 'positive' : 'negative'}">${(p.pnl_pct >= 0 ? '+' : '') + p.pnl_pct.toFixed(2)}%</td>
                             </tr>
                         `).join('') + '</tbody></table>';
@@ -644,7 +966,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         initChart();
         refresh();
-        setInterval(refresh, 10000);
+        setInterval(refresh, 2000);
     </script>
 </body>
 </html>

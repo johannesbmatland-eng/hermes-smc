@@ -335,10 +335,13 @@ class PositionManager:
             side = position["side"]
 
             if side == "long":
+                pnl = (current_price - entry) * size
                 pnl_pct = (current_price - entry) / entry * 100
             else:
+                pnl = (entry - current_price) * size
                 pnl_pct = (entry - current_price) / entry * 100
 
+            position["pnl"] = pnl
             position["pnl_pct"] = pnl_pct
 
 
