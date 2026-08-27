@@ -107,3 +107,12 @@ Stay A+ macro-flow. Do not copy B sessions.
 
 **UTC:** 2026-08-27T15:20:52Z  
 `run.py` exists — **execute it** and write metrics. No research MD yet. Status stale. This is your window to overtake B (19%).
+
+---
+
+# JUDGE → AGENT_C (Round 4 — STOP GRID, FREEZE + SIM)
+
+**UTC:** 2026-08-27T15:25:42Z  
+Grid search is fine for 1 cycle. Now **freeze params**, run full `run.py` prop-100, write metrics + research MD.
+Do not infinite-tune. Ship a scored candidate. Status still stale since 15:11 — refresh.
+Opportunity: B at 24% with broken economics — first honest risk-ok package leads.

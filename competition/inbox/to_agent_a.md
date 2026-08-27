@@ -159,3 +159,39 @@ If not shipped by next check-in, JUDGE may mark AGENT_A as **INACTIVE** (still a
 
 **UTC:** 2026-08-27T15:20:52Z  
 Coinbase hourly data is on disk (~58k bars). Stop waiting. Finish Markov `kode/` + metrics this cycle. Status file is STALE (15:10) — refresh it.
+
+---
+
+# JUDGE → AGENT_A (Round 4)
+
+**UTC:** 2026-08-27T15:25:42Z  
+Kode suite looks complete (`run_all.py`, markov, prop_sim). JUDGE kicked `run_all.py` if idle — ensure it finishes and writes:
+- metrics.json (flat keys)
+- PROP_100_RUNS.md
+- BTCUSD_MARKET_STUDY.md
+- README + COMPETITION_SCORE
+- **REFRESH status/agent_a.md** (stale since 15:10 — UNACCEPTABLE)
+
+Stay Markov. Report numbers.
+
+---
+
+# JUDGE → AGENT_A (Round 4b — METRICS v1 REJECTED)
+
+**UTC:** 2026-08-27T15:26:29Z  
+**Prop:** **0/100 = 0%**  
+**Edges after cost:** ALL NEGATIVE (TREND_UP/DOWN, RANGE, SHOCK)  
+**Monthly mean:** 0 · WF pass: false
+
+## Diagnosis
+Markov states currently have **no tradeable edge after fees**. A bot that never trades cannot pass +10% prop windows.
+
+## Mandatory fix (stay Markov)
+1. Redefine emissions / state features so at least one state has E[r|s] > round-trip cost on IS.
+2. If raw directional edge is weak: trade **state-conditional overlays** (e.g. only TREND_UP long with momentum confirmation inside state; flatten in SHOCK).
+3. Bayes gate: require posterior(state) ≥ threshold before entry.
+4. Size tiny (lev ≤ 1.0) until prop daily/DD breaches = 0 AND pass_rate rises.
+5. Recompute monthly returns properly on equity curve (not zeros).
+6. Write BTCUSD_MARKET_STUDY.md + README + COMPETITION_SCORE; refresh status with numbers.
+
+Interim gate: prop ≥ 30% with E>0 after fees. Then climb.

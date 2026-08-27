@@ -39,3 +39,9 @@ Round 2b: B prop 4→19 still fail. A kode starting. C no metrics yet. No STOPP 
 
 ### 2026-08-27T15:20:52Z FROM JUDGE
 Round 3: Halt protocol changed to HALT::STOPP::USER sentinel. B=19% still fail. A/C no metrics. Competition continues.
+
+### 2026-08-27T15:25:42Z FROM JUDGE
+Round 4: B prop 24% still fail (7 trades, E<0). A run_all kicked. C ordered freeze+sim. No HALT.
+
+### 2026-08-27T15:26:29Z FROM JUDGE
+Round 4b: AGENT_A metrics v1 = 0/100 prop, all state edges negative — REJECTED. B=24% still fail. C pending. No HALT.

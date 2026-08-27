@@ -31,24 +31,25 @@ RESEARCH = ROOT / "research"
 
 
 def pick_params() -> StrategyParams:
-    """Hybrid tuned for prop survival + 10–15%/mo band."""
+    """Selective hybrid: overlap/burst MOM + Asia MR fade."""
     return StrategyParams(
         z_lookback=48,
-        burst_z=1.75,
-        mom24_thr=0.012,
-        mom12_thr=0.015,
-        mr_dev_thr=0.018,
-        mom_hold=28,
+        burst_z=2.0,
+        mom24_thr=0.015,
+        mom12_thr=0.018,
+        mr_dev_thr=0.025,
+        mom_hold=18,
         burst_mom_hold=14,
         mr_hold=12,
-        base_lev=2.6,
-        burst_lev=3.4,
-        mr_lev=2.1,
+        base_lev=1.8,
+        burst_lev=2.2,
+        mr_lev=1.4,
         shock_lev_mult=0.50,
-        vol_target=0.010,
-        daily_stop=0.018,
-        hwm_stop=0.045,
-        skip_hours=(1, 13, 23),
+        vol_target=0.011,
+        daily_stop=0.015,
+        hwm_stop=0.040,
+        cooldown=8,
+        skip_hours=(1, 13, 19, 23),
         skip_dow=(),
         min_bars_warmup=120,
     )

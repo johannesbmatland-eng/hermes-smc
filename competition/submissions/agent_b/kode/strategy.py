@@ -33,33 +33,34 @@ COST_BPS_SIDE = FEE_BPS + SLIP_BPS  # 6 bps/side → 12 bps RT
 @dataclass
 class StrategyParams:
     z_lookback: int = 48
-    burst_z: float = 1.75
-    mom24_thr: float = 0.012
-    mom12_thr: float = 0.015
-    mr_dev_thr: float = 0.018
-    mom_hold: int = 24
+    burst_z: float = 2.0
+    mom24_thr: float = 0.015
+    mom12_thr: float = 0.018
+    mr_dev_thr: float = 0.025
+    mom_hold: int = 18
     burst_mom_hold: int = 14
     mr_hold: int = 12
-    base_lev: float = 2.4
-    burst_lev: float = 3.2
-    mr_lev: float = 2.0
-    shock_lev_mult: float = 0.55
-    vol_target: float = 0.010
-    daily_stop: float = 0.018
-    hwm_stop: float = 0.045
+    base_lev: float = 1.8
+    burst_lev: float = 2.2
+    mr_lev: float = 1.4
+    shock_lev_mult: float = 0.50
+    vol_target: float = 0.011
+    daily_stop: float = 0.015
+    hwm_stop: float = 0.040
+    cooldown: int = 8
     flatten_weekend_utc: bool = False
-    skip_hours: tuple = (1, 13, 23)
-    skip_dow: tuple = ()  # allow all; Thursday filter optional
+    skip_hours: tuple = (1, 13, 19, 23)
+    skip_dow: tuple = ()
     min_bars_warmup: int = 120
 
 
-# Permission matrix: which modes allowed per session
+# Permission matrix
 SESSION_MATRIX = {
     "Asia": "MR",
     "London": "MOM",
     "Overlap": "MOM",
-    "NY": "BOTH",
-    "Quiet": "MR",
+    "NY": "MOM",
+    "Quiet": "NONE",
 }
 
 
@@ -116,14 +117,13 @@ def regime_from_volz(vz: float) -> str:
 
 
 def decide_signal(row: pd.Series, p: StrategyParams) -> tuple[float, str, int]:
-    """Return (direction, mode, hold_bars). direction in {-1,0,+1}."""
+    """Return (direction, mode, hold_bars). Highly selective microstructure hybrid."""
     hour = int(row["hour"])
     dow = int(row["dow"])
     sess = row["session"]
     z = float(row["z"]) if np.isfinite(row["z"]) else np.nan
     mom24 = float(row["mom24"]) if np.isfinite(row["mom24"]) else np.nan
     mom12 = float(row["mom12"]) if np.isfinite(row["mom12"]) else np.nan
-    dev48 = float(row["dev48"]) if np.isfinite(row["dev48"]) else np.nan
     vol_ratio = float(row["vol_ratio"]) if np.isfinite(row["vol_ratio"]) else 1.0
     reg = regime_from_volz(row["vol_z_reg"] if "vol_z_reg" in row.index else np.nan)
 
@@ -135,37 +135,25 @@ def decide_signal(row: pd.Series, p: StrategyParams) -> tuple[float, str, int]:
 
     burst = np.isfinite(z) and abs(z) >= p.burst_z
 
-    # --- MOMENTUM branch (London / Overlap / NY) ---
-    # 1) Session-structure mom: London hours follow 24h thrust
-    if perm in ("MOM", "BOTH") and sess == "London" and hour in (7, 8, 9, 10, 11):
-        if np.isfinite(mom24) and abs(mom24) >= p.mom24_thr:
-            return float(np.sign(mom24)), "mom_london_thrust", p.mom_hold
+    # MOM-1: London/NY overlap — strongest fee-surviving edge (12h impulse continuation)
+    if perm == "MOM" and sess == "Overlap" and hour in (12, 13, 14):
+        if np.isfinite(mom12) and abs(mom12) >= p.mom12_thr and reg != "range":
+            return float(np.sign(mom12)), "mom_overlap", p.mom_hold
 
-    # 2) Overlap continuation of 12h impulse
-    if perm in ("MOM", "BOTH") and sess == "Overlap" and hour in (12, 13, 14, 15):
-        if np.isfinite(mom12) and abs(mom12) >= p.mom12_thr:
-            return float(np.sign(mom12)), "mom_overlap", max(12, p.burst_mom_hold)
-
-    # 3) Volatility-burst momentum in Western sessions
-    if perm in ("MOM", "BOTH") and burst and sess in ("London", "Overlap", "NY"):
-        if vol_ratio >= 1.05 or reg != "range":
+    # MOM-2: Western volatility-burst continuation (session open / burst microstructure)
+    if perm == "MOM" and burst and sess in ("London", "Overlap", "NY"):
+        if vol_ratio >= 1.10 and hour in (7, 8, 9, 10, 12, 14, 16, 17, 18):
             return float(np.sign(z)), "mom_burst", p.burst_mom_hold
 
-    # 4) NY BOTH: late-day mom if strong mom24
-    if perm == "BOTH" and sess == "NY" and hour in (16, 17, 18):
-        if np.isfinite(mom24) and abs(mom24) >= p.mom24_thr * 1.1:
-            return float(np.sign(mom24)), "mom_ny", p.burst_mom_hold
+    # MOM-3: London selective thrust — only strong moves + vol expansion (avoid churn)
+    if perm == "MOM" and sess == "London" and hour in (8, 9, 10):
+        if np.isfinite(mom24) and abs(mom24) >= max(0.022, p.mom24_thr * 1.4) and vol_ratio >= 1.15:
+            return float(np.sign(mom24)), "mom_london_thrust", p.mom_hold
 
-    # --- MEAN-REVERSION branch (Asia / Quiet / range) ---
-    # Burst fade when vol contracting (Asia microstructure mean-revert)
-    if perm in ("MR", "BOTH") and sess in ("Asia", "Quiet") and burst:
-        if vol_ratio <= 1.05 or reg == "range":
+    # MR-1: Asia burst fade only when vol contracting (mean-revert microstructure)
+    if perm == "MR" and sess == "Asia" and burst and hour in (0, 2, 3, 4, 5, 6):
+        if vol_ratio <= 0.95 or reg == "range":
             return float(-np.sign(z)), "mr_asia_burst", p.mr_hold
-
-    # Stretch vs 48h VWAP in Asia range regime
-    if perm in ("MR", "BOTH") and sess == "Asia" and np.isfinite(dev48):
-        if abs(dev48) >= p.mr_dev_thr and (reg == "range" or vol_ratio < 0.95):
-            return float(-np.sign(dev48)), "mr_asia_stretch", p.mr_hold
 
     return 0.0, "flat", 0
 
@@ -184,7 +172,8 @@ def leverage_for(mode: str, vol: float, p: StrategyParams, regime: str) -> float
     if regime == "range" and mode.startswith("mom"):
         lev *= 0.75
     if np.isfinite(vol) and vol > 0:
-        scale = min(1.6, max(0.35, p.vol_target / vol))
+        # Cap scale so we do not push into daily-fail territory on normal BTC hours
+        scale = min(1.15, max(0.40, p.vol_target / vol))
         lev *= scale
     return float(min(MAX_LEV, max(0.0, lev)))
 
@@ -270,6 +259,7 @@ def run_backtest(
     cur_date = None
     position = 0.0
     hold_left = 0
+    cooldown_left = 0
     trades = 0
     costs = 0.0
     daily_breach = 0
@@ -311,6 +301,9 @@ def run_backtest(
             eq_idx.append(dt)
             continue
 
+        if cooldown_left > 0:
+            cooldown_left -= 1
+
         bar_ret = float(row["ret"]) if np.isfinite(row["ret"]) else 0.0
         if position != 0.0:
             equity *= 1.0 + position * bar_ret
@@ -320,51 +313,54 @@ def run_backtest(
         day_pnl_pct = (equity - day_start_eq) / day_start_eq if day_start_eq else 0.0
         dd = (peak - equity) / peak if peak > 0 else 0.0
 
-        # Hard / soft risk exits
-        stop_daily = day_pnl_pct <= -p.daily_stop
-        stop_hwm = dd >= p.hwm_stop
         hard_daily = day_pnl_pct <= -DAILY_FAIL
         hard_hwm = dd >= MAX_DD_FAIL
+        soft_daily = day_pnl_pct <= -p.daily_stop
+        soft_hwm = dd >= p.hwm_stop
 
-        if stop_daily or stop_hwm or hard_daily or hard_hwm:
-            if position != 0.0:
-                c = equity * abs(position) * (COST_BPS_SIDE / 10000.0)
-                costs += c
-                equity -= c
-                if entry_eq is not None:
-                    trade_pnls.append((equity - entry_eq) / entry_eq)
-                position = 0.0
-                hold_left = 0
-                entry_eq = None
+        def _flatten(reason_cooldown: bool = True) -> None:
+            nonlocal position, hold_left, entry_eq, costs, equity, cooldown_left
+            if position == 0.0:
+                return
+            c = equity * abs(position) * (COST_BPS_SIDE / 10000.0)
+            costs += c
+            equity -= c
+            if entry_eq is not None:
+                trade_pnls.append((equity - entry_eq) / entry_eq)
+            position = 0.0
+            hold_left = 0
+            entry_eq = None
+            if reason_cooldown:
+                cooldown_left = max(cooldown_left, p.cooldown)
+
+        if hard_daily or hard_hwm:
+            _flatten(True)
             if hard_daily:
                 daily_breach += 1
-                failed = True
                 fail_reason = "daily_loss"
-            elif hard_hwm:
+            else:
                 hwm_breach += 1
-                failed = True
                 fail_reason = "max_dd"
+            failed = True
             eq_path.append(equity)
             eq_idx.append(dt)
             continue
 
-        # Hold countdown
-        if hold_left > 0:
-            hold_left -= 1
-            if hold_left == 0 and position != 0.0:
-                c = equity * abs(position) * (COST_BPS_SIDE / 10000.0)
-                costs += c
-                equity -= c
-                if entry_eq is not None:
-                    trade_pnls.append((equity - entry_eq) / entry_eq)
-                position = 0.0
-                entry_eq = None
+        pause_entries = soft_daily or cooldown_left > 0
 
-        # New entry
-        if position == 0.0 and not failed:
+        if position != 0.0 and (soft_daily or soft_hwm):
+            _flatten(True)
+
+        if hold_left > 0 and position != 0.0:
+            hold_left -= 1
+            if hold_left == 0:
+                _flatten(True)
+
+        if position == 0.0 and not failed and not pause_entries:
             direction, mode, hold = decide_signal(row, p)
             if direction != 0.0 and hold > 0:
-                reg = regime_from_volz(row["vol_z_reg"] if np.isfinite(row.get("vol_z_reg", np.nan)) else np.nan)
+                vz = row["vol_z_reg"] if "vol_z_reg" in row.index else np.nan
+                reg = regime_from_volz(float(vz) if np.isfinite(vz) else np.nan)
                 vol = float(row["vol"]) if np.isfinite(row["vol"]) else p.vol_target
                 lev = leverage_for(mode, vol, p, reg)
                 if lev > MAX_LEV + 1e-9:
@@ -381,11 +377,7 @@ def run_backtest(
 
         if challenge_mode and (equity / initial - 1.0) >= PASS_PCT:
             passed = True
-            if position != 0.0:
-                c = equity * abs(position) * (COST_BPS_SIDE / 10000.0)
-                costs += c
-                equity -= c
-                position = 0.0
+            _flatten(False)
             eq_path.append(equity)
             eq_idx.append(dt)
             break

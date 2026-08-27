@@ -1,0 +1,99 @@
+{
+  "walk_forward_pass": false,
+  "folds": [
+    {
+      "fold": 0,
+      "train_end": 34983,
+      "test_end": 39647,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "monthly_mean": 0.0,
+      "expectancy": 0.0,
+      "hitrate": 0.0,
+      "max_dd": 0.0,
+      "n_trades": 0,
+      "edge": {
+        "TREND_UP": -0.002066945611444885,
+        "TREND_DOWN": -0.0021691249033464104,
+        "RANGE": -0.0021332542273547997,
+        "SHOCK": -0.0022
+      }
+    },
+    {
+      "fold": 1,
+      "train_end": 39647,
+      "test_end": 44311,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "monthly_mean": 0.0,
+      "expectancy": 0.0,
+      "hitrate": 0.0,
+      "max_dd": 0.0,
+      "n_trades": 0,
+      "edge": {
+        "TREND_UP": -0.002068590626430364,
+        "TREND_DOWN": -0.002185621243653314,
+        "RANGE": -0.002129999359276129,
+        "SHOCK": -0.0022
+      }
+    },
+    {
+      "fold": 2,
+      "train_end": 44311,
+      "test_end": 48975,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "monthly_mean": 0.0,
+      "expectancy": 0.0,
+      "hitrate": 0.0,
+      "max_dd": 0.0,
+      "n_trades": 0,
+      "edge": {
+        "TREND_UP": -0.002071760199523016,
+        "TREND_DOWN": -0.002218901246915164,
+        "RANGE": -0.002135921540994986,
+        "SHOCK": -0.0022
+      }
+    },
+    {
+      "fold": 3,
+      "train_end": 48975,
+      "test_end": 53639,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "monthly_mean": 0.0,
+      "expectancy": 0.0,
+      "hitrate": 0.0,
+      "max_dd": 0.0,
+      "n_trades": 0,
+      "edge": {
+        "TREND_UP": -0.0020870881903206195,
+        "TREND_DOWN": -0.0022268270681307005,
+        "RANGE": -0.0021557741398416036,
+        "SHOCK": -0.0022
+      }
+    },
+    {
+      "fold": 4,
+      "train_end": 53639,
+      "test_end": 58303,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "monthly_mean": 0.0,
+      "expectancy": 0.0,
+      "hitrate": 0.0,
+      "max_dd": 0.0,
+      "n_trades": 0,
+      "edge": {
+        "TREND_UP": -0.002104296498263038,
+        "TREND_DOWN": -0.0022020835369848074,
+        "RANGE": -0.0021659113074778006,
+        "SHOCK": -0.0022
+      }
+    }
+  ],
+  "mean_oos_sharpe": 0.0,
+  "mean_oos_monthly": 0.0,
+  "mean_oos_expectancy": 0.0,
+  "positive_expectancy_folds": 0
+}

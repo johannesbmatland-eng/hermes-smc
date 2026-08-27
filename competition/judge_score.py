@@ -235,6 +235,19 @@ def load_agent(letter: str) -> AgentScore | None:
     max_lev = _safe_float(raw.get("max_leverage_used"), 0.0) or 0.0
     risk_ok = d3 == 0 and dd6 == 0 and lev == 0 and max_lev <= 5.0 + 1e-9
     risk_s = 100.0 if risk_ok else 0.0
+    # Inactive / never-trades bots must not farm full risk points
+    inactive = (
+        (rate is not None and rate == 0.0)
+        and (mean is not None and mean == 0.0)
+        and (max_lev == 0.0)
+        and int(raw.get("prop_passes") or 0) == 0
+    )
+    if inactive and risk_ok:
+        risk_s = 25.0
+        risk_ok = False  # not competitively risk-validated
+        notes_inactive = True
+    else:
+        notes_inactive = False
 
     research = research_score(d / "research" / "BTCUSD_MARKET_STUDY.md")
     code = code_score(d)
@@ -260,6 +273,8 @@ def load_agent(letter: str) -> AgentScore | None:
         and code >= 75
     )
     notes = []
+    if notes_inactive:
+        notes.append("inactive/no-trades — risk points capped")
     if rate is None:
         notes.append("missing prop_pass_rate")
     elif rate < 0.90:

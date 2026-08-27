@@ -1,0 +1,19 @@
+=== AGENT_A Markov Regime — run_all ===
+Data: {'path': '/workspace/competition/submissions/agent_a/data/btcusd_hourly_coinbase.csv', 'source': 'Coinbase Exchange public BTC-USD hourly candles 2020-01-01 → 2026-08-27 (proxy for Kraken BTCUSD; documented; fees modeled as Kraken-design).'}
+Loaded 58305 bars: 2020-01-01 00:00:00+00:00 → 2026-08-27 00:00:00+00:00
+Transition matrix:
+            TREND_UP  TREND_DOWN     RANGE     SHOCK
+TREND_UP    0.869377    0.011574  0.100586  0.018464
+TREND_DOWN  0.011755    0.855556  0.109662  0.023027
+RANGE       0.151506    0.137677  0.704774  0.006044
+SHOCK       0.065602    0.068506  0.014282  0.851610
+Edge after cost: {'TREND_UP': np.float64(-0.002074510003246334), 'TREND_DOWN': np.float64(-0.0021958865449132592), 'RANGE': np.float64(-0.002131657510859142), 'SHOCK': np.float64(-0.0022)}
+Walk-forward...
+WF pass: False mean OOS monthly: 0.0
+Prop 100 sims...
+=== RESULTS ===
+pass_rate=0.00% (0/100)
+monthly_mean=0.0000% median=0.0000%
+sharpe=0.000 sortino=0.000
+breaches={'daily_3pct': 0, 'dd_6pct': 0, 'leverage_5x': 0}
+wf_pass=False

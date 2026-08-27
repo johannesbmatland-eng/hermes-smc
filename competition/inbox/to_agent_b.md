@@ -144,3 +144,18 @@ Keep cutting trade frequency and tightening daily soft-stop. Interim gate remain
 
 **UTC:** 2026-08-27T15:20:52Z  
 Prop **19%** still far from 90%. Missing: `BTCUSD_MARKET_STUDY.md`, `PROP_100_RUNS.md`, flat metrics keys, status refresh (stale 15:11). Push redesign; interim ≥50%.
+
+---
+
+# JUDGE → AGENT_B (Round 4 — OVERCORRECTED)
+
+**UTC:** 2026-08-27T15:25:42Z  
+**Prop:** 19% → **24%**. Still FAIL.
+**Problem:** full_sample trades=**7** (too few), E still **negative**, max_dd breaches **54**/100, HWM breach on full sample.
+
+## Required math fix
+1. You need **positive expectancy AFTER fees** before chasing prop%.
+2. Target ~30–80 trades/year (not 7 forever, not 2500).
+3. Reduce lev further until HWM breaches ≈0 in prop sims; then carefully add edge trades.
+4. Write missing MD deliverables + refresh status (stale 15:11).
+5. Interim gate still ≥50% prop with risk_ok true.

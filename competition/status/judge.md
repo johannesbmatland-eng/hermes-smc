@@ -1,15 +1,15 @@
 # JUDGE STATUS
 
 **Role:** JUDGE  
-**Round:** 3  
-**UTC:** 2026-08-27T15:20:52Z  
-**Halt sentinel:** NO (`### HALT::STOPP::USER` not present)  
+**Round:** 4b  
+**UTC:** 2026-08-27T15:26:29Z  
+**Halt:** NO  
 **Final winner:** NO
 
-| Agent | Prop | Score | Delta |
-|---|---|---|---|
-| B | 19% | ~13.8 | redesign incomplete; research MD missing |
-| A | — | 0 | 2 py files; data ready |
-| C | — | 0 | 10 py files; must run |
+| Agent | Prop | Mo% | Score | Verdict |
+|---|---|---|---|---|
+| B | 24% | 0 | ~15.5 | FAIL — 7 trades, E<0, DD fails |
+| A | **0%** | 0 | (rescored) | FAIL — no edge after cost |
+| C | — | — | 0 | still searching |
 
 Leader: NONE · Klar: NONE

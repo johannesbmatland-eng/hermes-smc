@@ -1,0 +1,240 @@
+{
+  "agent": "A",
+  "strategy": "markov_regime",
+  "prop_pass_rate": 0.0,
+  "prop_passes": 0,
+  "prop_fails": 100,
+  "monthly_profit_mean": 0.0,
+  "monthly_profit_median": 0.0,
+  "max_daily_loss_observed": 0.0,
+  "max_dd_observed": 0.0,
+  "max_leverage_used": 0.0,
+  "fees_bps": 8.0,
+  "slippage_bps": 3.0,
+  "sharpe": 0.0,
+  "sortino": 0.0,
+  "expectancy": 0.0,
+  "hitrate": 0.0,
+  "payoff_ratio": 0.0,
+  "walk_forward_pass": false,
+  "risk_breaches": {
+    "daily_3pct": 0,
+    "dd_6pct": 0,
+    "leverage_5x": 0
+  },
+  "edge_after_cost": {
+    "TREND_UP": -0.002074510003246334,
+    "TREND_DOWN": -0.0021958865449132592,
+    "RANGE": -0.002131657510859142,
+    "SHOCK": -0.0022
+  },
+  "oos_backtest_monthly_mean": 0.0,
+  "data": {
+    "path": "/workspace/competition/submissions/agent_a/data/btcusd_hourly_coinbase.csv",
+    "source": "Coinbase Exchange public BTC-USD hourly candles 2020-01-01 \u2192 2026-08-27 (proxy for Kraken BTCUSD; documented; fees modeled as Kraken-design)."
+  },
+  "extras": {
+    "walk_forward": {
+      "walk_forward_pass": false,
+      "mean_oos_sharpe": 0.0,
+      "mean_oos_monthly": 0.0,
+      "mean_oos_expectancy": 0.0,
+      "positive_expectancy_folds": 0
+    },
+    "walk_forward_folds": [
+      {
+        "fold": 0,
+        "train_end": 34983,
+        "test_end": 39647,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "monthly_mean": 0.0,
+        "expectancy": 0.0,
+        "hitrate": 0.0,
+        "max_dd": 0.0,
+        "n_trades": 0,
+        "edge": {
+          "TREND_UP": -0.002066945611444885,
+          "TREND_DOWN": -0.0021691249033464104,
+          "RANGE": -0.0021332542273547997,
+          "SHOCK": -0.0022
+        }
+      },
+      {
+        "fold": 1,
+        "train_end": 39647,
+        "test_end": 44311,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "monthly_mean": 0.0,
+        "expectancy": 0.0,
+        "hitrate": 0.0,
+        "max_dd": 0.0,
+        "n_trades": 0,
+        "edge": {
+          "TREND_UP": -0.002068590626430364,
+          "TREND_DOWN": -0.002185621243653314,
+          "RANGE": -0.002129999359276129,
+          "SHOCK": -0.0022
+        }
+      },
+      {
+        "fold": 2,
+        "train_end": 44311,
+        "test_end": 48975,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "monthly_mean": 0.0,
+        "expectancy": 0.0,
+        "hitrate": 0.0,
+        "max_dd": 0.0,
+        "n_trades": 0,
+        "edge": {
+          "TREND_UP": -0.002071760199523016,
+          "TREND_DOWN": -0.002218901246915164,
+          "RANGE": -0.002135921540994986,
+          "SHOCK": -0.0022
+        }
+      },
+      {
+        "fold": 3,
+        "train_end": 48975,
+        "test_end": 53639,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "monthly_mean": 0.0,
+        "expectancy": 0.0,
+        "hitrate": 0.0,
+        "max_dd": 0.0,
+        "n_trades": 0,
+        "edge": {
+          "TREND_UP": -0.0020870881903206195,
+          "TREND_DOWN": -0.0022268270681307005,
+          "RANGE": -0.0021557741398416036,
+          "SHOCK": -0.0022
+        }
+      },
+      {
+        "fold": 4,
+        "train_end": 53639,
+        "test_end": 58303,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "monthly_mean": 0.0,
+        "expectancy": 0.0,
+        "hitrate": 0.0,
+        "max_dd": 0.0,
+        "n_trades": 0,
+        "edge": {
+          "TREND_UP": -0.002104296498263038,
+          "TREND_DOWN": -0.0022020835369848074,
+          "RANGE": -0.0021659113074778006,
+          "SHOCK": -0.0022
+        }
+      }
+    ],
+    "research": {
+      "n_bars": 58305,
+      "date_start": "2020-01-01 00:00:00+00:00",
+      "date_end": "2026-08-27 00:00:00+00:00",
+      "state_counts": {
+        "TREND_UP": 20432,
+        "TREND_DOWN": 17909,
+        "RANGE": 14657,
+        "SHOCK": 5307
+      },
+      "tod_mean_ret": {
+        "0": 6.6288132628742e-05,
+        "1": -5.46709287831991e-05,
+        "2": -0.0001275750730601109,
+        "3": -5.700219963495716e-05,
+        "4": -0.00012575099307556917,
+        "5": 0.00010147566837608058,
+        "6": 0.00010250640686199575,
+        "7": 8.317717610780121e-05,
+        "8": 0.0001593496948637067,
+        "9": 1.4362417285981076e-07,
+        "10": 0.00010785136500469634,
+        "11": 8.255449013137625e-05,
+        "12": 0.00013752846498438795,
+        "13": 0.00013525710496546523,
+        "14": -9.058705595591941e-05,
+        "15": 0.00019997789826864987,
+        "16": -4.233756913024412e-05,
+        "17": 3.1812442491901254e-05,
+        "18": 7.202498227668432e-06,
+        "19": 1.806142699971604e-05,
+        "20": 0.00026880884772241233,
+        "21": 0.00045703450790907953,
+        "22": 0.0003288415390759719,
+        "23": -0.0002765105963679096
+      },
+      "dow_mean_ret": {
+        "0": 0.00017659481983654305,
+        "1": 3.919736476425394e-05,
+        "2": 0.00019396972569583545,
+        "3": -8.717433611257164e-05,
+        "4": 6.32179618592269e-05,
+        "5": 2.6396046831844283e-05,
+        "6": 2.887965941156082e-05
+      },
+      "large_move_hours": {
+        "14": 46,
+        "15": 45,
+        "20": 36,
+        "0": 33,
+        "16": 33,
+        "1": 32,
+        "12": 29,
+        "21": 27
+      },
+      "large_move_dow": {
+        "0": 120,
+        "2": 112,
+        "4": 91,
+        "3": 88,
+        "1": 79,
+        "6": 58,
+        "5": 36
+      },
+      "transition": {
+        "TREND_UP": {
+          "TREND_UP": 0.8722352710902329,
+          "TREND_DOWN": 0.009601965053313236,
+          "RANGE": 0.14474761255115962,
+          "SHOCK": 0.0596874411598569
+        },
+        "TREND_DOWN": {
+          "TREND_UP": 0.00993345077314543,
+          "TREND_DOWN": 0.8602132529447887,
+          "RANGE": 0.13431105047748976,
+          "SHOCK": 0.06251176802861985
+        },
+        "RANGE": {
+          "TREND_UP": 0.10300450185946369,
+          "TREND_DOWN": 0.11125997878635628,
+          "RANGE": 0.7153478854024556,
+          "SHOCK": 0.014121634343814724
+        },
+        "SHOCK": {
+          "TREND_UP": 0.014826776277157956,
+          "TREND_DOWN": 0.018924803215541786,
+          "RANGE": 0.005593451568894952,
+          "SHOCK": 0.8636791564677085
+        }
+      },
+      "edge_after_cost": {
+        "TREND_UP": -0.0021105979338618855,
+        "TREND_DOWN": -0.0021961807825603263,
+        "RANGE": -0.0021622545339743983,
+        "SHOCK": -0.0022
+      },
+      "emission_mean": {
+        "TREND_UP": 8.94020661381145e-05,
+        "TREND_DOWN": -3.819217439674003e-06,
+        "RANGE": 3.774546602560194e-05,
+        "SHOCK": 0.00025733823547502383
+      }
+    }
+  }
+}
