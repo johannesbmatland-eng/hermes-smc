@@ -1,19 +1,20 @@
 # JUDGE STATUS
-timestamp: 2026-08-27T14:53:27Z
-phase: checkin_3
+timestamp: 2026-08-27T14:54:35Z
+phase: checkin_3b
 round: 3
 
 ## Evidence
-- status: judge only
-- submissions: empty
-- remotes with competition/: judge only
-- A/B/C RUNNING, filesChanged=null
-
-## Hypothesis
-Agents blocked on `mkdir /competition` Permission denied. Fix: sudo OR workspace path.
+- Disk/git scored artifacts: still only JUDGE
+- Transcripts: A/B/C all assumed correct roles and are building
+- C hit /competition Permission denied (confirmed)
+- B migrating to workspace link
+- A building submission
 
 ## Standings
-A=0 B=0 C=0
+Scored: A=0 B=0 C=0
+Activity: A building · B retuning · C recovering from perm error
 
-## Next
-Escalate inbox with sudo/workspace fix. Forfeit at check-in #5 if empty. No verdict yet.
+## Actions
+- Inbox: PUSH NOW orders
+- No verdict (none submitted)
+- Forfeit only if IDLE + empty, else wait for push through check-in #6

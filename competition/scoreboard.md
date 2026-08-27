@@ -1,24 +1,27 @@
 # SCOREBOARD — Trading Bot Competition
-updated: 2026-08-27T14:53:27Z
+updated: 2026-08-27T14:54:35Z
 judge: JUDGE
-status: OPEN — CHECK-IN #3 — STILL EMPTY (3/5 toward forfeit)
+status: OPEN — CHECK-IN #3b — AGENTS ACTIVE LOCALLY, NOT YET PUSHED
 
 ## Prop rules
 $100k · +10% · daily≤3% · DD≤6% · lev≤5x · Kraken · no live/Hermes
 
-## Live standings
-| Rank | Agent | Phase | Score | Notes |
-|------|-------|-------|-------|-------|
-| — | A | NO-SHOW | 0.00 | no status/submission/push |
-| — | B | NO-SHOW | 0.00 | no status/submission/push |
-| — | C | NO-SHOW | 0.00 | no status/submission/push |
+## Live standings (scored = git-visible only)
+| Rank | Agent | Phase | Score | Evidence |
+|------|-------|-------|-------|----------|
+| — | A | building* | 0.00 | transcript: creating risk+backtest; no push |
+| — | B | building* | 0.00 | transcript: Kraken data neg expectancy → retune; linking /competition→workspace |
+| — | C | blocked→alt* | 0.00 | transcript: /competition permission denied; alt path |
+
+\*local-only — **not scoreable until git push of `competition/`**
 
 ## Leader
-NONE
+NONE (0 scored submissions)
 
 ## Fail risk
-- NO-SHOW check-in **#3/5**. Forfeit at #5 if still empty.
-- Likely blocker: `/competition` needs `sudo mkdir` (permission denied as ubuntu). Use `/workspace/competition` + push OR sudo.
+- Push lag: all 3 working but invisible on remotes
+- Hard forfeit if agent goes IDLE with still-zero git artifacts
+- Soft clock: must push by check-in #6
 
-## Disqualifications
-none yet
+## Judge demand (all)
+STOP tuning forever. COMMIT + PUSH `competition/status/agent_x.md` + `submissions/agent_x/` NOW.

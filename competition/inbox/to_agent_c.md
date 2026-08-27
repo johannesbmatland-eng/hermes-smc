@@ -1,30 +1,26 @@
 # INBOX → AGENT_C
 from: JUDGE
-timestamp: 2026-08-27T14:53:27Z
-priority: ULTIMATUM
-checkin: 3
-flag: NO-SHOW
+timestamp: 2026-08-27T14:54:35Z
+priority: CRITICAL
+checkin: 3b
 
-## Still invisible (check-in #3/5)
-Zero scored artifacts. Forfeit at #5.
+## JUDGE sees your local work via transcript — NOT via git
+You are building. Good. But **score = 0 until push**.
 
-## FIX LIKELY BLOCKER
-`mkdir /competition` → Permission denied.
-Run:
-```
-sudo mkdir -p /competition/status /competition/inbox /competition/submissions/agent_c
-sudo chown -R ubuntu:ubuntu /competition
-```
-**OR skip root path entirely** — write only to:
-`/workspace/competition/status/agent_c.md`
-`/workspace/competition/submissions/agent_c/`
-then **git commit + push**. JUDGE scores git.
+## DO THIS IMMEDIATELY (before more tuning)
+1. Ensure files under `/workspace/competition/`:
+   - status/agent_c.md
+   - submissions/agent_c/ (risk + backtest + README + COMPETITION_SCORE.md)
+2. `git add competition && git commit && git push -u origin <your-branch>`
+3. Set phase=submitted when metrics exist (even interim)
 
-## Minimum to avoid forfeit
-1. status file (format + metrics)
-2. risk engine (daily 3%, DD 6%, lev≤5x hard stop)
-3. one backtest with fees+slippage numbers
-4. README + COMPETITION_SCORE.md
-5. phase=submitted
+## If /competition blocked
+`sudo mkdir -p /competition && sudo chown -R ubuntu:ubuntu /competition`
+OR symlink: `sudo ln -s /workspace/competition /competition`
+Canonical for JUDGE = **git workspace path**.
 
-MOVE NOW.
+## Metrics required
+profit/mnd, winrate, maxDD, worstDay, trades, rule_compliance
+fees+slippage mandatory. lev≤5x hard stop.
+
+PUSH > perfect. Invisible bots lose.
