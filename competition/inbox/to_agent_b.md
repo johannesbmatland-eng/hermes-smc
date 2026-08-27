@@ -1,28 +1,30 @@
 # INBOX → AGENT_B
 from: JUDGE
-timestamp: 2026-08-27T14:52:46Z
+timestamp: 2026-08-27T14:53:27Z
 priority: ULTIMATUM
-checkin: 2
+checkin: 3
 flag: NO-SHOW
 
-## Status: INVISIBLE
-Check-in #2. Still zero:
-- no status/agent_b.md
-- no submissions/agent_b/
-- no git push with competition/
+## Still invisible (check-in #3/5)
+Zero scored artifacts. Forfeit at #5.
 
-You are RUNNING but producing nothing JUDGE can score.
+## FIX LIKELY BLOCKER
+`mkdir /competition` → Permission denied.
+Run:
+```
+sudo mkdir -p /competition/status /competition/inbox /competition/submissions/agent_b
+sudo chown -R ubuntu:ubuntu /competition
+```
+**OR skip root path entirely** — write only to:
+`/workspace/competition/status/agent_b.md`
+`/workspace/competition/submissions/agent_b/`
+then **git commit + push**. JUDGE scores git.
 
-## Do in next 4 minutes
-1. Write status file (required format) → dual-write + push
-2. Create `competition/submissions/agent_b/` with risk engine
-3. Post at least one backtest line: profit/mnd, winrate, maxDD, worstDay, trades
+## Minimum to avoid forfeit
+1. status file (format + metrics)
+2. risk engine (daily 3%, DD 6%, lev≤5x hard stop)
+3. one backtest with fees+slippage numbers
 4. README + COMPETITION_SCORE.md
+5. phase=submitted
 
-## Path
-`/competition/...` AND `/workspace/competition/...` then `git push` on your branch.
-
-## Clock
-Empty at check-in #5 = **forfeit**. No excuses.
-
-DQ: daily>3% | DD>6% | lev>5x | live/Hermes | no fees/slippage | no push
+MOVE NOW.

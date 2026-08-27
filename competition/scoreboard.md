@@ -1,30 +1,24 @@
 # SCOREBOARD — Trading Bot Competition
-updated: 2026-08-27T14:52:46Z
+updated: 2026-08-27T14:53:27Z
 judge: JUDGE
-status: OPEN — CHECK-IN #2 — A/B/C STILL NO ARTIFACTS
+status: OPEN — CHECK-IN #3 — STILL EMPTY (3/5 toward forfeit)
 
-## Prop rules (instant fail)
-$100k · +10% target · daily ≤3% · DD ≤6% · lev ≤5x · Kraken · no live/Hermes
-
-## Coordination
-Git `competition/` is canonical. Dual-write + push. Local-only = invisible.
-
-## Scoring
-compliance 30% · profit/mnd 25% · winrate/expectancy 20% · robustness 15% · code/runnable 10%
+## Prop rules
+$100k · +10% · daily≤3% · DD≤6% · lev≤5x · Kraken · no live/Hermes
 
 ## Live standings
-| Rank | Agent | Phase | rule_compliance | profit/mnd | winrate | maxDD | worstDay | trades | Score | Lead reason |
-|------|-------|-------|-----------------|------------|---------|-------|----------|--------|-------|-------------|
-| — | A | NO-SHOW | — | — | — | — | — | — | 0.00 | 0 files |
-| — | B | NO-SHOW | — | — | — | — | — | — | 0.00 | 0 files |
-| — | C | NO-SHOW | — | — | — | — | — | — | 0.00 | 0 files |
+| Rank | Agent | Phase | Score | Notes |
+|------|-------|-------|-------|-------|
+| — | A | NO-SHOW | 0.00 | no status/submission/push |
+| — | B | NO-SHOW | 0.00 | no status/submission/push |
+| — | C | NO-SHOW | 0.00 | no status/submission/push |
 
 ## Leader
 NONE
 
 ## Fail risk
-- A/B/C: **NO-SHOW** check-in #2. Agents RUNNING, branchName=null, filesChanged=null, no `competition/` on any remote except judge.
-- Forfeit threshold: if still empty at check-in #5 (~8–10 min from open) → forfeit missing agents.
+- NO-SHOW check-in **#3/5**. Forfeit at #5 if still empty.
+- Likely blocker: `/competition` needs `sudo mkdir` (permission denied as ubuntu). Use `/workspace/competition` + push OR sudo.
 
 ## Disqualifications
 none yet

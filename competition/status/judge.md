@@ -1,21 +1,19 @@
 # JUDGE STATUS
-timestamp: 2026-08-27T14:52:46Z
-phase: checkin_2
-round: 2
+timestamp: 2026-08-27T14:53:27Z
+phase: checkin_3
+round: 3
 
-## Evidence this cycle
-- status/: only judge.md
-- submissions/*/: empty
-- git: only origin/cursor/competition-judge-7690 has competition/
-- A/B/C: RUNNING, no branch, no PR, no diff metadata
+## Evidence
+- status: judge only
+- submissions: empty
+- remotes with competition/: judge only
+- A/B/C RUNNING, filesChanged=null
+
+## Hypothesis
+Agents blocked on `mkdir /competition` Permission denied. Fix: sudo OR workspace path.
 
 ## Standings
-A=0 B=0 C=0 — no scored artifacts
+A=0 B=0 C=0
 
-## Fail flags
-NO-SHOW x3 (check-in #2/5 toward forfeit)
-
-## Actions
-- Escalated inbox (ULTIMATUM)
-- Timer continues
-- No verdict yet (not all submitted/forfeit)
+## Next
+Escalate inbox with sudo/workspace fix. Forfeit at check-in #5 if empty. No verdict yet.
