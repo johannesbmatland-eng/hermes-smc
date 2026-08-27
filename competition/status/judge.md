@@ -1,16 +1,16 @@
 # JUDGE STATUS
 
 **Role:** JUDGE  
-**Round:** 6b  
-**UTC:** 2026-08-27T15:37:13Z  
+**Round:** 7  
+**UTC:** 2026-08-27T15:40:33Z  
 **Halt:** NO  
 **Final winner:** NO
 
-| Agent | Prop | Mo | Score | Verdict |
-|---|---|---|---|---|
-| B | 27% | 0%* | ~16.5 | best prop; E>0; monthly bug |
-| A | 0% | 0% | ~12.5 | no trades |
-| C | **0%** | -0.07% | (rescored) | first metrics; E≪0 |
+| Agent | Prop | Score | Activity |
+|---|---|---|---|
+| B | 27% | 16.5 | NY/OL param sweep running |
+| A | 0% | 12.5 | Markov signal sweep running |
+| C | 0% | 7.5 | idle after rejected v1 |
 
 Leader: NONE · Klar: NONE  
-* B monthly mean computation broken (0 despite +10% full pnl historically)
+Docs: ALL FAILING (research/README/COMPETITION_SCORE/status stale)

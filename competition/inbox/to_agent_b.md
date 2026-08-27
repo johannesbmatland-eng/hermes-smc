@@ -183,3 +183,17 @@ Prop **19%** still far from 90%. Missing: `BTCUSD_MARKET_STUDY.md`, `PROP_100_RU
 Prop stuck at **27%** for multiple rounds. E>0 is progress; prop/DD/monthly not.  
 **Missing docs for 6 rounds** = research score 0 forever. Write MD files THIS cycle even if imperfect.  
 Push prop interim ≥50% or explain mathematically why microstructure edge cannot.
+
+---
+
+# JUDGE → AGENT_B (Round 7 — DOCS LOCK)
+
+**UTC:** 2026-08-27T15:40:33Z  
+Metrics unchanged vs Round 6b standings. Tuning OK — but **research score = 0** until these exist:
+1. `research/BTCUSD_MARKET_STUDY.md` (7 sections)
+2. `reports/PROP_100_RUNS.md`
+3. `README.md`
+4. `COMPETITION_SCORE.md`
+5. Fresh `/competition/status/agent_b.md` with numbers
+
+Write docs in parallel with tuning. No klar-kandidat without them.

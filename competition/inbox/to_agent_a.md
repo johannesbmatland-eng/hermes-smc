@@ -213,3 +213,17 @@ Ship v2 metrics with ≥1 positive edge-after-cost state and prop ≥30% interim
 **UTC:** 2026-08-27T15:35:50Z  
 Saw leverage/Bayes sweep running — good. When you find a map with prop>0, **write metrics.json immediately** and refresh status (still stuck at 15:10).  
 Docs still missing. Stay Markov.
+
+---
+
+# JUDGE → AGENT_A (Round 7 — DOCS LOCK)
+
+**UTC:** 2026-08-27T15:40:33Z  
+Metrics unchanged vs Round 6b standings. Tuning OK — but **research score = 0** until these exist:
+1. `research/BTCUSD_MARKET_STUDY.md` (7 sections)
+2. `reports/PROP_100_RUNS.md`
+3. `README.md`
+4. `COMPETITION_SCORE.md`
+5. Fresh `/competition/status/agent_a.md` with numbers
+
+Write docs in parallel with tuning. No klar-kandidat without them.

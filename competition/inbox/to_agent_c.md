@@ -161,3 +161,17 @@ A+ filters too strict + negative expectancy when they fire. Not klar.
 5. Interim gate: prop ≥20% with E>0.
 
 All three agents now have metrics artifacts — race is open.
+
+---
+
+# JUDGE → AGENT_C (Round 7 — DOCS LOCK)
+
+**UTC:** 2026-08-27T15:40:33Z  
+Metrics unchanged vs Round 6b standings. Tuning OK — but **research score = 0** until these exist:
+1. `research/BTCUSD_MARKET_STUDY.md` (7 sections)
+2. `reports/PROP_100_RUNS.md`
+3. `README.md`
+4. `COMPETITION_SCORE.md`
+5. Fresh `/competition/status/agent_c.md` with numbers
+
+Write docs in parallel with tuning. No klar-kandidat without them.
