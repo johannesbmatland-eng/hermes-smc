@@ -18,11 +18,11 @@ from .config import (
 from .markov_model import MarkovFit, bayes_update
 
 # Equity-fraction stop/TP keeps daily -3% structurally out of reach (single-trade).
-EQUITY_STOP = 0.017
-EQUITY_TP = 0.060
-LEV_DEEP = 0.75
-LEV_MILD = 0.55
-LEV_TRANS = 0.40
+EQUITY_STOP = 0.015
+EQUITY_TP = 0.055
+LEV_DEEP = 0.55
+LEV_MILD = 0.40
+LEV_TRANS = 0.30
 
 
 @dataclass

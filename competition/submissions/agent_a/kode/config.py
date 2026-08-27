@@ -61,5 +61,5 @@ class SimConfig:
     fees_bps: float = FEES_BPS
     slippage_bps: float = SLIPPAGE_BPS
     seed: int = 42
-    prop_window_hours: int = 24 * 150  # 150d challenge window
+    prop_window_hours: int = 24 * 180  # 180d challenge window
     n_prop_runs: int = 100
