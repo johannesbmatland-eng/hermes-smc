@@ -1,0 +1,382 @@
+{
+  "period_days": 90,
+  "from": "2026-05-29T11:00:00+00:00",
+  "to": "2026-08-27T11:00:00+00:00",
+  "market": "BTC/USD",
+  "data_source": "okx:BTC/USDT",
+  "bars_5m": 25920,
+  "signals": 333,
+  "trades": 333,
+  "wins": 148,
+  "losses": 185,
+  "win_rate_pct": 44.44444444444444,
+  "total_pnl": 4426.88,
+  "total_account_pct": 4.427,
+  "initial_capital": 100000.0,
+  "final_capital": 104426.88,
+  "avg_r": -0.106,
+  "avg_win": 673.5,
+  "avg_loss": -514.87,
+  "profit_factor": 1.046,
+  "max_win": 2458.58,
+  "max_loss": -534.68,
+  "by_exit_reason": {
+    "trailing_stop": 128,
+    "stop_loss": 201,
+    "take_profit": 4
+  },
+  "by_session": [
+    {
+      "name": "LNDN",
+      "trades": 85,
+      "wins": 43,
+      "losses": 42,
+      "win_rate": 0.5058823529411764,
+      "total_pnl": 5968.293088065643,
+      "avg_pnl": 70.21521280077228,
+      "total_account_pct": 5.886258671432381,
+      "avg_account_pct": 0.06925010201685154,
+      "avg_r": 0.017195201632272252
+    },
+    {
+      "name": "ASIA",
+      "trades": 108,
+      "wins": 46,
+      "losses": 62,
+      "win_rate": 0.42592592592592593,
+      "total_pnl": 2450.349243637959,
+      "avg_pnl": 22.688418922573693,
+      "total_account_pct": 2.6190888927556184,
+      "avg_account_pct": 0.02425082308107054,
+      "avg_r": -0.14063132453745092
+    },
+    {
+      "name": "NYPM",
+      "trades": 85,
+      "wins": 36,
+      "losses": 49,
+      "win_rate": 0.4235294117647059,
+      "total_pnl": -971.689266888535,
+      "avg_pnl": -11.431638433982766,
+      "total_account_pct": -0.6792938146944706,
+      "avg_account_pct": -0.007991691937582007,
+      "avg_r": -0.14834710324696837
+    },
+    {
+      "name": "NYAM",
+      "trades": 55,
+      "wins": 23,
+      "losses": 32,
+      "win_rate": 0.41818181818181815,
+      "total_pnl": -3020.076364840128,
+      "avg_pnl": -54.9104793607296,
+      "total_account_pct": -2.8145531917147197,
+      "avg_account_pct": -0.051173694394813084,
+      "avg_r": -0.16363636363636364
+    }
+  ],
+  "by_side": [
+    {
+      "name": "short",
+      "trades": 159,
+      "wins": 75,
+      "losses": 84,
+      "win_rate": 0.4716981132075472,
+      "total_pnl": 5154.094104927098,
+      "avg_pnl": 32.41568619451005,
+      "total_account_pct": 5.40295805645349,
+      "avg_account_pct": 0.033980868279581695,
+      "avg_r": -0.05169915827077698
+    },
+    {
+      "name": "long",
+      "trades": 174,
+      "wins": 73,
+      "losses": 101,
+      "win_rate": 0.41954022988505746,
+      "total_pnl": -727.2174049521594,
+      "avg_pnl": -4.179410373288272,
+      "total_account_pct": -0.3914574986746819,
+      "avg_account_pct": -0.002249755739509666,
+      "avg_r": -0.15583866966804785
+    }
+  ],
+  "by_rsi_entry": [
+    {
+      "name": "RSI 60-70",
+      "trades": 52,
+      "wins": 23,
+      "losses": 29,
+      "win_rate": 0.4423076923076923,
+      "total_pnl": 3694.780431430696,
+      "avg_pnl": 71.05346983520569,
+      "total_account_pct": 3.7558705403202586,
+      "avg_account_pct": 0.07222827962154343,
+      "avg_r": -0.11538461538461539
+    },
+    {
+      "name": "RSI 30-40",
+      "trades": 50,
+      "wins": 24,
+      "losses": 26,
+      "win_rate": 0.48,
+      "total_pnl": 2905.017546978159,
+      "avg_pnl": 58.10035093956318,
+      "total_account_pct": 2.959499839225768,
+      "avg_account_pct": 0.059189996784515364,
+      "avg_r": -0.04
+    },
+    {
+      "name": "RSI 40-50",
+      "trades": 110,
+      "wins": 48,
+      "losses": 62,
+      "win_rate": 0.43636363636363634,
+      "total_pnl": -791.5275565707191,
+      "avg_pnl": -7.19570505973381,
+      "total_account_pct": -0.5775518686547889,
+      "avg_account_pct": -0.005250471533225354,
+      "avg_r": -0.11634260750942736
+    },
+    {
+      "name": "RSI 50-60",
+      "trades": 121,
+      "wins": 53,
+      "losses": 68,
+      "win_rate": 0.4380165289256198,
+      "total_pnl": -1381.3937218631972,
+      "avg_pnl": -11.416477040191713,
+      "total_account_pct": -1.1263179531124294,
+      "avg_account_pct": -0.009308412835639913,
+      "avg_r": -0.12015213108476742
+    }
+  ],
+  "best_session": {
+    "name": "LNDN",
+    "trades": 85,
+    "wins": 43,
+    "losses": 42,
+    "win_rate": 0.5058823529411764,
+    "total_pnl": 5968.293088065643,
+    "avg_pnl": 70.21521280077228,
+    "total_account_pct": 5.886258671432381,
+    "avg_account_pct": 0.06925010201685154,
+    "avg_r": 0.017195201632272252
+  },
+  "elapsed_sec": 13.4,
+  "skipped_session_bars": 0,
+  "strategy": {
+    "exits": {
+      "structure_break": false,
+      "mode": "be_trail",
+      "be_at_rr": 1.5,
+      "trail_after_be": true,
+      "trail_rr": 1.0,
+      "tp_rr": 3.0,
+      "be_buffer_pct": 0.0001
+    },
+    "rsi": {
+      "enabled": true,
+      "period": 14,
+      "long_max": 65,
+      "short_min": 35
+    },
+    "sessions": {
+      "windows": [
+        {
+          "name": "ASIA",
+          "start": "20:00",
+          "end": "02:00",
+          "enabled": true
+        },
+        {
+          "name": "LNDN",
+          "start": "02:00",
+          "end": "09:30",
+          "enabled": true
+        },
+        {
+          "name": "NYAM",
+          "start": "09:30",
+          "end": "13:30",
+          "enabled": true
+        },
+        {
+          "name": "NYPM",
+          "start": "13:30",
+          "end": "20:00",
+          "enabled": true
+        }
+      ],
+      "filter_entries": true
+    },
+    "risk_pct": 0.5
+  },
+  "recent_trades": [
+    {
+      "side": "long",
+      "session": "LNDN",
+      "entry": 78254.6,
+      "exit": 79407.40433000002,
+      "pnl": 1572.22,
+      "r": 1.46,
+      "reason": "take_profit",
+      "rsi_in": 58.9,
+      "rsi_out": 73.37
+    },
+    {
+      "side": "long",
+      "session": "NYPM",
+      "entry": 78943.2,
+      "exit": 78782.45817000001,
+      "pnl": -531.93,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 54.58,
+      "rsi_out": 45.87
+    },
+    {
+      "side": "long",
+      "session": "NYPM",
+      "entry": 78954.6,
+      "exit": 78775.66021,
+      "pnl": -529.27,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 56.96,
+      "rsi_out": 55.43
+    },
+    {
+      "side": "long",
+      "session": "ASIA",
+      "entry": 80653.8,
+      "exit": 79900.72259,
+      "pnl": -526.63,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 64.78,
+      "rsi_out": 43.44
+    },
+    {
+      "side": "short",
+      "session": "LNDN",
+      "entry": 79912.2,
+      "exit": 79475.54508000001,
+      "pnl": 384.19,
+      "r": 1.0,
+      "reason": "trailing_stop",
+      "rsi_in": 38.75,
+      "rsi_out": 34.11
+    },
+    {
+      "side": "short",
+      "session": "LNDN",
+      "entry": 79319.9,
+      "exit": 78967.37499000001,
+      "pnl": 645.37,
+      "r": 1.0,
+      "reason": "trailing_stop",
+      "rsi_in": 35.78,
+      "rsi_out": 33.96
+    },
+    {
+      "side": "short",
+      "session": "NYPM",
+      "entry": 78790.2,
+      "exit": 78544.64098000001,
+      "pnl": 351.04,
+      "r": 1.0,
+      "reason": "trailing_stop",
+      "rsi_in": 38.42,
+      "rsi_out": 29.62
+    },
+    {
+      "side": "long",
+      "session": "NYPM",
+      "entry": 78719.0,
+      "exit": 78458.4554,
+      "pnl": -530.9,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 54.87,
+      "rsi_out": 43.37
+    },
+    {
+      "side": "short",
+      "session": "ASIA",
+      "entry": 78367.0,
+      "exit": 78662.79176,
+      "pnl": -528.24,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 37.08,
+      "rsi_out": 48.16
+    },
+    {
+      "side": "long",
+      "session": "ASIA",
+      "entry": 79101.0,
+      "exit": 78959.3051,
+      "pnl": -525.6,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 58.54,
+      "rsi_out": 54.84
+    },
+    {
+      "side": "long",
+      "session": "ASIA",
+      "entry": 79085.9,
+      "exit": 78876.33,
+      "pnl": -522.97,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 55.06,
+      "rsi_out": 44.55
+    },
+    {
+      "side": "short",
+      "session": "LNDN",
+      "entry": 78782.5,
+      "exit": 78555.07410999999,
+      "pnl": 764.13,
+      "r": 1.0,
+      "reason": "trailing_stop",
+      "rsi_in": 40.89,
+      "rsi_out": 35.58
+    },
+    {
+      "side": "long",
+      "session": "NYPM",
+      "entry": 78609.2,
+      "exit": 78919.58609000001,
+      "pnl": 643.04,
+      "r": 1.0,
+      "reason": "trailing_stop",
+      "rsi_in": 63.18,
+      "rsi_out": 65.51
+    },
+    {
+      "side": "long",
+      "session": "ASIA",
+      "entry": 78956.3,
+      "exit": 78676.29003,
+      "pnl": -527.4,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 56.81,
+      "rsi_out": 39.68
+    },
+    {
+      "side": "long",
+      "session": "ASIA",
+      "entry": 78872.1,
+      "exit": 78739.67101,
+      "pnl": -524.76,
+      "r": -1.0,
+      "reason": "stop_loss",
+      "rsi_in": 54.63,
+      "rsi_out": 44.8
+    }
+  ]
+}
