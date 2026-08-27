@@ -60,12 +60,13 @@ def run_backtest(
     start_equity: float | None = None,
     enforce_prop_halt: bool = True,
 ) -> BacktestResult:
-    from .signals import evaluate_bar  # local import to avoid cycles
+    from .signals import compute_signal_arrays
 
     p = params or DEFAULT_PARAMS
     costs = costs or DEFAULT_COSTS
     prop = prop or DEFAULT_PROP
     feat = build_features(df, p)
+    sig = compute_signal_arrays(feat, p, costs)
     risk = RiskEngine(prop, start_equity=start_equity)
     one_way = costs.one_way_frac
     n = len(feat)
@@ -220,9 +221,8 @@ def run_backtest(
         )
 
         if signed_qty == 0.0 and (not risk.state.halted) and i >= cooldown_until and i + 1 < n:
-            fr = evaluate_bar(i, feat, p, costs)
-            if fr.a_plus:
-                pending_side = int(fr.side)
+            if sig["a_plus"][i]:
+                pending_side = int(sig["side"][i])
 
     eq_df = pd.DataFrame(eq_rows)
     stats = summarize(eq_df, trades, prop)

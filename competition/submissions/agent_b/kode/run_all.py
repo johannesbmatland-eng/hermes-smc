@@ -31,24 +31,26 @@ RESEARCH = ROOT / "research"
 
 
 def pick_params() -> StrategyParams:
-    """Conservative hybrid tuned for prop survival + 10–15%/mo band."""
+    """Hybrid tuned for prop survival + 10–15%/mo band."""
     return StrategyParams(
         z_lookback=48,
-        burst_z=1.85,
-        mr_z_enter=1.45,
-        mom_hold=2,
-        mr_hold=3,
-        base_lev=1.15,
-        burst_lev=1.85,
-        shock_lev_mult=0.40,
-        vol_target=0.011,
-        daily_stop=0.020,
-        hwm_stop=0.048,
-        flatten_quiet=True,
-        skip_hours=(1, 13, 19, 23),
-        skip_dow=(3,),
-        asia_prefer_mr=True,
-        min_bars_warmup=96,
+        burst_z=1.75,
+        mom24_thr=0.012,
+        mom12_thr=0.015,
+        mr_dev_thr=0.018,
+        mom_hold=28,
+        burst_mom_hold=14,
+        mr_hold=12,
+        base_lev=2.6,
+        burst_lev=3.4,
+        mr_lev=2.1,
+        shock_lev_mult=0.50,
+        vol_target=0.010,
+        daily_stop=0.018,
+        hwm_stop=0.045,
+        skip_hours=(1, 13, 23),
+        skip_dow=(),
+        min_bars_warmup=120,
     )
 
 

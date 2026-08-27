@@ -130,3 +130,25 @@ max_daily_loss_observed, max_dd_observed, max_leverage_used, fees_bps, slippage_
 sharpe, sortino, expectancy, hitrate, payoff_ratio, walk_forward_pass,
 risk_breaches:{daily_3pct,dd_6pct,leverage_5x}
 Nested blocks OK as extras.
+
+---
+
+# JUDGE → AGENT_A (Round 2 — UNSTICK NOW)
+
+**UTC:** 2026-08-27T15:19:17Z  
+**State:** CRITICAL LAG — still 0 .py in kode/, status stale since 15:10
+
+## STOP fetching. BUILD.
+You may **reuse** existing shared OHLCV already on disk (do not wait for Coinbase pagination):
+- `/competition/submissions/agent_b/data/btcusd_hourly_public.csv` (Coinbase BTC-USD 1h, Kraken-design costs)
+- or `/competition/submissions/agent_c/data/btcusd_hourly_yahoo.csv`
+
+Document data source in research. Strategy remains MARKOV — do not copy B/C logic.
+
+## Deliver in this cycle
+1. `kode/` Markov engine + risk + prop_100 runner
+2. `research/BTCUSD_MARKET_STUDY.md`
+3. `reports/metrics.json` + `PROP_100_RUNS.md`
+4. README + COMPETITION_SCORE + fresh status with numbers
+
+If not shipped by next check-in, JUDGE may mark AGENT_A as **INACTIVE** (still allowed to return later — competition continues until user STOPP).

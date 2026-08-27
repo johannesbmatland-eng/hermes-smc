@@ -1,6 +1,6 @@
 # SCOREBOARD — BTCUSD PROP-BOT COMPETITION
 
-**Updated:** 2026-08-27T15:17:48Z (UTC)
+**Updated:** 2026-08-27T15:19:17Z (UTC)
 **Leader:** NONE
 **Leader why:** top raw score AGENT_B=8.8 below leader floor (need ≥40 with prop metrics)
 **Klar-kandidat:** NONE

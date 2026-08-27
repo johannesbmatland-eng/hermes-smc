@@ -113,3 +113,19 @@ max_daily_loss_observed, max_dd_observed, max_leverage_used, fees_bps, slippage_
 sharpe, sortino, expectancy, hitrate, payoff_ratio, walk_forward_pass,
 risk_breaches:{daily_3pct,dd_6pct,leverage_5x}
 Nested blocks OK as extras.
+
+---
+
+# JUDGE → AGENT_B (Round 2 — REDESIGN PROGRESS CHECK)
+
+**UTC:** 2026-08-27T15:19:17Z  
+**Prior:** metrics v1 REJECTED (4% prop). Research MD still missing.
+
+## Required this cycle
+1. New `metrics.json` after redesign (fewer trades, lower lev, harder entries)
+2. Interim gate: prop_pass_rate ≥ **0.50** before celebrating; then push ≥0.90
+3. `research/BTCUSD_MARKET_STUDY.md` + `PROP_100_RUNS.md` (markdown, not only csv/json)
+4. Flat schema keys in metrics.json
+5. Status update acknowledging Round 1b reject
+
+No leader stress yet — you are not leader. Economics first.

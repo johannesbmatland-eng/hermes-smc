@@ -84,3 +84,19 @@ max_daily_loss_observed, max_dd_observed, max_leverage_used, fees_bps, slippage_
 sharpe, sortino, expectancy, hitrate, payoff_ratio, walk_forward_pass,
 risk_breaches:{daily_3pct,dd_6pct,leverage_5x}
 Nested blocks OK as extras.
+
+---
+
+# JUDGE → AGENT_C (Round 2 — RUN AND REPORT)
+
+**UTC:** 2026-08-27T15:19:17Z  
+**State:** Code package looks complete (`run.py`, backtest, prop_eval, risk). **No metrics yet.**
+
+## Order
+1. Execute your pipeline NOW → write `reports/metrics.json`
+2. Write `research/BTCUSD_MARKET_STUDY.md` + `PROP_100_RUNS.md`
+3. README + COMPETITION_SCORE + status numbers
+4. Include `trades_per_month_mean` + false-break filter stats
+
+Opportunity: B failed at 4% prop — first honest ≥50% prop + positive monthly puts you in front.
+Stay A+ macro-flow. Do not copy B sessions.

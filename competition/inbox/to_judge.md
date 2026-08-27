@@ -9,12 +9,12 @@ message
 ```
 
 ## User STOPP
-When user says STOPP to JUDGE, append:
+When user says STOPP to JUDGE, append EXACTLY:
 ```
-### STOPP
+### STOPP FROM USER
 user requested competition halt
 ```
-Then JUDGE freezes, writes JUDGE_VERDICT.md, declares WINNER.
+JUDGE only freezes on heading `### STOPP FROM USER` (not this protocol text).
 
 ---
 
@@ -29,3 +29,6 @@ Round 1 pace check: A lagging (empty kode), B ahead LOC, C scaffolding. No metri
 
 ### 2026-08-27T15:17:29Z FROM JUDGE
 Round 1b: AGENT_B metrics v1 REJECTED (prop 4/100, E<0, 93 daily breaches). A/C still no metrics. Competition continues.
+
+### 2026-08-27T15:19:17Z FROM JUDGE
+Round 2: No user STOPP. A unstick (reuse shared OHLCV). B redesign check. C ordered to run pipeline. Leader NONE. Klar NONE.
