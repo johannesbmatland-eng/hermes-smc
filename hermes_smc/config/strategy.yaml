@@ -45,10 +45,10 @@ sessions:
 exits:
   structure_break: false
   mode: "be_trail"       # fixed_tp | be_trail | trail_only
-  be_at_rr: 1.0          # at 1:1 → move SL to break-even
+  be_at_rr: 1.5          # BE after 1.5R (avoids BTC noise scratch at 1R)
   trail_after_be: true   # then trail favorable extreme
   trail_rr: 1.0          # trail distance = 1R behind peak/trough
-  tp_rr: 0               # 0 = no hard TP (pure BE + trail)
+  tp_rr: 3.0             # hard TP at 3R (~1.5% account at 0.5% risk)
   be_buffer_pct: 0.0001  # tiny BE buffer past entry
 
 risk:

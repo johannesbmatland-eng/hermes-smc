@@ -263,11 +263,19 @@ def test_paper_engine_short_sl_tp_helpers():
     assert size > 0
 
 
-def test_be_trail_tp_defaults_to_none_without_hard_tp():
+def test_be_trail_default_hard_tp_at_three_r():
     engine = PaperTradingEngine(SMCConfig())
     entry, sl = 100.0, 99.0
     tp = engine._calculate_smc_tp(entry, sl, side="long")
-    assert tp is None  # tp_rr: 0 → pure trail
+    assert abs(tp - 103.0) < 1e-9  # tp_rr: 3 → 3R hard TP
+
+
+def test_be_trail_tp_none_when_tp_rr_zero():
+    engine = PaperTradingEngine(SMCConfig())
+    engine.config._config["exits"]["tp_rr"] = 0
+    entry, sl = 100.0, 99.0
+    tp = engine._calculate_smc_tp(entry, sl, side="long")
+    assert tp is None
 
 
 def test_rr_two_makes_one_percent_from_half_percent_risk():
@@ -324,6 +332,37 @@ def test_be_at_one_r_then_trail_no_hard_tp():
 
     # Pullback to trailed SL
     assert engine.check_exit_conditions(position, candles, 101.0) == "trailing_stop"
+
+
+def test_smart_defaults_be_at_1_5r_trail_and_3r_tp():
+    engine = SMCEngine(SMCConfig())
+    # Defaults: be_at 1.5, trail 1.0, tp 3.0
+    position = {
+        "entry_price": 100.0,
+        "stop_loss": 99.0,
+        "take_profit": None,
+        "side": "long",
+        "initial_stop_loss": 99.0,
+        "open_time": 1.0,
+    }
+    candles = [_candle(i, 100, 101, 99.5, 100) for i in range(12)]
+
+    # At +1R: not yet BE
+    assert engine.check_exit_conditions(position, candles, 101.0) is None
+    assert position["be_moved"] is False
+    assert abs(position["take_profit"] - 103.0) < 1e-9  # 3R target applied
+
+    # At +1.5R: BE
+    assert engine.check_exit_conditions(position, candles, 101.5) is None
+    assert position["be_moved"] is True
+    assert position["stop_loss"] >= 100.0
+
+    # At +2.5R: trail to peak - 1R = 101.5
+    assert engine.check_exit_conditions(position, candles, 102.5) is None
+    assert abs(position["stop_loss"] - 101.5) < 1e-9
+
+    # Hit 3R hard TP
+    assert engine.check_exit_conditions(position, candles, 103.0) == "take_profit"
 
 
 def test_hard_tp_at_five_r_still_works():

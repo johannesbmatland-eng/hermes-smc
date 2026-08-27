@@ -40,10 +40,10 @@ DEFAULT_STRATEGY = {
     "exits": {
         "structure_break": False,  # SL/TP only — avoid killing FVG pullback entries
         "mode": "be_trail",        # fixed_tp | be_trail | trail_only
-        "be_at_rr": 1.0,
+        "be_at_rr": 1.5,
         "trail_after_be": True,
         "trail_rr": 1.0,
-        "tp_rr": 0,                # 0 = no hard TP
+        "tp_rr": 3.0,              # hard TP at 3R
         "be_buffer_pct": 0.0001,
     },
     "fvq_detection": {

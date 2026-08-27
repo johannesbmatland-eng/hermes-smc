@@ -558,8 +558,8 @@ class PaperTradingEngine(SMCEngine):
         side: str = "long",
     ) -> float | None:
         """
-        TP price: in be_trail mode use exits.tp_rr (default 1:5 hard cap).
-        trail_only with tp_rr=0 → no hard TP.
+        TP price: in be_trail mode use exits.tp_rr (default 1:3 hard cap).
+        trail_only / tp_rr=0 → no hard TP.
         """
         mode = self.config.get("exits.mode", "fixed_tp")
         if mode in ("be_trail", "trail_only"):
