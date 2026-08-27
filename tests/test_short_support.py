@@ -333,7 +333,7 @@ def test_bearish_engulfing_confirmation():
 def test_crypto_bullish_engulfing_when_open_equals_prev_close():
     """Bear touches FVG, larger bull locks (open may equal prev close)."""
     engine = PaperTradingEngine(SMCConfig())
-    fvg = {"top": 78773.3, "bottom": 78750.0, "type": "bullish"}
+    fvg = {"top": 78773.3, "bottom": 78750.0, "type": "bullish", "end_candle": 0}
     candles = [
         _candle(1, 78780, 78790, 78770, 78775),
         _candle(2, 78773.3, 78773.3, 78760.0, 78765.0),  # bear touches FVG
@@ -343,6 +343,34 @@ def test_crypto_bullish_engulfing_when_open_equals_prev_close():
     assert engine._candle_touches_fvg(candles[1], fvg) is True
     assert engine._is_body_engulfing(candles[1], candles[2], "long") is True
     assert engine._check_smc_confirmation(candles, None, fvg, side="long") == "engulfing_5m"
+
+
+def test_engulf_allowed_on_second_candle_after_touch():
+    """Bear touches FVG; middle candle does not engulf; 2nd next candle does."""
+    engine = PaperTradingEngine(SMCConfig())
+    fvg = {"top": 100.5, "bottom": 100.0, "type": "bullish", "end_candle": 0}
+    candles = [
+        _candle(1, 101, 102, 100.8, 101.5),           # before
+        _candle(2, 101.2, 101.3, 99.9, 100.2),        # bear touches FVG
+        _candle(3, 100.2, 100.4, 100.1, 100.3),       # small bull — does NOT engulf
+        _candle(4, 100.2, 101.5, 100.15, 101.4),      # larger bull engulfs the bear body
+        _candle(5, 101.4, 101.6, 101.3, 101.5),       # forming
+    ]
+    # Immediate next does not confirm
+    early = candles[:4]  # locked= small bull at idx 2 — should fail
+    assert engine._check_smc_confirmation(early, None, fvg, side="long") is None
+    # With 2-candle lookback, locked engulf at idx 3 confirms touch at idx 1
+    assert engine._check_smc_confirmation(candles, None, fvg, side="long") == "engulfing_5m"
+
+
+def test_sl_is_just_under_fvg_zone_not_candle_low():
+    engine = PaperTradingEngine(SMCConfig())
+    # FVG zone 100-101; first candle that formed gap had low at 95 (must NOT drive SL)
+    fvg = {"top": 101.0, "bottom": 100.0, "type": "bullish"}
+    sl = engine._calculate_smc_sl(102.0, fvg, side="long")
+    assert sl < fvg["bottom"]
+    assert sl > 99.5  # tight under FVG, nowhere near a deep candle-1 low
+    assert abs(sl - 100.0 * (1 - 0.0003)) < 1e-9
 
 
 def test_analysis_snapshot_has_checklist_and_phase():

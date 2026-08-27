@@ -55,12 +55,13 @@ DEFAULT_STRATEGY = {
         "pullback_depth_pct": 0.5,
         "max_open_positions": 1,
         "cooldown_seconds": 300,
+        "engulf_lookback": 2,
     },
     "risk": {
         "risk_pct_per_trade": 0.5,
         "rr_target": 2.0,       # 1:2 RR → 0.5% risk makes 1%
         "rr_alternative": 3.0,
-        "sl_buffer_pct": 0.002,
+        "sl_buffer_pct": 0.0003,  # just beyond FVG zone edge
     },
 }
 
@@ -226,7 +227,7 @@ class PositionManager:
         self,
         entry_price: float,
         fvg_bottom: float,
-        sl_buffer_pct: float = 0.002,
+        sl_buffer_pct: float = 0.0003,
         side: str = "long",
         fvg_top: float | None = None,
     ) -> float:
@@ -487,7 +488,7 @@ class SMCEngine:
         sl_price = self.position_manager.calculate_sl_price(
             entry_price,
             best_fvg["bottom"],
-            self.config.get("risk.sl_buffer_pct", 0.002),
+            self.config.get("risk.sl_buffer_pct", 0.0003),
             side=side,
             fvg_top=best_fvg["top"],
         )

@@ -48,12 +48,13 @@ DEFAULT_CONFIG = {
         "pullback_depth_pct": 0.5,  # enter when price pulls back to 50% of move
         "max_open_positions": 1,
         "cooldown_seconds": 300,
+        "engulf_lookback": 2,
     },
     "risk": {
         "risk_pct_per_trade": 0.5,
         "rr_target": 2.0,  # 1:2 RR → 0.5% risk makes 1%
         "rr_alternative": 3.0,
-        "sl_buffer_pct": 0.002,  # 0.2% SL buffer below FVG
+        "sl_buffer_pct": 0.0003,  # just beyond FVG zone edge
     },
     "paper_trading": {
         "initial_capital": 100000,
