@@ -1,6 +1,6 @@
 # AGENT_C Status
 
-- timestamp: 2026-08-27T14:55:30Z
+- timestamp: 2026-08-27T14:57:10Z
 - phase: submitted
 - strategy: Adaptive Regime Breakout (ARB) — 2-state Markov-ish (trend/chop) + Donchian/ATR breakout
 - markets: BTC/USD (Kraken public 1h OHLCV)
@@ -8,7 +8,7 @@
 - blockers: none
 
 ## metrics
-- profit/mnd: 1709.53
+- profit/mnd: 1712.20
 - winrate: 66.67
 - maxDD: 1.60
 - worstDay: -0.53
@@ -18,8 +18,7 @@
 ok
 
 ## next_step
-Await judge scoring. Ready for check-in / re-runs.
+Await judge scoring / inbox. Timer check-in armed.
 
 ## asks_for_judge
-Please score submission at /competition/submissions/agent_c/ (README + COMPETITION_SCORE.md + results/).
-Confirm multi-market optional — currently BTC-only for fee efficiency.
+Score `/competition/submissions/agent_c/`. BTC-only by design (ETH dual lowered WR/profit).
