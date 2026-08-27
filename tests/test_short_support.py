@@ -263,11 +263,11 @@ def test_paper_engine_short_sl_tp_helpers():
     assert size > 0
 
 
-def test_be_trail_tp_defaults_to_five_r():
+def test_be_trail_tp_defaults_to_none_without_hard_tp():
     engine = PaperTradingEngine(SMCConfig())
     entry, sl = 100.0, 99.0
     tp = engine._calculate_smc_tp(entry, sl, side="long")
-    assert abs(tp - 105.0) < 1e-9  # 1:5 hard TP in be_trail mode
+    assert tp is None  # tp_rr: 0 → pure trail
 
 
 def test_rr_two_makes_one_percent_from_half_percent_risk():
@@ -294,40 +294,41 @@ def test_exit_conditions_short():
     assert engine.check_exit_conditions(position, candles, 89.0) == "take_profit"
 
 
-def test_be_at_two_r_then_trail():
+def test_be_at_one_r_then_trail_no_hard_tp():
     engine = SMCEngine(SMCConfig())
     engine.config._config["exits"]["mode"] = "be_trail"
-    engine.config._config["exits"]["be_at_rr"] = 2.0
+    engine.config._config["exits"]["be_at_rr"] = 1.0
     engine.config._config["exits"]["trail_rr"] = 1.0
-    engine.config._config["exits"]["tp_rr"] = 5.0
+    engine.config._config["exits"]["tp_rr"] = 0
 
     position = {
         "entry_price": 100.0,
         "stop_loss": 99.0,
-        "take_profit": 102.0,  # old 1:2 — should widen to 105
+        "take_profit": 105.0,  # legacy — should clear
         "side": "long",
         "initial_stop_loss": 99.0,
         "open_time": 1.0,
     }
     candles = [_candle(i, 100, 101, 99.5, 100) for i in range(12)]
 
-    # At +2R (102): move SL to BE, do not exit yet
-    assert engine.check_exit_conditions(position, candles, 102.0) is None
+    # At +1R (101): move SL to BE, clear TP
+    assert engine.check_exit_conditions(position, candles, 101.0) is None
     assert position["be_moved"] is True
     assert position["stop_loss"] >= 100.0
-    assert position["take_profit"] == 105.0  # widened to 1:5
+    assert position["take_profit"] is None
 
-    # At +3R (103): trail SL to peak - 1R = 102
-    assert engine.check_exit_conditions(position, candles, 103.0) is None
-    assert abs(position["stop_loss"] - 102.0) < 1e-9
+    # At +2R (102): trail SL to peak - 1R = 101
+    assert engine.check_exit_conditions(position, candles, 102.0) is None
+    assert abs(position["stop_loss"] - 101.0) < 1e-9
     assert position["sl_mode"] == "trailing"
 
     # Pullback to trailed SL
-    assert engine.check_exit_conditions(position, candles, 102.0) == "trailing_stop"
+    assert engine.check_exit_conditions(position, candles, 101.0) == "trailing_stop"
 
 
 def test_hard_tp_at_five_r_still_works():
     engine = SMCEngine(SMCConfig())
+    engine.config._config["exits"]["tp_rr"] = 5.0
     position = {
         "entry_price": 100.0,
         "stop_loss": 99.0,

@@ -173,6 +173,48 @@ class DashboardServer:
             session_config=engine.config.get("sessions", {}) or {},
         )
 
+    def close_trade(self, trade_id: str | None = None) -> dict[str, Any]:
+        """Manually close one open trade (or the only open trade)."""
+        engine = self.load_engine()
+        pm = engine.position_manager
+        opens = list(pm.open_positions.items())
+        if not opens:
+            return {"ok": False, "error": "No open position"}
+
+        if trade_id:
+            if trade_id not in pm.open_positions:
+                # Allow short id prefix
+                match = [tid for tid in pm.open_positions if tid.startswith(trade_id)]
+                if len(match) != 1:
+                    return {"ok": False, "error": f"Trade not found: {trade_id}"}
+                trade_id = match[0]
+        else:
+            trade_id = opens[0][0]
+
+        position = pm.open_positions[trade_id]
+        price = engine.last_price
+        if price is None:
+            price = position.get("current_price") or position["entry_price"]
+
+        closed = pm.close_position(trade_id, float(price), exit_reason="manual")
+        if not closed:
+            return {"ok": False, "error": "Close failed"}
+
+        engine.last_trade_time = time.time()
+        engine.trades.append({
+            "id": trade_id,
+            "type": "close",
+            "side": closed.get("side"),
+            "reason": "manual",
+            "price": price,
+            "timestamp": time.time(),
+        })
+        logger.info(
+            f"Manual close {trade_id[:8]}… @ {price:.2f} "
+            f"pnl={closed.get('pnl', 0):+.2f}"
+        )
+        return {"ok": True, "trade": closed}
+
     def get_positions(self) -> list[dict]:
         engine = self.load_engine()
         return list(engine.position_manager.open_positions.values())
@@ -306,6 +348,33 @@ class DashboardHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_POST(self):
+        path = self.path.split("?")[0]
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        raw = self.rfile.read(length) if length else b"{}"
+        try:
+            body = json.loads(raw.decode() or "{}")
+        except Exception:
+            body = {}
+
+        if path == "/api/close":
+            if not self.engine_server:
+                self.send_json({"ok": False, "error": "Engine not ready"})
+                return
+            trade_id = body.get("id") or body.get("trade_id")
+            self.send_json(self.engine_server.close_trade(trade_id))
+            return
+
+        self.send_response(404)
+        self.end_headers()
 
     def _get_dashboard_html(self) -> str:
         return """<!DOCTYPE html>
@@ -550,6 +619,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
         .chart-legend .lg-sl::before { background: var(--red); border-top: 1px dashed var(--red); height: 0; }
         .chart-legend .lg-tp::before { background: var(--green); }
         .chart-legend.hidden { display: none; }
+        .btn-close {
+            margin-top: 14px;
+            border: 1px solid rgba(240,113,120,0.45);
+            background: rgba(240,113,120,0.12);
+            color: var(--red);
+            font: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn-close:hover { background: rgba(240,113,120,0.22); }
+        .btn-close:disabled { opacity: 0.5; cursor: wait; }
     </style>
 </head>
 <body>
@@ -582,6 +666,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 <div class="live-metric"><div class="k">Size</div><div class="v" id="live_size">—</div></div>
                 <div class="live-metric"><div class="k">Equity</div><div class="v" id="live_equity">—</div></div>
             </div>
+            <button type="button" class="btn-close" id="btn_close_trade">Close trade</button>
         </div>
 
         <div class="layout">
@@ -859,13 +944,48 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
             document.getElementById('live_entry').textContent = Number(t.entry_price).toFixed(2);
             document.getElementById('live_sl').textContent = Number(t.stop_loss).toFixed(2);
-            document.getElementById('live_tp').textContent = Number(t.take_profit).toFixed(2);
+            document.getElementById('live_tp').textContent =
+                t.take_profit != null ? Number(t.take_profit).toFixed(2) : 'none (trail)';
             document.getElementById('live_mark').textContent =
                 t.current_price != null ? Number(t.current_price).toFixed(2) : '—';
             document.getElementById('live_size').textContent =
                 Number(t.position_size).toFixed(6) + ' BTC';
             document.getElementById('live_equity').textContent =
                 formatCurrency(stats.equity != null ? stats.equity : (stats.capital + pnl));
+            const closeBtn = document.getElementById('btn_close_trade');
+            if (closeBtn) {
+                closeBtn.dataset.tradeId = t.id || '';
+                closeBtn.disabled = false;
+            }
+        }
+
+        async function closeLiveTrade() {
+            const btn = document.getElementById('btn_close_trade');
+            if (!btn || btn.disabled) return;
+            if (!confirm('Close the open paper trade at mark price?')) return;
+            btn.disabled = true;
+            btn.textContent = 'Closing…';
+            try {
+                const res = await fetch('/api/close', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: btn.dataset.tradeId || null }),
+                });
+                const data = await res.json();
+                if (!data.ok) {
+                    alert(data.error || 'Close failed');
+                    btn.disabled = false;
+                    btn.textContent = 'Close trade';
+                    return;
+                }
+                btn.textContent = 'Closed';
+                await refresh();
+            } catch (e) {
+                console.error(e);
+                alert('Close failed');
+                btn.disabled = false;
+                btn.textContent = 'Close trade';
+            }
         }
 
         function renderChecklist(items) {
@@ -1067,6 +1187,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
         }
 
         initChart();
+        document.getElementById('btn_close_trade').addEventListener('click', closeLiveTrade);
         refresh();
         setInterval(refresh, 2000);
     </script>

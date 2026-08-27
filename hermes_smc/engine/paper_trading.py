@@ -563,7 +563,7 @@ class PaperTradingEngine(SMCEngine):
         """
         mode = self.config.get("exits.mode", "fixed_tp")
         if mode in ("be_trail", "trail_only"):
-            rr = float(self.config.get("exits.tp_rr", 5.0) or 0)
+            rr = float(self.config.get("exits.tp_rr", 0) or 0)
             if rr <= 0:
                 return None
         else:

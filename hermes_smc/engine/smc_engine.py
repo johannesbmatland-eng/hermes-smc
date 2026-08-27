@@ -40,10 +40,10 @@ DEFAULT_STRATEGY = {
     "exits": {
         "structure_break": False,  # SL/TP only — avoid killing FVG pullback entries
         "mode": "be_trail",        # fixed_tp | be_trail | trail_only
-        "be_at_rr": 2.0,
+        "be_at_rr": 1.0,
         "trail_after_be": True,
         "trail_rr": 1.0,
-        "tp_rr": 5.0,
+        "tp_rr": 0,                # 0 = no hard TP
         "be_buffer_pct": 0.0001,
     },
     "fvq_detection": {
@@ -667,7 +667,7 @@ class SMCEngine:
             return
 
         if mode in ("be_trail", "trail_only"):
-            tp_rr = float(self.config.get("exits.tp_rr", 5.0) or 0)
+            tp_rr = float(self.config.get("exits.tp_rr", 0) or 0)
             if tp_rr > 0:
                 desired = entry + tp_rr * risk if side == "long" else entry - tp_rr * risk
                 cur_tp = position.get("take_profit")
@@ -677,7 +677,8 @@ class SMCEngine:
                     position["take_profit"] = desired
                 elif side == "short" and cur_tp > desired:
                     position["take_profit"] = desired
-            elif mode == "trail_only":
+            else:
+                # No hard TP — clear any legacy fixed target on open trades
                 position["take_profit"] = None
 
     def _update_trailing_stops(self, position: dict, current_price: float):
@@ -693,7 +694,7 @@ class SMCEngine:
         if risk <= 0:
             return
 
-        be_at = float(self.config.get("exits.be_at_rr", 2.0))
+        be_at = float(self.config.get("exits.be_at_rr", 1.0))
         trail_rr = float(self.config.get("exits.trail_rr", 1.0))
         trail_after = bool(self.config.get("exits.trail_after_be", True))
         be_buf = float(self.config.get("exits.be_buffer_pct", 0.0001))

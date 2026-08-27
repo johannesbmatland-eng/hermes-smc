@@ -45,10 +45,10 @@ sessions:
 exits:
   structure_break: false
   mode: "be_trail"       # fixed_tp | be_trail | trail_only
-  be_at_rr: 2.0          # at 1:2 → move SL to break-even
+  be_at_rr: 1.0          # at 1:1 → move SL to break-even
   trail_after_be: true   # then trail favorable extreme
   trail_rr: 1.0          # trail distance = 1R behind peak/trough
-  tp_rr: 5.0             # hard TP at 1:5 (0 = no hard TP, pure trail)
+  tp_rr: 0               # 0 = no hard TP (pure BE + trail)
   be_buffer_pct: 0.0001  # tiny BE buffer past entry
 
 risk:
