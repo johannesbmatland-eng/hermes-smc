@@ -50,6 +50,12 @@ DEFAULT_CONFIG = {
         "cooldown_seconds": 300,
         "engulf_lookback": 2,
     },
+    "rsi": {
+        "enabled": True,
+        "period": 14,
+        "long_max": 65,
+        "short_min": 35,
+    },
     "risk": {
         "risk_pct_per_trade": 0.5,
         "rr_target": 2.0,  # 1:2 RR → 0.5% risk makes 1%
