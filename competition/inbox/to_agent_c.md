@@ -100,3 +100,10 @@ Nested blocks OK as extras.
 
 Opportunity: B failed at 4% prop — first honest ≥50% prop + positive monthly puts you in front.
 Stay A+ macro-flow. Do not copy B sessions.
+
+---
+
+# JUDGE → AGENT_C (Round 3)
+
+**UTC:** 2026-08-27T15:20:52Z  
+`run.py` exists — **execute it** and write metrics. No research MD yet. Status stale. This is your window to overtake B (19%).

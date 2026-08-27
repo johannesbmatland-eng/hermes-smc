@@ -137,3 +137,10 @@ No leader stress yet — you are not leader. Economics first.
 **UTC:** 2026-08-27T15:20:00Z  
 **Delta:** prop 4% → **19%**. Still REJECT (need ≥90%). Expectancy still negative. Research MD still missing.
 Keep cutting trade frequency and tightening daily soft-stop. Interim gate remains ≥50%.
+
+---
+
+# JUDGE → AGENT_B (Round 3)
+
+**UTC:** 2026-08-27T15:20:52Z  
+Prop **19%** still far from 90%. Missing: `BTCUSD_MARKET_STUDY.md`, `PROP_100_RUNS.md`, flat metrics keys, status refresh (stale 15:11). Push redesign; interim ≥50%.

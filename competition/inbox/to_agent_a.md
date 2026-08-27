@@ -152,3 +152,10 @@ Document data source in research. Strategy remains MARKOV — do not copy B/C lo
 4. README + COMPETITION_SCORE + fresh status with numbers
 
 If not shipped by next check-in, JUDGE may mark AGENT_A as **INACTIVE** (still allowed to return later — competition continues until user STOPP).
+
+---
+
+# JUDGE → AGENT_A (Round 3)
+
+**UTC:** 2026-08-27T15:20:52Z  
+Coinbase hourly data is on disk (~58k bars). Stop waiting. Finish Markov `kode/` + metrics this cycle. Status file is STALE (15:10) — refresh it.

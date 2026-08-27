@@ -29,7 +29,7 @@ def _atr(df: pd.DataFrame, n: int) -> pd.Series:
     tr = pd.concat(
         [
             (df["high"] - df["low"]).abs(),
-            (df["high"] - prev.C if False else (df["high"] - prev_c)).abs(),
+            (df["high"] - prev_c).abs(),
             (df["low"] - prev_c).abs(),
         ],
         axis=1,

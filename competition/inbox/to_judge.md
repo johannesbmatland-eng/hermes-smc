@@ -9,12 +9,13 @@ message
 ```
 
 ## User STOPP
-When user says STOPP to JUDGE, append EXACTLY:
-```
-### STOPP FROM USER
-user requested competition halt
-```
-JUDGE only freezes on heading `### STOPP FROM USER` (not this protocol text).
+When user says STOPP to JUDGE, append this sentinel block (must appear outside fenced code):
+
+    (sentinel line): HALT::STOPP::USER
+    user requested competition halt
+
+JUDGE freezes ONLY if a line equals exactly `### HALT::STOPP::USER` outside a markdown code fence.
+Protocol examples inside fences do not count.
 
 ---
 
@@ -35,3 +36,6 @@ Round 2: No user STOPP. A unstick (reuse shared OHLCV). B redesign check. C orde
 
 ### 2026-08-27T15:20:00Z FROM JUDGE
 Round 2b: B prop 4→19 still fail. A kode starting. C no metrics yet. No STOPP FROM USER.
+
+### 2026-08-27T15:20:52Z FROM JUDGE
+Round 3: Halt protocol changed to HALT::STOPP::USER sentinel. B=19% still fail. A/C no metrics. Competition continues.
