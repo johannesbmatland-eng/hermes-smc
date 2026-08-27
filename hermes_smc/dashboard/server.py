@@ -102,7 +102,7 @@ class DashboardServer:
 
         unrealized = sum(p.get("pnl", 0) or 0 for p in open_positions)
         total_pnl = sum(p.get("pnl", 0) for p in closed_positions)
-        # Account return % vs initial capital (0.5% risk → ~1% at 1:2 RR)
+        # Account return % vs initial capital (1% risk → ~2% at 1:2 RR)
         total_account_pct = (
             (total_pnl / pm.initial_capital) * 100 if pm.initial_capital else 0.0
         )

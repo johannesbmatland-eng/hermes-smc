@@ -3,6 +3,16 @@
 Logg over alt som blir gjort med boten. Nyaste overst.
 (Alle kodeendringar ligg ogsa i git-historikken med detaljar.)
 
+## 2026-08-27 — Dagleg fixed 1:2 RR-plan (1%/2%)
+
+- **Mål**: 1 trade/dag, −1 % ved tap, +2 % ved vinning → ~10 %/mnd ved 50 % WR (~20 dagar).
+- **Config**: `risk_pct_per_trade: 1.0`, `exits.mode: fixed_tp`, `rr_target: 2.0`,
+  `entry.max_trades_per_day: 1` (NY kalenderdag).
+- **Kode**: dagleg trade-gate i engine + paper + backtest; dashboard viser
+  «Daily trade limit» når dagen er brukt.
+- SMC signal-stack (trend/FVG/engulf/RSI/sessions) er uendra — berre frekvens,
+  risiko og exit-modus.
+
 ## 2026-08-26 — Go-live pa Railway + persistens + gamal bot stoppa
 
 - **Ny bot live**: hermes-smc deploya til Railway med eige domene:

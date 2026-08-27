@@ -21,6 +21,7 @@ entry:
   confirmation: "engulfing_or_ifvg"
   pullback_depth_pct: 0.5
   max_open_positions: 1
+  max_trades_per_day: 1   # first valid SMC signal locks the NY calendar day
   cooldown_seconds: 300
   engulf_lookback: 2      # bearish FVG-touch → engulf on 1st or 2nd next candle
 
@@ -43,16 +44,17 @@ sessions:
 
 exits:
   structure_break: false
-  mode: "be_trail"       # fixed_tp | be_trail | trail_only
-  be_at_rr: 1.5          # BE after 1.5R (avoids BTC noise scratch at 1R)
-  trail_after_be: true   # then trail favorable extreme
-  trail_rr: 1.0          # trail distance = 1R behind peak/trough
-  tp_rr: 3.0             # hard TP at 3R (~1.5% account at 0.5% risk)
-  be_buffer_pct: 0.0001  # tiny BE buffer past entry
+  mode: "fixed_tp"       # fixed_tp | be_trail | trail_only — daily plan uses fixed 1:2
+  be_at_rr: 1.5          # unused in fixed_tp (kept for be_trail experiments)
+  trail_after_be: true
+  trail_rr: 1.0
+  tp_rr: 2.0             # unused in fixed_tp (risk.rr_target drives TP)
+  be_buffer_pct: 0.0001
 
 risk:
-  risk_pct_per_trade: 0.5
-  rr_target: 2.0          # used for BE trigger alignment / legacy fixed TP
+  # Daily plan: −1% on SL / +2% on TP → EV +0.5%/trade @ 50% WR ≈ ~10%/mnd (20 days)
+  risk_pct_per_trade: 1.0
+  rr_target: 2.0          # fixed 1:2 RR
   rr_alternative: 3.0
   # SL just beyond FVG zone edge (gap), NOT under candle-1's low
   sl_buffer_pct: 0.0003

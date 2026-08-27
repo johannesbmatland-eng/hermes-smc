@@ -87,6 +87,40 @@ def weekday_from_ts(ts: float | None, config: dict | None = None) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(tz).strftime("%A")
 
 
+def calendar_day_key(ts: float | None = None, config: dict | None = None) -> str:
+    """NY (or session-tz) calendar day as YYYY-MM-DD for daily trade caps."""
+    import time as _time
+
+    cfg = _session_cfg(config)
+    tz = ZoneInfo(cfg["timezone"])
+    t = float(ts if ts is not None else _time.time())
+    return datetime.fromtimestamp(t, tz=timezone.utc).astimezone(tz).strftime("%Y-%m-%d")
+
+
+def count_opens_on_day(
+    open_positions: dict | list,
+    closed_positions: list,
+    *,
+    ts: float | None = None,
+    config: dict | None = None,
+) -> int:
+    """Count positions whose open_time falls on the same calendar day as ts."""
+    day = calendar_day_key(ts, config)
+    opens = (
+        list(open_positions.values())
+        if isinstance(open_positions, dict)
+        else list(open_positions or [])
+    )
+    count = 0
+    for p in opens + list(closed_positions or []):
+        ot = p.get("open_time")
+        if ot is None:
+            continue
+        if calendar_day_key(float(ot), config) == day:
+            count += 1
+    return count
+
+
 def enrich_trade_meta(
     trade: dict,
     initial_capital: float = 100_000,

@@ -672,11 +672,14 @@ class PaperTradingEngine(SMCEngine):
         max_open = self.config.get("entry.max_open_positions", 1)
         cooldown = self.config.get("entry.cooldown_seconds", 300)
         cooldown_remaining = max(0, cooldown - (time.time() - self.last_trade_time))
+        max_per_day = int(self.config.get("entry.max_trades_per_day", 0) or 0)
+        trades_today = self.trades_opened_today()
+        daily_limit_hit = max_per_day > 0 and trades_today >= max_per_day
 
         checklist = []
         waiting: list[str] = []
 
-        # Capacity / cooldown
+        # Capacity / cooldown / daily limit
         if open_count >= max_open:
             checklist.append({
                 "id": "capacity",
@@ -685,6 +688,14 @@ class PaperTradingEngine(SMCEngine):
                 "detail": f"{open_count}/{max_open} open — managing existing trade",
             })
             waiting.append("Waiting for open position to close")
+        elif daily_limit_hit:
+            checklist.append({
+                "id": "capacity",
+                "label": "Daily trade limit",
+                "status": "fail",
+                "detail": f"{trades_today}/{max_per_day} trades today (NY day) — next signal tomorrow",
+            })
+            waiting.append("Daily trade taken — waiting for next NY day")
         elif cooldown_remaining > 0:
             checklist.append({
                 "id": "capacity",
@@ -694,11 +705,16 @@ class PaperTradingEngine(SMCEngine):
             })
             waiting.append(f"Cooldown ({int(cooldown_remaining)}s)")
         else:
+            day_note = (
+                f" · {trades_today}/{max_per_day} today"
+                if max_per_day > 0
+                else ""
+            )
             checklist.append({
                 "id": "capacity",
                 "label": "Ready to trade",
                 "status": "pass",
-                "detail": f"{open_count}/{max_open} open positions",
+                "detail": f"{open_count}/{max_open} open positions{day_note}",
             })
 
         # Trend / EMA
@@ -922,6 +938,9 @@ class PaperTradingEngine(SMCEngine):
 
         if open_count > 0:
             phase = "Managing open position"
+        elif daily_limit_hit:
+            phase = "Daily trade taken — waiting for next NY day"
+            waiting = ["Daily trade taken — waiting for next NY day"]
         elif (
             confirmation
             and side
@@ -999,6 +1018,8 @@ class PaperTradingEngine(SMCEngine):
             "confirmation": confirmation,
             "open_positions": open_count,
             "cooldown_remaining": round(cooldown_remaining, 1),
+            "trades_today": trades_today,
+            "max_trades_per_day": max_per_day,
             "updated_at": time.time(),
         }
 
@@ -1079,6 +1100,9 @@ class PaperTradingEngine(SMCEngine):
         if time.time() - self.last_trade_time < self.config.get("entry.cooldown_seconds", 300):
             return
 
+        if self.daily_trade_limit_reached():
+            return
+
         signal = self.detect_entry_signal(candles_5m, candles_15m, candles_1h, candles_1m)
         if signal and signal["position_size"] > 0:
             trade_id = str(uuid.uuid4())
@@ -1137,9 +1161,11 @@ class PaperTradingEngine(SMCEngine):
                 candles_5m, candles_15m, candles_1h, candles_1m, current_price
             )
 
+            risk_pct = self.config.get("risk.risk_pct_per_trade", 1.0)
+            rr = self.config.get("risk.rr_target", 2.0)
             logger.info(
                 f"PAPER TRADE OPEN: {trade_id[:8]}... | "
                 f"{side.upper()} {fill_size:.6f} BTC @ {fill_price:.2f} USD | "
                 f"SL: {signal['sl_price']:.2f} | TP: {signal['tp_price']:.2f} | "
-                f"Risk: 0.5% | RR 1:2 | Confirmation: {signal['confirmation']}"
+                f"Risk: {risk_pct}% | RR 1:{rr:g} | Confirmation: {signal['confirmation']}"
             )

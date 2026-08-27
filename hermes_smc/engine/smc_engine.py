@@ -39,11 +39,11 @@ DEFAULT_STRATEGY = {
     },
     "exits": {
         "structure_break": False,  # SL/TP only — avoid killing FVG pullback entries
-        "mode": "be_trail",        # fixed_tp | be_trail | trail_only
+        "mode": "fixed_tp",        # fixed_tp | be_trail | trail_only
         "be_at_rr": 1.5,
         "trail_after_be": True,
         "trail_rr": 1.0,
-        "tp_rr": 3.0,              # hard TP at 3R
+        "tp_rr": 2.0,              # unused when mode=fixed_tp (rr_target drives TP)
         "be_buffer_pct": 0.0001,
     },
     "fvq_detection": {
@@ -54,6 +54,7 @@ DEFAULT_STRATEGY = {
         "confirmation": "engulfing_or_ifvg",
         "pullback_depth_pct": 0.5,
         "max_open_positions": 1,
+        "max_trades_per_day": 1,  # first valid signal locks the NY day
         "cooldown_seconds": 300,
         "engulf_lookback": 2,
     },
@@ -74,8 +75,9 @@ DEFAULT_STRATEGY = {
         ],
     },
     "risk": {
-        "risk_pct_per_trade": 0.5,
-        "rr_target": 2.0,       # 1:2 RR → 0.5% risk makes 1%
+        # −1% SL / +2% TP → EV +0.5%/trade @ 50% WR ≈ ~10%/mnd (≈20 days)
+        "risk_pct_per_trade": 1.0,
+        "rr_target": 2.0,
         "rr_alternative": 3.0,
         "sl_buffer_pct": 0.0003,  # just beyond FVG zone edge
     },
@@ -433,6 +435,24 @@ class SMCEngine:
         self.last_trade_time: float = 0
         self._running = False
         self._stopped = False
+
+    def trades_opened_today(self, ts: float | None = None) -> int:
+        """How many positions were opened on the current NY calendar day."""
+        from .analytics import count_opens_on_day
+
+        return count_opens_on_day(
+            self.position_manager.open_positions,
+            self.position_manager.closed_positions,
+            ts=ts,
+            config=self.config.get("sessions", {}) or {},
+        )
+
+    def daily_trade_limit_reached(self, ts: float | None = None) -> bool:
+        """True when max_trades_per_day is set and already filled for this day."""
+        limit = int(self.config.get("entry.max_trades_per_day", 0) or 0)
+        if limit <= 0:
+            return False
+        return self.trades_opened_today(ts) >= limit
 
     async def fetch_all_timeframes(self) -> dict[str, list[dict]]:
         """Fetch candles for all required timeframes."""
@@ -800,6 +820,8 @@ class SMCEngine:
         if len(self.position_manager.open_positions) < self.config.get("entry.max_open_positions", 1):
             # Check cooldown
             if time.time() - self.last_trade_time < self.config.get("entry.cooldown_seconds", 300):
+                return
+            if self.daily_trade_limit_reached():
                 return
 
             signal = self.detect_entry_signal(candles_5m, candles_15m, candles_1h)

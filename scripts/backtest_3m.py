@@ -230,10 +230,12 @@ def run_backtest(days: int = 90) -> dict:
     cooldown = float(cfg.get("entry.cooldown_seconds", 300))
     session_cfg = cfg.get("sessions", {}) or {}
     max_open = int(cfg.get("entry.max_open_positions", 1))
+    max_per_day = int(cfg.get("entry.max_trades_per_day", 0) or 0)
 
     last_trade_ts = 0.0
     signals = 0
     skipped_session = 0
+    skipped_daily = 0
     t0 = time.time()
 
     # Start after warmup so EMA/RSI/FVG are meaningful
@@ -267,6 +269,9 @@ def run_backtest(days: int = 90) -> dict:
         if len(engine.position_manager.open_positions) >= max_open:
             continue
         if ts - last_trade_ts < cooldown:
+            continue
+        if max_per_day > 0 and engine.daily_trade_limit_reached(ts):
+            skipped_daily += 1
             continue
 
         # Session filter on the locked confirmation candle time (matches entry fill bar)
@@ -380,14 +385,20 @@ def run_backtest(days: int = 90) -> dict:
         "best_session": analytics.get("best_session"),
         "elapsed_sec": round(time.time() - t0, 1),
         "skipped_session_bars": skipped_session,
+        "skipped_daily_limit_bars": skipped_daily,
         "strategy": {
             "exits": cfg.get("exits"),
             "rsi": cfg.get("rsi"),
+            "entry": {
+                "max_trades_per_day": max_per_day,
+                "max_open_positions": max_open,
+            },
             "sessions": {
                 "windows": (cfg.get("sessions") or {}).get("windows"),
                 "filter_entries": True,  # applied via bar-time active_session
             },
             "risk_pct": cfg.get("risk.risk_pct_per_trade"),
+            "rr_target": cfg.get("risk.rr_target"),
         },
         "recent_trades": [
             {

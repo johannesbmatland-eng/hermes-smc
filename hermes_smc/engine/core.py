@@ -32,11 +32,11 @@ DEFAULT_CONFIG = {
     },
     "exits": {
         "structure_break": False,
-        "mode": "be_trail",
+        "mode": "fixed_tp",
         "be_at_rr": 1.5,
         "trail_after_be": True,
         "trail_rr": 1.0,
-        "tp_rr": 3.0,
+        "tp_rr": 2.0,
         "be_buffer_pct": 0.0001,
     },
     "fvq_detection": {
@@ -47,6 +47,7 @@ DEFAULT_CONFIG = {
         "confirmation": "engulfing_or_ifvg",  # 'engulfing' | 'ifvg' | 'both'
         "pullback_depth_pct": 0.5,  # enter when price pulls back to 50% of move
         "max_open_positions": 1,
+        "max_trades_per_day": 1,
         "cooldown_seconds": 300,
         "engulf_lookback": 2,
     },
@@ -57,8 +58,8 @@ DEFAULT_CONFIG = {
         "short_min": 35,
     },
     "risk": {
-        "risk_pct_per_trade": 0.5,
-        "rr_target": 2.0,  # 1:2 RR → 0.5% risk makes 1%
+        "risk_pct_per_trade": 1.0,  # −1% SL / +2% TP at 1:2
+        "rr_target": 2.0,
         "rr_alternative": 3.0,
         "sl_buffer_pct": 0.0003,  # just beyond FVG zone edge
     },
