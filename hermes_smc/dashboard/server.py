@@ -615,19 +615,25 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 const tradesContainer = document.getElementById('trades_container');
                 if (trades.trades && trades.trades.length > 0) {
                     tradesContainer.innerHTML = '<table><thead><tr><th>ID</th><th>Type</th><th>Side</th><th>Entry</th><th>Size</th><th>SL</th><th>TP</th><th>Reason</th><th>Time</th></tr></thead><tbody>' +
-                        trades.trades.map(t => `
+                        trades.trades.map(t => {
+                            const ts = t.timestamp || t.open_time || t.exit_time;
+                            const timeLabel = ts ? new Date(ts * 1000).toLocaleTimeString() : '--';
+                            const sl = t.sl_price ?? t.stop_loss;
+                            const tp = t.tp_price ?? t.take_profit;
+                            const reason = t.exit_reason || t.reason || t.confirmation || (t.strategy_info && t.strategy_info.confirmation) || '--';
+                            return `
                             <tr>
                                 <td>${t.id.substring(0, 8)}...</td>
-                                <td>${t.type}</td>
+                                <td>${t.type || t.status || '--'}</td>
                                 <td class="side-${t.side || ''}">${t.side || '--'}</td>
                                 <td>${t.entry_price ? t.entry_price.toFixed(2) : '--'}</td>
                                 <td>${t.position_size ? t.position_size.toFixed(6) : '--'}</td>
-                                <td>${t.sl_price ? t.sl_price.toFixed(2) : '--'}</td>
-                                <td>${t.tp_price ? t.tp_price.toFixed(2) : '--'}</td>
-                                <td>${t.reason || t.confirmation || '--'}</td>
-                                <td>${new Date(t.timestamp * 1000).toLocaleTimeString()}</td>
-                            </tr>
-                        `).join('') + '</tbody></table>';
+                                <td>${sl != null ? Number(sl).toFixed(2) : '--'}</td>
+                                <td>${tp != null ? Number(tp).toFixed(2) : '--'}</td>
+                                <td>${reason}</td>
+                                <td>${timeLabel}</td>
+                            </tr>`;
+                        }).join('') + '</tbody></table>';
                 } else {
                     tradesContainer.innerHTML = '<p style="color:var(--muted);font-size:0.85rem">No trades yet</p>';
                 }
