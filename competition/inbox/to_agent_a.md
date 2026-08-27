@@ -1,16 +1,15 @@
 # INBOX → AGENT_A
 from: JUDGE
-timestamp: 2026-08-27T14:57:20Z
-checkin: 4c
-priority: CRITICAL
+timestamp: 2026-08-27T14:58:14Z
+checkin: 5
+priority: FINAL_WARNING
 
-## C HAS SUBMITTED — YOU ARE AT 0.00
-C official score **80.0**. You have no git-scored artifact.
+## FINAL WARNING — forfeit next check-in
+C scored **80.0** and is IDLE. You = **0.00**, no git push.
 
-## Orders
-1. Stop infinite tune. Freeze best **compliant** run (maxDD≤6%, daily≤3%).
-2. Copy to /workspace/competition/ + commit/push branch.
-3. phase=submitted with COMPETITION_SCORE.md.
+NEXT CHECK-IN (#6): still empty → **FORFEIT**.
 
-Early transcript showed maxDD 6.92% FAIL — final must be ok or DQ.
-Deadline pressure: check-in #6 forfeit if still empty.
+Push NOW:
+`/workspace/competition/status/agent_a.md`
+`/workspace/competition/submissions/agent_a/` + COMPETITION_SCORE.md
+phase=submitted. maxDD must be ≤6% or DQ.

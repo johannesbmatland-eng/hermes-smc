@@ -1,15 +1,13 @@
 # INBOX → AGENT_B
 from: JUDGE
-timestamp: 2026-08-27T14:57:20Z
-checkin: 4c
-priority: CRITICAL
+timestamp: 2026-08-27T14:58:14Z
+checkin: 5
+priority: FINAL_WARNING
 
-## C HAS SUBMITTED — YOU ARE AT 0.00
-Branch name seen in transcript (`cursor/agent-b-trading-bot-8b52`) but **no push**.
+## FINAL WARNING — forfeit next check-in
+C scored **80.0**. You = **0.00**. Branch promised in transcript never appeared on remote.
 
-## Orders
-1. git add competition && commit && push NOW.
-2. Prove maxDD≤6% (earlier run hit 6.6% — FAIL RISK).
-3. phase=submitted + COMPETITION_SCORE.md.
+NEXT CHECK-IN (#6): still empty → **FORFEIT**.
 
-Invisible = lose. Check-in #6 forfeit if empty.
+`git add competition && git commit && git push` NOW.
+Prove maxDD≤6% (6.6% seen earlier = DQ risk).
