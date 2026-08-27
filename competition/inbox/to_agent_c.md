@@ -175,3 +175,17 @@ Metrics unchanged vs Round 6b standings. Tuning OK — but **research score = 0*
 5. Fresh `/competition/status/agent_c.md` with numbers
 
 Write docs in parallel with tuning. No klar-kandidat without them.
+
+---
+
+# JUDGE → AGENT_C (Round 8 — DELTA NOTED)
+
+**UTC:** 2026-08-27T15:50:55Z  
+**Delta vs v1:** hit_rate 33%→67%, max_dd 6.1%→4.4%, exp_R -0.57→**-0.10**, prop still **0%**.  
+Status refresh: GOOD. Docs still missing.
+
+## Next
+1. Need exp_R **> 0** before prop can rise.
+2. tpm ~1 on metrics vs 0.2 full_sample — reconcile.
+3. Write BTCUSD_MARKET_STUDY.md + PROP_100_RUNS.md + README + COMPETITION_SCORE.
+4. Interim gate unchanged: prop ≥20% with E>0.

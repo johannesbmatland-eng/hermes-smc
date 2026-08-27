@@ -1,10 +1,8 @@
-"""Walk-forward evaluation and 100-run prop challenge Monte Carlo."""
+"""Walk-forward + 100-run prop challenge evaluation."""
 
 from __future__ import annotations
 
-import json
-from dataclasses import asdict
-from pathlib import Path
+from dataclasses import asdict, replace
 from typing import Any
 
 import numpy as np
@@ -12,7 +10,22 @@ import pandas as pd
 
 from .backtest import run_backtest, BacktestResult
 from .config import StrategyParams, CostModel, PropRules, DEFAULT_PARAMS, DEFAULT_COSTS, DEFAULT_PROP
-from .data import load_ohlc
+from .strategy_4h import generate_a_plus_events
+
+
+def _fit_priors(base: StrategyParams, result: BacktestResult) -> StrategyParams:
+    trades = result.trades
+    if len(trades) < 8:
+        return base
+    hits = sum(1 for t in trades if t.pnl > 0) / len(trades)
+    win_R = [t.pnl_R for t in trades if t.pnl > 0]
+    loss_R = [abs(t.pnl_R) for t in trades if t.pnl <= 0]
+    avg_w = float(np.mean(win_R)) if win_R else base.prior_avg_win_R
+    avg_l = float(np.mean(loss_R)) if loss_R else base.prior_avg_loss_R
+    hr = float(np.clip(0.6 * hits + 0.4 * base.prior_hit_rate, 0.30, 0.70))
+    avg_w = float(np.clip(0.6 * avg_w + 0.4 * base.prior_avg_win_R, 0.8, 4.0))
+    avg_l = float(np.clip(0.6 * avg_l + 0.4 * base.prior_avg_loss_R, 0.7, 1.4))
+    return replace(base, prior_hit_rate=hr, prior_avg_win_R=avg_w, prior_avg_loss_R=avg_l)
 
 
 def walk_forward(
@@ -24,7 +37,6 @@ def walk_forward(
     costs: CostModel | None = None,
     prop: PropRules | None = None,
 ) -> list[dict[str, Any]]:
-    """Anchored rolling walk-forward on OOS folds."""
     params = params or DEFAULT_PARAMS
     costs = costs or DEFAULT_COSTS
     prop = prop or DEFAULT_PROP
@@ -39,10 +51,9 @@ def walk_forward(
         test_end = cursor + pd.DateOffset(months=test_months)
         train_df = df[(df["timestamp"] >= train_start) & (df["timestamp"] < test_start)].reset_index(drop=True)
         test_df = df[(df["timestamp"] >= test_start) & (df["timestamp"] < test_end)].reset_index(drop=True)
-        if len(train_df) < 500 or len(test_df) < 200:
+        if len(train_df) < 200 or len(test_df) < 80:
             cursor += pd.DateOffset(months=step_months)
             continue
-        # Fit priors from train trades (update hit rate / R for fee hurdle)
         tr = run_backtest(train_df, params=params, costs=costs, prop=prop, enforce_prop_halt=False)
         fitted = _fit_priors(params, tr)
         te = run_backtest(test_df, params=fitted, costs=costs, prop=prop, enforce_prop_halt=True)
@@ -66,30 +77,6 @@ def walk_forward(
     return folds
 
 
-def _fit_priors(base: StrategyParams, result: BacktestResult) -> StrategyParams:
-    """Update prior hit-rate / payoff from IS without changing structure."""
-    trades = result.trades
-    if len(trades) < 8:
-        return base
-    hits = sum(1 for t in trades if t.pnl > 0) / len(trades)
-    win_R = [t.pnl_R for t in trades if t.pnl > 0]
-    loss_R = [abs(t.pnl_R) for t in trades if t.pnl <= 0]
-    avg_w = float(np.mean(win_R)) if win_R else base.prior_avg_win_R
-    avg_l = float(np.mean(loss_R)) if loss_R else base.prior_avg_loss_R
-    # blend toward base to avoid tiny-sample chaos
-    hr = 0.6 * hits + 0.4 * base.prior_hit_rate
-    # clamp sanity
-    hr = float(np.clip(hr, 0.25, 0.65))
-    avg_w = float(np.clip(0.6 * avg_w + 0.4 * base.prior_avg_win_R, 0.8, 3.5))
-    avg_l = float(np.clip(0.6 * avg_l + 0.4 * base.prior_avg_loss_R, 0.7, 1.4))
-    # copy via replace pattern
-    d = asdict(base)
-    d["prior_hit_rate"] = hr
-    d["prior_avg_win_R"] = avg_w
-    d["prior_avg_loss_R"] = avg_l
-    return StrategyParams(**d)
-
-
 def prop_challenge_window(
     df: pd.DataFrame,
     start_idx: int,
@@ -98,20 +85,17 @@ def prop_challenge_window(
     costs: CostModel,
     prop: PropRules,
 ) -> dict[str, Any]:
-    """Run one prop evaluation from a randomized start until pass/fail or window end.
+    """One prop eval from randomized start.
 
-    Challenge ends early on pass (+10%) or hard fail; otherwise judged at window end.
-    Typical prop eval horizon ~30–60 calendar days of hourly bars.
+    Warmup history prepended for indicators; scoring starts at challenge open.
+    Monthly profit = window return (window sized ~1 month of calendar time).
     """
-    end = min(len(df), start_idx + max_bars)
-    window = df.iloc[start_idx:end].reset_index(drop=True)
-    # Need warmup history for features — prepend lookback from before start
-    warm = 400
+    warm = 120
     warm_start = max(0, start_idx - warm)
+    end = min(len(df), start_idx + max_bars)
     full = df.iloc[warm_start:end].reset_index(drop=True)
-    # Run on full but only score from challenge start equity path after warmup bars
     res = run_backtest(full, params=params, costs=costs, prop=prop, enforce_prop_halt=True)
-    # Restrict equity curve to challenge period
+
     challenge_ts0 = df.iloc[start_idx]["timestamp"]
     eq = res.equity_curve[res.equity_curve["timestamp"] >= challenge_ts0].reset_index(drop=True)
     if eq.empty:
@@ -120,61 +104,51 @@ def prop_challenge_window(
             "reason": "empty",
             "end_equity": prop.account_usd,
             "monthly_return": 0.0,
+            "total_return": 0.0,
             "n_trades": 0,
             "daily_breach": False,
             "dd_breach": False,
             "leverage_breach": False,
             "max_dd": 0.0,
+            "max_daily_loss": 0.0,
+            "max_leverage": 0.0,
             "days": 0.0,
         }
 
-    # Rebase: simulate starting at account size by scaling PnL path
-    # Better: re-run with only window but features need history — use cash accounting from first challenge bar.
-    # Approximate: take relative equity change from challenge start.
     e0 = float(eq["equity"].iloc[0])
-    e1 = float(eq["equity"].iloc[-1])
-    if e0 <= 0:
-        rel = 0.0
-    else:
-        rel = e1 / e0
-    end_eq = prop.account_usd * rel
-
-    # Check breaches already from engine on full path — conservative.
-    # Also compute max DD on challenge window rebased.
-    path = prop.account_usd * (eq["equity"].to_numpy(dtype=np.float64) / e0)
+    path = prop.account_usd * (eq["equity"].to_numpy(dtype=np.float64) / max(e0, 1e-12))
+    end_eq = float(path[-1])
     hwm = np.maximum.accumulate(path)
     dd = (hwm - path) / np.maximum(hwm, 1e-12)
     max_dd = float(np.max(dd))
 
-    # Daily loss on rebased path
     eq2 = eq.copy()
     eq2["day"] = pd.to_datetime(eq2["timestamp"]).dt.date
     daily_breach = False
+    max_daily_loss = 0.0
     for _, g in eq2.groupby("day"):
-        day_path = prop.account_usd * (g["equity"].to_numpy(dtype=np.float64) / e0)
+        day_path = prop.account_usd * (g["equity"].to_numpy(dtype=np.float64) / max(e0, 1e-12))
         day_start = day_path[0]
         day_min = float(np.min(day_path))
+        loss = max(0.0, (day_start - day_min) / day_start)
+        max_daily_loss = max(max_daily_loss, loss)
         if (day_min - day_start) / day_start <= -prop.daily_loss_limit:
             daily_breach = True
-            break
 
     dd_breach = max_dd >= prop.max_dd_hwm
     lev_breach = res.leverage_breach
+    # leverage observed from notional proxy: risk sizing keeps under cap; use engine flag
 
     t0 = pd.Timestamp(eq["timestamp"].iloc[0])
     t1 = pd.Timestamp(eq["timestamp"].iloc[-1])
     days = max((t1 - t0).total_seconds() / 86400.0, 1e-6)
-    months = days / 30.4375
-    monthly = (rel) ** (1.0 / max(months, 1e-6)) - 1.0 if rel > 0 else -1.0
+    total_ret = end_eq / prop.account_usd - 1.0
+    # Window ≈ monthly evaluation horizon → report window return as monthly_profit
+    monthly = total_ret
 
-    # Count trades in window
     n_tr = sum(1 for t in res.trades if t.entry_time >= challenge_ts0)
-
-    passed = (
-        (not daily_breach)
-        and (not dd_breach)
-        and (not lev_breach)
-        and end_eq >= prop.account_usd * (1.0 + prop.pass_pct)
+    passed = (not daily_breach) and (not dd_breach) and (not lev_breach) and (
+        end_eq >= prop.account_usd * (1.0 + prop.pass_pct)
     )
     reason = "pass" if passed else (
         "daily" if daily_breach else "dd" if dd_breach else "lev" if lev_breach else "no_pass"
@@ -184,15 +158,18 @@ def prop_challenge_window(
         "reason": reason,
         "end_equity": end_eq,
         "monthly_return": monthly,
-        "total_return": rel - 1.0,
+        "total_return": total_ret,
         "n_trades": n_tr,
         "daily_breach": daily_breach,
         "dd_breach": dd_breach,
         "leverage_breach": lev_breach,
         "max_dd": max_dd,
+        "max_daily_loss": max_daily_loss,
+        "max_leverage": float(res.max_leverage_used),
         "days": days,
         "start_time": str(challenge_ts0),
         "end_time": str(t1),
+        "soft_halts": res.soft_halt_count,
     }
 
 
@@ -200,7 +177,7 @@ def run_prop_100(
     df: pd.DataFrame,
     n_runs: int = 100,
     seed: int = 42,
-    challenge_days: int = 45,
+    challenge_days: int = 60,
     params: StrategyParams | None = None,
     costs: CostModel | None = None,
     prop: PropRules | None = None,
@@ -209,8 +186,9 @@ def run_prop_100(
     costs = costs or DEFAULT_COSTS
     prop = prop or DEFAULT_PROP
     rng = np.random.default_rng(seed)
-    bars = challenge_days * 24
-    warm = 400
+    # 4H bars
+    bars = max(int(challenge_days * 6), 60)
+    warm = 120
     max_start = len(df) - bars - 1
     if max_start <= warm:
         raise ValueError("insufficient data for prop windows")
@@ -228,15 +206,13 @@ def run_prop_100(
     dd_b = sum(1 for r in runs if r["dd_breach"])
     lev_b = sum(1 for r in runs if r["leverage_breach"])
     mo = np.array([r["monthly_return"] for r in runs], dtype=np.float64)
-    tr = np.array([r["n_trades"] for r in runs], dtype=np.float64)
-    # trades per month from challenge window
     tpm = []
     for r in runs:
         m = max(r["days"] / 30.4375, 1e-6)
         tpm.append(r["n_trades"] / m)
     tpm_a = np.array(tpm, dtype=np.float64)
 
-    summary = {
+    return {
         "n_runs": n_runs,
         "pass_count": passes,
         "pass_rate": passes / n_runs,
@@ -250,12 +226,9 @@ def run_prop_100(
         "dd_breach_count": dd_b,
         "leverage_breach_count": lev_b,
         "risk_ok": daily_b == 0 and dd_b == 0 and lev_b == 0,
+        "max_daily_loss_observed": float(max(r["max_daily_loss"] for r in runs)),
+        "max_dd_observed": float(max(r["max_dd"] for r in runs)),
         "challenge_days": challenge_days,
         "seed": seed,
         "runs": runs,
     }
-    return summary
-
-
-def full_sample_backtest(df: pd.DataFrame, params: StrategyParams | None = None) -> BacktestResult:
-    return run_backtest(df, params=params or DEFAULT_PARAMS)

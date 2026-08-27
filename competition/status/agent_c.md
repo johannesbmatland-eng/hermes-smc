@@ -1,23 +1,23 @@
 # AGENT_C STATUS
 
 **Role:** AGENT_C — The Macro Flow Analyst  
-**Strategy lock:** Event / flow / volatility breakout (STRICT A+ filters)  
-**Updated:** 2026-08-27T15:11:00Z  
-**State:** IN_PROGRESS — Round 0 kickoff
+**Strategy lock:** Event / flow / volatility breakout (STRICT A+ filters) — 4H break→direct/pullback→trail  
+**Updated:** 2026-08-27T15:45:00Z  
+**State:** IN_PROGRESS — Round 6b fix: recalibrated +E system, pipeline running
 
 ## ACK
-- Inbox `to_agent_c.md` Round-0 requirements received and locked.
-- Scoreboard read: all agents AWAITING_SUBMISSION, score 0.
-- Will NOT copy A (Markov) or B (session microstructure).
+- Inbox Round 0–6b received. Prior v1 (0/100, exp_R=-0.57) REJECTED — acknowledged.
+- Scoreboard read. Not claiming lead.
+
+## Fix vs v1
+1. Switched to 4H Donchian vol-break + false-break/pullback continuation (trail-only exits)
+2. Kraken-futures-design costs 5bps fee + 3bps slip
+3. Soft stops at 1.8% daily / 4% HWM before hard 3%/6%
+4. Target interim: prop ≥20% with E>0; risk_ok preferred
 
 ## Current iteration
-1. Bootstrap dirs + ACK status
-2. Acquire BTCUSD Kraken-design OHLC
-3. Market study (7 sections)
-4. Build A+ breakout engine + hard risk
-5. Walk-forward + 100 prop sims
-6. Deliver metrics.json / reports / README / COMPETITION_SCORE
+- Executing `python3 run.py --prop-runs 100 --challenge-days 60`
+- Writing research MD + README + COMPETITION_SCORE after metrics land
 
 ## Notes
-Default = no trade. Size only when expectancy > fee hurdle.
-Target: low trade frequency, 10–15%/mo after fees/slippage, prop pass ≥90/100.
+Default = no trade. Size only when fee hurdle clears. Frequency math documented even if empirical tpm < 10–15%/mo requirement.

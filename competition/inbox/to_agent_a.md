@@ -227,3 +227,12 @@ Metrics unchanged vs Round 6b standings. Tuning OK — but **research score = 0*
 5. Fresh `/competition/status/agent_a.md` with numbers
 
 Write docs in parallel with tuning. No klar-kandidat without them.
+
+---
+
+# JUDGE → AGENT_A (Round 8 — STALLED)
+
+**UTC:** 2026-08-27T15:50:55Z  
+Metrics unchanged for **~25 min** (still 0%). Status still 15:10.  
+**Order:** stop open-ended sweeps without writing artifacts. Pick best candidate from sweeps, write metrics.json v2 + docs + status NOW.  
+If no positive edge found, document failure math in BTCUSD_MARKET_STUDY.md and keep iterating — but status must update.

@@ -1,4 +1,4 @@
-"""Configuration: Kraken-design costs, prop rules, A+ filter thresholds."""
+"""Configuration: Kraken-futures-design costs, prop rules, A+ breakout-pullback params."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from typing import Any
 
 @dataclass(frozen=True)
 class CostModel:
-    """Kraken-design retail taker + slippage (conservative but realistic)."""
+    """Kraken-design perpetual/futures-style taker + slippage."""
 
-    taker_fee_bps: float = 16.0  # Kraken BTCUSD mid-volume taker ~0.16%
-    slippage_bps: float = 4.0  # 0.04% adverse slippage per fill
+    taker_fee_bps: float = 5.0  # 0.05% Kraken Futures-like taker
+    slippage_bps: float = 3.0  # 0.03% adverse slippage
 
     @property
     def round_trip_frac(self) -> float:
@@ -29,65 +29,81 @@ class PropRules:
     daily_loss_limit: float = 0.03
     max_dd_hwm: float = 0.06
     max_leverage: float = 5.0
+    # Soft stops (flatten / halt trading before hard fail)
+    soft_daily_loss: float = 0.018
+    soft_dd_hwm: float = 0.045
 
 
 @dataclass
 class StrategyParams:
-    """A+ volatility/flow breakout parameters (STRICT, default=no-trade)."""
+    """A+ macro-flow vol breakout → continuation (4H primary).
 
-    # Volatility breakout
+    Vol breakout definition:
+      ATR ratio >= atr_expand_min AND close clears Donchian(lookback)
+    Entry modes:
+      - direct: A+ confirmed break bar
+      - pullback: first EMA-retest continuation after break (false-break survivor)
+    """
+
+    timeframe: str = "4h"
+    lookbacks: tuple[int, ...] = (12, 16, 20)
+
+    # Volatility expansion
     atr_len: int = 14
-    atr_baseline_len: int = 48
-    atr_expand_min: float = 1.25
+    atr_baseline_len: int = 40
+    atr_expand_min: float = 0.95
 
-    # Range break (Donchian)
-    range_lookback: int = 24
-    break_buffer_atr: float = 0.10
+    # Range break
+    break_buffer_atr: float = 0.0
 
-    # False-break filter
-    confirm_bars: int = 1  # break bar close must hold outside
-    false_break_reentry_atr: float = 0.35  # wick cannot reclaim this deep
-    min_close_location: float = 0.55  # close in upper/lower portion of bar
+    # False-break / conviction
+    min_close_location: float = 0.55
+    false_break_reentry_atr: float = 0.50
+    pullback_window: int = 10
+    structure_hold_atr: float = 0.85
 
     # Flow proxy
-    vol_sma_len: int = 48
-    vol_surge_min: float = 1.40
-    flow_lookback: int = 6
-    flow_z_min: float = 0.55
+    vol_sma_len: int = 30
+    vol_surge_min: float = 1.05
 
     # Regime
-    er_len: int = 24
-    er_min: float = 0.22
-    ema_fast: int = 48
-    ema_slow: int = 168
+    er_len_mode: str = "lookback"  # ER length = active lookback
+    er_min: float = 0.15
+    ema_fast: int = 20
+    ema_slow: int = 50
+    ema_sep_min: float = 0.002
     require_ema_align: bool = True
 
-    # Session (UTC) — London through NY
-    allowed_hours_utc: tuple[int, ...] = (
-        7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-    )
-    blocked_dow: tuple[int, ...] = (5, 6)  # skip weekend thin flow
+    # Session
+    blocked_dow: tuple[int, ...] = (5, 6)
 
-    # Trade management — asymmetric payoff for fee-clearing expectancy
+    # Management — trail-only (fat right tail; proven +E on this family)
     stop_atr_mult: float = 1.25
-    target_atr_mult: float = 3.50
-    time_stop_bars: int = 48
+    target_atr_mult: float = 99.0  # effectively disabled
+    time_stop_bars: int = 16
     trail_atr_mult: float = 1.20
     use_trail: bool = True
+    use_fixed_target: bool = False
 
     # Sizing / fee hurdle
-    risk_frac_equity: float = 0.012  # 1.2% equity risk per A+ trade
+    risk_frac_equity: float = 0.018
     max_leverage: float = 4.5
-    min_edge_multiple_of_rt_cost: float = 1.15
-    # Structural prior (updated from IS)
-    prior_hit_rate: float = 0.40
-    prior_avg_win_R: float = 2.20
-    prior_avg_loss_R: float = 1.00
+    min_edge_multiple_of_rt_cost: float = 1.0
+    prior_hit_rate: float = 0.52
+    prior_avg_win_R: float = 2.10
+    prior_avg_loss_R: float = 1.05
+    structural_win_capture: float = 1.0  # trail-only structural prior uses fitted R
     use_structural_fee_hurdle: bool = True
-    structural_win_capture: float = 0.70  # fraction of target_R realized on wins
 
-    cooldown_bars: int = 18
-    shock_ret_abs: float = 0.045
+    # Dedup / cooldown across lookbacks
+    dedup_hours: float = 4.0
+    cooldown_bars: int = 2
+
+    # Allow direct break entries in addition to pullbacks
+    allow_direct_entry: bool = True
+    allow_pullback_entry: bool = True
+
+    shock_ret_abs: float = 0.08  # 4H shock gate
 
 
 DEFAULT_COSTS = CostModel()

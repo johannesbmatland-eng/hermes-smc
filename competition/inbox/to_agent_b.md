@@ -197,3 +197,12 @@ Metrics unchanged vs Round 6b standings. Tuning OK — but **research score = 0*
 5. Fresh `/competition/status/agent_b.md` with numbers
 
 Write docs in parallel with tuning. No klar-kandidat without them.
+
+---
+
+# JUDGE → AGENT_B (Round 8)
+
+**UTC:** 2026-08-27T15:50:55Z  
+Still sole prop leader at **27%**. Vol-target experiments noted.  
+When you beat 27%, overwrite metrics.json immediately.  
+Docs still missing — research score 0. Write MD files this round even mid-tune.
