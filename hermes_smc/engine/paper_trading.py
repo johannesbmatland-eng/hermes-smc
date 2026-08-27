@@ -8,7 +8,7 @@ from typing import Any
 
 from .core import MarketStructureDetector
 from .smc_engine import SMCEngine, SMCConfig, PositionManager
-from .analytics import build_entry_context
+from .analytics import build_entry_context, active_session, session_from_ts
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,16 @@ class PaperTradingEngine(SMCEngine):
                 f"long_max={long_max}, short_min={short_min})"
             )
             return None
+
+        session_cfg = self.config.get("sessions", {}) or {}
+        if isinstance(session_cfg, dict) and session_cfg.get("filter_entries", True):
+            sess = active_session(config=session_cfg)
+            if not sess:
+                logger.info(
+                    "Skip entry: outside enabled KZP sessions "
+                    f"(now={session_from_ts(time.time(), session_cfg)})"
+                )
+                return None
 
         if not candidate_fvgs:
             logger.debug("Skip entry: no unmitigated FVGs for side=%s", side)
@@ -764,6 +774,35 @@ class PaperTradingEngine(SMCEngine):
                 ),
             })
 
+        # KZP session filter (America/New_York)
+        session_cfg = self.config.get("sessions", {}) or {}
+        if not isinstance(session_cfg, dict):
+            session_cfg = {}
+        current_session = session_from_ts(time.time(), session_cfg)
+        live_killzone = active_session(config=session_cfg)
+        if not session_cfg.get("filter_entries", True):
+            checklist.append({
+                "id": "session",
+                "label": "Session (KZP)",
+                "status": "pass",
+                "detail": f"{current_session} — filter off",
+            })
+        elif live_killzone:
+            checklist.append({
+                "id": "session",
+                "label": "Session (KZP)",
+                "status": "pass",
+                "detail": f"{live_killzone} killzone open (NY time)",
+            })
+        else:
+            checklist.append({
+                "id": "session",
+                "label": "Session (KZP)",
+                "status": "fail",
+                "detail": f"{current_session} — waiting ASIA/LNDN/NYAM/NYPM",
+            })
+            waiting.append(f"Outside KZP session ({current_session})")
+
         for tf_key, label in [("5m", "EMA 5m"), ("15m", "EMA 15m"), ("1h", "EMA 1h")]:
             tf_trend = trend.get(f"trend_{tf_key}", "neutral")
             ema_val = trend.get("details", {}).get(f"ema_{tf_key}")
@@ -886,6 +925,7 @@ class PaperTradingEngine(SMCEngine):
             confirmation
             and side
             and rsi_ok
+            and (live_killzone or not session_cfg.get("filter_entries", True))
             and open_count < max_open
             and cooldown_remaining <= 0
         ):
@@ -937,6 +977,12 @@ class PaperTradingEngine(SMCEngine):
                 "long_max": long_max,
                 "short_min": short_min,
                 "allows_side": rsi_ok if side else None,
+            },
+            "session": {
+                "name": current_session,
+                "active": live_killzone,
+                "timezone": session_cfg.get("timezone", "America/New_York"),
+                "filter_entries": session_cfg.get("filter_entries", True),
             },
             "structure": {
                 "confirmed_uptrend": trend.get("details", {}).get("confirmed_uptrend"),
@@ -1032,7 +1078,11 @@ class PaperTradingEngine(SMCEngine):
             side = signal.get("side", "long")
             fill_price = signal["entry_price"]
             fill_size = signal["position_size"]
-            ctx = build_entry_context(signal.get("trend_info"), signal.get("confirmation"))
+            ctx = build_entry_context(
+                signal.get("trend_info"),
+                signal.get("confirmation"),
+                session_config=self.config.get("sessions", {}) or {},
+            )
 
             self.position_manager.open_position(
                 trade_id=trade_id,

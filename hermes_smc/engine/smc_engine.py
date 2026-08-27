@@ -63,6 +63,18 @@ DEFAULT_STRATEGY = {
         "long_max": 65,
         "short_min": 35,
     },
+    "sessions": {
+        "timezone": "America/New_York",
+        "filter_entries": True,
+        "windows": [
+            {"name": "ASIA", "start": "20:00", "end": "00:00", "enabled": True},
+            {"name": "LNDN", "start": "02:00", "end": "05:00", "enabled": True},
+            {"name": "NYAM", "start": "09:30", "end": "11:00", "enabled": True},
+            {"name": "NYL", "start": "12:00", "end": "13:00", "enabled": False},
+            {"name": "NYPM", "start": "13:30", "end": "16:00", "enabled": True},
+            {"name": "RTH", "start": "09:30", "end": "16:00", "enabled": False},
+        ],
+    },
     "risk": {
         "risk_pct_per_trade": 0.5,
         "rr_target": 2.0,       # 1:2 RR → 0.5% risk makes 1%

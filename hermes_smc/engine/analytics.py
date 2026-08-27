@@ -5,38 +5,95 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
+
+# KZP [TFO] killzones — times in America/New_York (as on the indicator)
+DEFAULT_SESSIONS = {
+    "timezone": "America/New_York",
+    "filter_entries": True,
+    "windows": [
+        {"name": "ASIA", "start": "20:00", "end": "00:00", "enabled": True},
+        {"name": "LNDN", "start": "02:00", "end": "05:00", "enabled": True},
+        {"name": "NYAM", "start": "09:30", "end": "11:00", "enabled": True},
+        {"name": "NYL", "start": "12:00", "end": "13:00", "enabled": False},
+        {"name": "NYPM", "start": "13:30", "end": "16:00", "enabled": True},
+        {"name": "RTH", "start": "09:30", "end": "16:00", "enabled": False},
+    ],
+}
 
 
-# Crypto sessions in UTC (inclusive start, exclusive end for primary label)
-SESSION_WINDOWS = (
-    ("Asia", 0, 8),
-    ("London", 8, 13),
-    ("NY", 13, 21),
-    ("Off-hours", 21, 24),
-)
+def _parse_hhmm(value: str) -> int:
+    """'09:30' → minutes from midnight."""
+    parts = str(value).strip().split(":")
+    hour = int(parts[0])
+    minute = int(parts[1]) if len(parts) > 1 else 0
+    return hour * 60 + minute
 
 
-def session_from_ts(ts: float | None) -> str:
-    """Map unix timestamp → trading session (UTC)."""
+def _in_window(minutes: int, start: str, end: str) -> bool:
+    """Inclusive start, exclusive end. Supports midnight wrap (e.g. 20:00–00:00)."""
+    start_m = _parse_hhmm(start)
+    end_m = _parse_hhmm(end)
+    if start_m == end_m:
+        return False
+    if start_m < end_m:
+        return start_m <= minutes < end_m
+    return minutes >= start_m or minutes < end_m
+
+
+def _session_cfg(config: dict | None = None) -> dict:
+    cfg = dict(DEFAULT_SESSIONS)
+    if config:
+        cfg["timezone"] = config.get("timezone", cfg["timezone"])
+        if "filter_entries" in config:
+            cfg["filter_entries"] = bool(config["filter_entries"])
+        if config.get("windows"):
+            cfg["windows"] = config["windows"]
+    return cfg
+
+
+def _local_minutes(ts: float, tz_name: str) -> int:
+    tz = ZoneInfo(tz_name)
+    local = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(tz)
+    return local.hour * 60 + local.minute
+
+
+def session_from_ts(ts: float | None, config: dict | None = None) -> str:
+    """Map unix timestamp → KZP session name (NY time)."""
     if not ts:
         return "Unknown"
-    hour = datetime.fromtimestamp(ts, tz=timezone.utc).hour
-    # London/NY overlap gets its own bucket (often highest liquidity)
-    if 12 <= hour < 16:
-        return "London/NY overlap"
-    for name, start, end in SESSION_WINDOWS:
-        if start <= hour < end:
-            return name
-    return "Unknown"
+    cfg = _session_cfg(config)
+    minutes = _local_minutes(float(ts), cfg["timezone"])
+    for window in cfg["windows"]:
+        if not window.get("enabled", True):
+            continue
+        if _in_window(minutes, window["start"], window["end"]):
+            return window["name"]
+    return "Off-session"
 
 
-def weekday_from_ts(ts: float | None) -> str:
+def active_session(ts: float | None = None, config: dict | None = None) -> str | None:
+    """Return enabled session name if *now* (or ts) is inside a killzone, else None."""
+    import time as _time
+    name = session_from_ts(ts if ts is not None else _time.time(), config)
+    if name in ("Unknown", "Off-session"):
+        return None
+    return name
+
+
+def weekday_from_ts(ts: float | None, config: dict | None = None) -> str:
     if not ts:
         return "Unknown"
-    return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%A")
+    tz_name = _session_cfg(config)["timezone"]
+    tz = ZoneInfo(tz_name)
+    return datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(tz).strftime("%A")
 
 
-def enrich_trade_meta(trade: dict, initial_capital: float = 100_000) -> dict:
+def enrich_trade_meta(
+    trade: dict,
+    initial_capital: float = 100_000,
+    session_config: dict | None = None,
+) -> dict:
     """
     Attach session / calendar / account-% fields for analytics.
     Safe to call on already-closed historical trades (backfill).
@@ -46,8 +103,16 @@ def enrich_trade_meta(trade: dict, initial_capital: float = 100_000) -> dict:
     exit_ts = out.get("exit_time") or open_ts
     info = out.get("strategy_info") or {}
 
-    out["session"] = out.get("session") or info.get("session") or session_from_ts(open_ts)
-    out["weekday"] = out.get("weekday") or info.get("weekday") or weekday_from_ts(open_ts)
+    out["session"] = (
+        out.get("session")
+        or info.get("session")
+        or session_from_ts(open_ts, session_config)
+    )
+    out["weekday"] = (
+        out.get("weekday")
+        or info.get("weekday")
+        or weekday_from_ts(open_ts, session_config)
+    )
     out["trend"] = out.get("trend") or info.get("trend") or "unknown"
     out["confirmation"] = (
         out.get("confirmation")
@@ -62,11 +127,9 @@ def enrich_trade_meta(trade: dict, initial_capital: float = 100_000) -> dict:
     sl = float(out.get("stop_loss") or 0)
     size = float(out.get("position_size") or 0)
 
-    # Account return vs starting capital (what "0.5% risk → 1% win" means)
     baseline = float(out.get("capital_at_open") or initial_capital) or initial_capital
     out["pnl_account_pct"] = (pnl / baseline) * 100 if baseline else 0.0
 
-    # Price move % (kept for chart context)
     if out.get("pnl_pct") is None and entry and out.get("exit_price") is not None:
         exit_px = float(out["exit_price"])
         if out["side"] == "short":
@@ -111,7 +174,6 @@ def _bucket_stats(trades: list[dict], key: str) -> list[dict]:
             "avg_account_pct": (sum(account_pcts) / n) if n else 0.0,
             "avg_r": (sum(r_mults) / n) if n else 0.0,
         })
-    # Best first: total account % then win rate
     rows.sort(key=lambda r: (r["total_account_pct"], r["win_rate"], r["trades"]), reverse=True)
     return rows
 
@@ -120,10 +182,16 @@ def build_analytics(
     closed_positions: list[dict],
     initial_capital: float = 100_000,
     open_positions: list[dict] | None = None,
+    session_config: dict | None = None,
 ) -> dict[str, Any]:
     """Aggregate performance by session, weekday, trend, confirmation, side, exit."""
-    enriched = [enrich_trade_meta(t, initial_capital) for t in closed_positions]
-    open_enriched = [enrich_trade_meta(t, initial_capital) for t in (open_positions or [])]
+    enriched = [
+        enrich_trade_meta(t, initial_capital, session_config) for t in closed_positions
+    ]
+    open_enriched = [
+        enrich_trade_meta(t, initial_capital, session_config)
+        for t in (open_positions or [])
+    ]
 
     total_pnl = sum(float(t.get("pnl") or 0) for t in enriched)
     total_account_pct = (total_pnl / initial_capital * 100) if initial_capital else 0.0
@@ -169,23 +237,29 @@ def build_analytics(
         "best_condition": best_condition,
         "recent_enriched": enriched[-20:],
         "enough_data": len(enriched) >= 5,
+        "session_timezone": _session_cfg(session_config)["timezone"],
         "note": (
             "Breakdowns get meaningful after ~1 week / 5+ closed trades."
             if len(enriched) < 5
-            else "Session and condition stats from closed paper trades."
+            else "KZP session stats from closed paper trades (America/New_York)."
         ),
     }
 
 
-def build_entry_context(trend_info: dict | None, confirmation: str | None) -> dict:
+def build_entry_context(
+    trend_info: dict | None,
+    confirmation: str | None,
+    session_config: dict | None = None,
+) -> dict:
     """Snapshot market context stored on the position at entry."""
     trend_info = trend_info or {}
     details = trend_info.get("details") or {}
-    now = datetime.now(tz=timezone.utc)
+    tz_name = _session_cfg(session_config)["timezone"]
+    now = datetime.now(tz=ZoneInfo(tz_name))
     ts = now.timestamp()
     return {
-        "session": session_from_ts(ts),
-        "weekday": weekday_from_ts(ts),
+        "session": session_from_ts(ts, session_config),
+        "weekday": weekday_from_ts(ts, session_config),
         "trend": trend_info.get("overall", "unknown"),
         "trend_5m": trend_info.get("trend_5m"),
         "trend_15m": trend_info.get("trend_15m"),
@@ -193,5 +267,6 @@ def build_entry_context(trend_info: dict | None, confirmation: str | None) -> di
         "confirmed_uptrend": details.get("confirmed_uptrend"),
         "confirmed_downtrend": details.get("confirmed_downtrend"),
         "confirmation": confirmation,
-        "utc_hour": now.hour,
+        "local_time": now.strftime("%H:%M"),
+        "timezone": tz_name,
     }

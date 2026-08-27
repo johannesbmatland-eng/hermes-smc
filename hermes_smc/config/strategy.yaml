@@ -30,6 +30,18 @@ rsi:
   long_max: 65            # no longs when RSI above this
   short_min: 35           # no shorts when RSI below this
 
+# KZP [TFO] killzones (America/New_York)
+sessions:
+  timezone: "America/New_York"
+  filter_entries: true    # only open trades inside enabled windows
+  windows:
+    - { name: "ASIA", start: "20:00", end: "00:00", enabled: true }
+    - { name: "LNDN", start: "02:00", end: "05:00", enabled: true }
+    - { name: "NYAM", start: "09:30", end: "11:00", enabled: true }
+    - { name: "NYL",  start: "12:00", end: "13:00", enabled: false }
+    - { name: "NYPM", start: "13:30", end: "16:00", enabled: true }
+    - { name: "RTH",  start: "09:30", end: "16:00", enabled: false }
+
 exits:
   structure_break: false
   mode: "be_trail"       # fixed_tp | be_trail | trail_only

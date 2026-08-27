@@ -70,8 +70,12 @@ def test_account_pct_matches_half_percent_risk_double_rr():
 
 def test_analytics_sessions_and_conditions():
     from hermes_smc.engine.analytics import build_analytics, session_from_ts
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
 
-    assert session_from_ts(1787816139.0)  # any valid label
+    ts = datetime(2026, 3, 10, 10, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
+    assert session_from_ts(ts) == "NYAM"
+
     trades = [
         {
             "pnl": 1000,
@@ -80,7 +84,7 @@ def test_analytics_sessions_and_conditions():
             "stop_loss": 99,
             "position_size": 5,
             "side": "long",
-            "open_time": 1700000000,  # will map to a session
+            "open_time": ts,
             "exit_reason": "take_profit",
             "strategy_info": {"trend": "bullish", "confirmation": "engulfing_5m"},
         },
@@ -91,7 +95,7 @@ def test_analytics_sessions_and_conditions():
             "stop_loss": 98,
             "position_size": 5,
             "side": "long",
-            "open_time": 1700000000 + 3600 * 14,
+            "open_time": datetime(2026, 3, 10, 14, 0, tzinfo=ZoneInfo("America/New_York")).timestamp(),
             "exit_reason": "stop_loss",
             "strategy_info": {"trend": "bullish", "confirmation": "engulfing_5m"},
         },
@@ -99,9 +103,32 @@ def test_analytics_sessions_and_conditions():
     a = build_analytics(trades, initial_capital=100_000)
     assert a["trade_count"] == 2
     assert abs(a["total_account_pct"] - 0.5) < 1e-9
-    assert a["by_session"]
-    assert a["by_trend"]
+    names = {r["name"] for r in a["by_session"]}
+    assert "NYAM" in names and "NYPM" in names
     assert a["best_session"] is not None
+
+
+def test_kzp_session_windows_ny_time():
+    from hermes_smc.engine.analytics import session_from_ts, active_session, _in_window
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    assert _in_window(20 * 60, "20:00", "00:00") is True
+    assert _in_window(0, "20:00", "00:00") is False
+    assert _in_window(3 * 60, "02:00", "05:00") is True
+    assert _in_window(9 * 60 + 45, "09:30", "11:00") is True
+
+    asia = datetime(2026, 3, 10, 21, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
+    assert session_from_ts(asia) == "ASIA"
+    lndn = datetime(2026, 3, 10, 3, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
+    assert session_from_ts(lndn) == "LNDN"
+    off = datetime(2026, 3, 10, 7, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
+    assert session_from_ts(off) == "Off-session"
+    assert active_session(off) is None
+    assert active_session(asia) == "ASIA"
+
+
+def test_capital_repair_from_negative_notional_reservation():
     """Old model left capital negative after large BTC notionals — repair on load."""
     import json
     import tempfile

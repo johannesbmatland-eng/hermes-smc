@@ -170,6 +170,7 @@ class DashboardServer:
             pm.closed_positions,
             initial_capital=pm.initial_capital,
             open_positions=list(pm.open_positions.values()),
+            session_config=engine.config.get("sessions", {}) or {},
         )
 
     def get_positions(self) -> list[dict]:
@@ -180,11 +181,15 @@ class DashboardServer:
         engine = self.load_engine()
         pm = engine.position_manager
         history = [
-            enrich_trade_meta(t, pm.initial_capital)
+            enrich_trade_meta(t, pm.initial_capital, engine.config.get("sessions", {}) or {})
             for t in pm.trade_history
         ]
         opens = [
-            enrich_trade_meta({**p, "type": "open", "status": "open"}, pm.initial_capital)
+            enrich_trade_meta(
+                {**p, "type": "open", "status": "open"},
+                pm.initial_capital,
+                engine.config.get("sessions", {}) or {},
+            )
             for p in pm.open_positions.values()
         ]
         combined = history + opens
