@@ -116,6 +116,7 @@ class DashboardServer:
             "candles": candles,
             "ema": engine.last_ema_5m,
             "fvg": nearest,
+            "fvg_boxes": getattr(engine, "last_fvg_boxes", []) or [],
             "price": engine.last_price,
             "bias": analysis.get("bias"),
         }
@@ -249,6 +250,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
             font-weight: 700;
         }
         #chart { width: 100%; height: 420px; }
+        #chart-wrap { position: relative; width: 100%; height: 420px; }
+        #fvg-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
         .phase {
             font-size: 1.05rem;
             font-weight: 600;
@@ -321,8 +331,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         <div class="layout">
             <div class="card">
-                <div class="card-title">BTC/USD · 5m</div>
-                <div id="chart"></div>
+                <div class="card-title">BTC/USD · 5m · FVG boxes</div>
+                <div id="chart-wrap">
+                    <div id="chart"></div>
+                    <canvas id="fvg-overlay"></canvas>
+                </div>
                 <div class="meta">
                     <span class="chip" id="chip_ema">EMA 50</span>
                     <span class="chip" id="chip_fvg">FVG —</span>
@@ -376,10 +389,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
     </div>
 
     <script>
-        let chart, candleSeries, emaSeries, fvgTopLine, fvgBottomLine;
+        let chart, candleSeries, emaSeries, fvgBoxes = [], chartFitted = false;
+        let fvgOverlay, fvgCtx;
 
         function initChart() {
+            const wrap = document.getElementById('chart-wrap');
             const el = document.getElementById('chart');
+            fvgOverlay = document.getElementById('fvg-overlay');
+            fvgCtx = fvgOverlay.getContext('2d');
             chart = LightweightCharts.createChart(el, {
                 layout: {
                     background: { color: 'transparent' },
@@ -392,7 +409,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 rightPriceScale: { borderColor: '#1e2733' },
                 timeScale: { borderColor: '#1e2733', timeVisible: true, secondsVisible: false },
                 crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                width: el.clientWidth,
+                width: wrap.clientWidth,
                 height: 420,
             });
             candleSeries = chart.addCandlestickSeries({
@@ -410,24 +427,72 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 lastValueVisible: true,
                 title: 'EMA 50',
             });
-            window.addEventListener('resize', () => {
-                chart.applyOptions({ width: el.clientWidth });
-            });
+            const resize = () => {
+                const w = wrap.clientWidth;
+                chart.applyOptions({ width: w });
+                fvgOverlay.width = w;
+                fvgOverlay.height = 420;
+                drawFvgBoxes();
+            };
+            window.addEventListener('resize', resize);
+            resize();
+            chart.timeScale().subscribeVisibleLogicalRangeChange(() => drawFvgBoxes());
+            chart.subscribeCrosshairMove(() => drawFvgBoxes());
         }
 
-        function setFvgLines(fvg) {
-            if (fvgTopLine) { candleSeries.removePriceLine(fvgTopLine); fvgTopLine = null; }
-            if (fvgBottomLine) { candleSeries.removePriceLine(fvgBottomLine); fvgBottomLine = null; }
-            if (!fvg) return;
-            const color = fvg.type === 'bullish' ? 'rgba(62,207,142,0.85)' : 'rgba(240,113,120,0.85)';
-            fvgTopLine = candleSeries.createPriceLine({
-                price: fvg.top, color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed,
-                axisLabelVisible: true, title: 'FVG top',
-            });
-            fvgBottomLine = candleSeries.createPriceLine({
-                price: fvg.bottom, color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed,
-                axisLabelVisible: true, title: 'FVG bot',
-            });
+        function drawFvgBoxes() {
+            if (!fvgCtx || !candleSeries) return;
+            const w = fvgOverlay.width;
+            const h = fvgOverlay.height;
+            fvgCtx.clearRect(0, 0, w, h);
+            if (!fvgBoxes || !fvgBoxes.length) return;
+
+            for (const box of fvgBoxes) {
+                const x1 = chart.timeScale().timeToCoordinate(box.time_start);
+                const x2 = chart.timeScale().timeToCoordinate(box.time_end);
+                const yTop = candleSeries.priceToCoordinate(box.top);
+                const yBot = candleSeries.priceToCoordinate(box.bottom);
+                if (x1 == null || x2 == null || yTop == null || yBot == null) continue;
+
+                const left = Math.min(x1, x2);
+                const right = Math.max(x1, x2);
+                const top = Math.min(yTop, yBot);
+                const height = Math.abs(yBot - yTop);
+                const width = Math.max(right - left, 2);
+                const active = box.unmitigated !== false;
+                const bull = box.type === 'bullish';
+
+                // nephew_sam_-style translucent zone
+                fvgCtx.fillStyle = bull
+                    ? (active ? 'rgba(62, 207, 142, 0.22)' : 'rgba(62, 207, 142, 0.08)')
+                    : (active ? 'rgba(240, 113, 120, 0.22)' : 'rgba(240, 113, 120, 0.08)');
+                fvgCtx.strokeStyle = bull
+                    ? (active ? 'rgba(62, 207, 142, 0.85)' : 'rgba(62, 207, 142, 0.35)')
+                    : (active ? 'rgba(240, 113, 120, 0.85)' : 'rgba(240, 113, 120, 0.35)');
+                fvgCtx.lineWidth = 1;
+                fvgCtx.setLineDash(active ? [] : [4, 3]);
+                fvgCtx.fillRect(left, top, width, Math.max(height, 1));
+                fvgCtx.strokeRect(left, top, width, Math.max(height, 1));
+
+                // mid / CE line
+                const yMid = candleSeries.priceToCoordinate(box.mid);
+                if (yMid != null) {
+                    fvgCtx.beginPath();
+                    fvgCtx.setLineDash([3, 3]);
+                    fvgCtx.strokeStyle = bull
+                        ? 'rgba(62, 207, 142, 0.55)'
+                        : 'rgba(240, 113, 120, 0.55)';
+                    fvgCtx.moveTo(left, yMid);
+                    fvgCtx.lineTo(left + width, yMid);
+                    fvgCtx.stroke();
+                }
+
+                // small label
+                fvgCtx.setLineDash([]);
+                fvgCtx.fillStyle = bull ? '#3ecf8e' : '#f07178';
+                fvgCtx.font = '10px IBM Plex Sans, sans-serif';
+                fvgCtx.fillText(active ? 'FVG' : 'filled', left + 4, top + 12);
+            }
         }
 
         function formatCurrency(value) {
@@ -495,8 +560,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     if (chartData.ema && chartData.ema.length) {
                         emaSeries.setData(chartData.ema);
                     }
-                    setFvgLines(chartData.fvg);
-                    chart.timeScale().fitContent();
+                    fvgBoxes = chartData.fvg_boxes || [];
+                    if (!chartFitted) {
+                        chart.timeScale().fitContent();
+                        chartFitted = true;
+                    }
+                    requestAnimationFrame(drawFvgBoxes);
                 }
 
                 const ema = analysis.ema || {};

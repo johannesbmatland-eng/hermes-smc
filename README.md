@@ -23,6 +23,8 @@ Boten handlar **long og short** pa BTC/USD nar SMC-monsteret stemmer:
 1. **Trend-filter**: 1t og 15m ma vise klar trend (EMA50 + HH/HL for long, LH/LL for short).
 2. **FVG (Fair Value Gap)**: 3 candles der wick på fyrste og siste ikkje overlappar
    (bullish: siste low over fyrste high; bearish: siste high under fyrste low).
+   Dashbordet markerer gap som grøne/raude bokser (nephew_sam_-stil), og fjernar/toner
+   dei når wick fyller gapet.
 3. **Pullback**: ventar pa at prisen trekkjer seg tilbake inn i gapet.
 4. **Bekreftelse**: engulfing-candle eller IFVG.
 5. **Risk**: 0.5 % per trade, SL/TP spegla for begge retningar.

@@ -23,6 +23,7 @@ class PaperTradingEngine(SMCEngine):
         self.last_candles_5m: list[dict] = []
         self.last_ema_5m: list[dict] = []
         self.last_price: float | None = None
+        self.last_fvg_boxes: list[dict] = []
 
     async def fetch_all_timeframes(self) -> dict[str, list[dict]]:
         """Fetch candles including 1m for confirmation signals."""
@@ -764,6 +765,12 @@ class PaperTradingEngine(SMCEngine):
         self.last_ema_5m = self._ema_series(
             candles_5m, self.config.get("trend_filter.ema_period", 50)
         )[-150:]
+        # nephew_sam_-style FVG boxes for the visible chart window
+        self.last_fvg_boxes = MarketStructureDetector.build_fvg_boxes(
+            self.last_candles_5m,
+            max_age_candles=self.config.get("fvq_detection.min_candles_since_fvg", 50),
+            include_mitigated=True,
+        )
         self.last_analysis = self.build_analysis_snapshot(
             candles_5m, candles_15m, candles_1h, candles_1m, current_price
         )

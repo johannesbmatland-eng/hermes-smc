@@ -115,16 +115,18 @@ class MarketStructureDetector:
     @staticmethod
     def detect_fvg(candles: list[dict]) -> list[dict]:
         """
-        Detect 3-candle Fair Value Gaps (ICT).
+        Detect 3-candle Fair Value Gaps (ICT / nephew_sam_-style).
 
         Candle 1 = first, candle 2 = impulse, candle 3 = last.
         Bullish: last low does not overlap first high (last.low > first.high).
         Bearish: last high does not overlap first low (last.high < first.low).
-        The gap zone is the imbalance between those two wicks.
+        Gap zone is the imbalance between those two wicks.
+        Mitigation uses wick-touch (nephew_sam_ fill option).
         """
         fvgs = []
         for i in range(2, len(candles)):
             c_first = candles[i - 2]
+            c_mid = candles[i - 1]
             c_last = candles[i]
 
             # Bullish FVG: last low above first high (no wick overlap)
@@ -137,9 +139,13 @@ class MarketStructureDetector:
                     "bottom": fvg_bottom,
                     "mid": (fvg_top + fvg_bottom) / 2,
                     "start_candle": i - 2,
+                    "mid_candle": i - 1,
                     "end_candle": i,
+                    "start_time": c_first["timestamp"],
+                    "form_time": c_last["timestamp"],
                     "timestamp": c_first["timestamp"],
                     "unmitigated": True,
+                    "mitigated_time": None,
                 })
 
             # Bearish FVG: last high below first low (no wick overlap)
@@ -152,29 +158,81 @@ class MarketStructureDetector:
                     "bottom": fvg_bottom,
                     "mid": (fvg_top + fvg_bottom) / 2,
                     "start_candle": i - 2,
+                    "mid_candle": i - 1,
                     "end_candle": i,
+                    "start_time": c_first["timestamp"],
+                    "form_time": c_last["timestamp"],
                     "timestamp": c_first["timestamp"],
                     "unmitigated": True,
+                    "mitigated_time": None,
                 })
 
         for fvg in fvgs:
-            fvg["unmitigated"] = MarketStructureDetector._is_fvg_unmitigated(candles, fvg)
+            mitigated_at = MarketStructureDetector._fvg_mitigated_at(candles, fvg)
+            fvg["unmitigated"] = mitigated_at is None
+            fvg["mitigated_time"] = mitigated_at
 
         return fvgs
 
     @staticmethod
+    def _fvg_mitigated_at(candles: list[dict], fvg: dict) -> int | None:
+        """Return timestamp when wick first fills the FVG, else None."""
+        # Start after the forming candle (nephew_sam_: fill on later wick/close)
+        for c in candles[fvg["end_candle"] + 1:]:
+            if fvg["type"] == "bullish":
+                if c["low"] <= fvg["bottom"]:
+                    return c["timestamp"]
+            else:
+                if c["high"] >= fvg["top"]:
+                    return c["timestamp"]
+        return None
+
+    @staticmethod
     def _is_fvg_unmitigated(candles: list[dict], fvg: dict) -> bool:
         """Check if an FVG has been mitigated by price."""
-        for c in candles[fvg["end_candle"]:]:
-            if fvg["type"] == "bullish":
-                # Price has mitigated if low <= fvg_bottom
-                if c["low"] <= fvg["bottom"]:
-                    return False
-            else:
-                # Price has mitigated if high >= fvg_top
-                if c["high"] >= fvg["top"]:
-                    return False
-        return True
+        return MarketStructureDetector._fvg_mitigated_at(candles, fvg) is None
+
+    @staticmethod
+    def build_fvg_boxes(
+        candles: list[dict],
+        max_age_candles: int = 50,
+        include_mitigated: bool = False,
+        extend_unmitigated: bool = True,
+    ) -> list[dict]:
+        """
+        Build chart boxes for FVG/IFVG marking (TradingView-style).
+
+        Unmitigated boxes extend to the latest candle (like nephew_sam_ lines).
+        Mitigated boxes end at the fill candle and are marked muted.
+        """
+        if not candles:
+            return []
+        fvgs = MarketStructureDetector.detect_fvg(candles)
+        last_time = candles[-1]["timestamp"]
+        boxes = []
+        for fvg in fvgs:
+            age = len(candles) - fvg["end_candle"]
+            if age > max_age_candles and fvg["unmitigated"]:
+                continue
+            if not fvg["unmitigated"] and not include_mitigated:
+                # Still include very recent fills briefly for IFVG context
+                if age > 10:
+                    continue
+            end_time = last_time if (fvg["unmitigated"] and extend_unmitigated) else (
+                fvg["mitigated_time"] or fvg["form_time"]
+            )
+            boxes.append({
+                "type": fvg["type"],
+                "top": fvg["top"],
+                "bottom": fvg["bottom"],
+                "mid": fvg["mid"],
+                "time_start": fvg["form_time"],  # box starts when FVG forms (candle 3)
+                "time_end": end_time,
+                "unmitigated": fvg["unmitigated"],
+                "age_candles": age,
+                "label": "FVG",
+            })
+        return boxes
 
     @staticmethod
     def detect_bos_hh_hl(candles: list[dict], lookback: int = 50) -> dict:

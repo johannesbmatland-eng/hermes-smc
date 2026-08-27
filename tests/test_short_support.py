@@ -84,6 +84,24 @@ def test_no_fvg_when_wicks_overlap():
     assert fvgs == []
 
 
+def test_fvg_boxes_extend_until_fill():
+    candles = [
+        _candle(1000, 100, 101, 99, 100.5),
+        _candle(1060, 101, 106, 100.8, 105),
+        _candle(1120, 105, 107, 102.5, 106),  # bullish FVG 101-102.5 forms
+        _candle(1180, 106, 108, 103, 107),
+        _candle(1240, 107, 108, 100.5, 101),  # wick fills below 101
+        _candle(1300, 101, 102, 100, 101.5),
+    ]
+    boxes = MarketStructureDetector.build_fvg_boxes(candles, max_age_candles=50, include_mitigated=True)
+    assert any(b["type"] == "bullish" for b in boxes)
+    filled = [b for b in boxes if b["type"] == "bullish" and not b["unmitigated"]]
+    assert filled
+    assert filled[0]["time_start"] == 1120
+    assert filled[0]["time_end"] == 1240
+
+
+
 def test_paper_engine_short_sl_tp_helpers():
     engine = PaperTradingEngine(SMCConfig())
     fvg = {"top": 105.0, "bottom": 100.0, "mid": 102.5, "type": "bearish"}
