@@ -335,6 +335,35 @@ class PaperTradingEngine(SMCEngine):
 
         return best
 
+    def _is_body_engulfing(self, prev: dict, curr: dict, side: str) -> bool:
+        """
+        Body engulfing (crypto-friendly).
+
+        Current candle body must fully cover the previous body.
+        On 24/7 markets open often equals previous close, so we use <= / >=
+        instead of strict inequalities.
+        """
+        prev_top = max(prev["open"], prev["close"])
+        prev_bot = min(prev["open"], prev["close"])
+        curr_top = max(curr["open"], curr["close"])
+        curr_bot = min(curr["open"], curr["close"])
+
+        if side == "long":
+            # Prev bearish, curr bullish, curr body covers prev body
+            return (
+                curr["close"] > curr["open"]
+                and prev["close"] < prev["open"]
+                and curr_top > prev_top
+                and curr_bot <= prev_bot
+            )
+        # Short: prev bullish, curr bearish
+        return (
+            curr["close"] < curr["open"]
+            and prev["close"] > prev["open"]
+            and curr_bot < prev_bot
+            and curr_top >= prev_top
+        )
+
     def _check_smc_confirmation(
         self,
         candles_5m: list[dict],
@@ -345,20 +374,9 @@ class PaperTradingEngine(SMCEngine):
         """Check for SMC entry confirmation (bullish for long, bearish for short)."""
         method = self.config.get("entry.confirmation", "engulfing_or_ifvg")
 
-        if len(candles_5m) >= 3 and method in ["engulfing", "engulfing_or_ifvg"]:
-            c_prev = candles_5m[-2]
-            c_curr = candles_5m[-1]
-
-            if side == "long":
-                if (c_curr["close"] > c_curr["open"] and c_prev["close"] < c_prev["open"]
-                        and c_curr["close"] > c_prev["open"]
-                        and c_curr["open"] < c_prev["close"]):
-                    return "engulfing_5m"
-            else:
-                if (c_curr["close"] < c_curr["open"] and c_prev["close"] > c_prev["open"]
-                        and c_curr["close"] < c_prev["open"]
-                        and c_curr["open"] > c_prev["close"]):
-                    return "engulfing_5m"
+        if len(candles_5m) >= 2 and method in ["engulfing", "engulfing_or_ifvg"]:
+            if self._is_body_engulfing(candles_5m[-2], candles_5m[-1], side):
+                return "engulfing_5m"
 
         if candles_1m and method in ["ifvg", "engulfing_or_ifvg"]:
             confirmation = self._detect_ifvg(candles_1m, fvg, side=side)

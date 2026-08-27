@@ -128,6 +128,18 @@ def test_bearish_engulfing_confirmation():
     assert conf == "engulfing_5m"
 
 
+def test_crypto_bullish_engulfing_when_open_equals_prev_close():
+    """BTC often opens at previous close — must still count as engulfing."""
+    engine = PaperTradingEngine(SMCConfig())
+    candles = [
+        _candle(1, 78773.3, 78773.3, 78763.3, 78765.0),  # small bear
+        _candle(2, 78765.0, 78827.1, 78764.9, 78827.1),  # big bull, open == prev close
+    ]
+    fvg = {"top": 78806.3, "bottom": 78773.3, "type": "bullish"}
+    assert engine._is_body_engulfing(candles[0], candles[1], "long") is True
+    assert engine._check_smc_confirmation(candles, None, fvg, side="long") == "engulfing_5m"
+
+
 def test_exit_conditions_short():
     engine = SMCEngine(SMCConfig())
     position = {

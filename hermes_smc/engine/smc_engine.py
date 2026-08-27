@@ -441,26 +441,35 @@ class SMCEngine:
     ) -> str | None:
         """
         Check for entry confirmation (mirrored for shorts):
-        - Engulfing candle on 5m
+        - Body engulfing candle on 5m (crypto-friendly: open may equal prev close)
         - IFVG-like structure on 5m
         """
         confirmation_method = self.config.get("entry.confirmation", "engulfing_or_ifvg")
 
-        if len(candles_5m) >= 3:
+        if len(candles_5m) >= 2 and confirmation_method in ["engulfing", "engulfing_or_ifvg"]:
             c1 = candles_5m[-2]
             c2 = candles_5m[-1]
+            prev_top = max(c1["open"], c1["close"])
+            prev_bot = min(c1["open"], c1["close"])
+            curr_top = max(c2["open"], c2["close"])
+            curr_bot = min(c2["open"], c2["close"])
 
-            if confirmation_method in ["engulfing", "engulfing_or_ifvg"]:
-                if side == "long":
-                    # Bullish engulfing
-                    if c2["close"] > c2["open"] and c1["close"] < c1["open"]:
-                        if c2["close"] > c1["open"] and c2["open"] < c1["close"]:
-                            return "engulfing_5m"
-                else:
-                    # Bearish engulfing
-                    if c2["close"] < c2["open"] and c1["close"] > c1["open"]:
-                        if c2["close"] < c1["open"] and c2["open"] > c1["close"]:
-                            return "engulfing_5m"
+            if side == "long":
+                if (
+                    c2["close"] > c2["open"]
+                    and c1["close"] < c1["open"]
+                    and curr_top > prev_top
+                    and curr_bot <= prev_bot
+                ):
+                    return "engulfing_5m"
+            else:
+                if (
+                    c2["close"] < c2["open"]
+                    and c1["close"] > c1["open"]
+                    and curr_bot < prev_bot
+                    and curr_top >= prev_top
+                ):
+                    return "engulfing_5m"
 
         if confirmation_method in ["ifvg", "engulfing_or_ifvg"]:
             if len(candles_5m) >= 3:
