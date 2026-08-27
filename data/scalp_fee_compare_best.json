@@ -1,0 +1,41 @@
+{
+  "family": "ema_cross",
+  "sides": "both",
+  "sess": [
+    "LNDN",
+    "NYAM"
+  ],
+  "risk": 1.0,
+  "tp": 2.0,
+  "sl": 0.003,
+  "cd": 12,
+  "mxd": 5,
+  "fee": 0.0,
+  "trades": 99,
+  "wins": 44,
+  "win_rate_pct": 44.44,
+  "total_account_pct": 26.786,
+  "per_month_simple_pct": 2.232,
+  "max_dd_pct": 5.88,
+  "worst_day_pct": -2.97,
+  "months": [
+    {
+      "month": "2025-08",
+      "pct": -1.381,
+      "pnl": -1380.99
+    },
+    {
+      "month": "2025-09",
+      "pct": 22.349,
+      "pnl": 22348.77
+    },
+    {
+      "month": "2025-10",
+      "pct": 5.818,
+      "pnl": 5817.81
+    }
+  ],
+  "risk_ok": true,
+  "target_ok": false,
+  "final_equity": 126785.59
+}

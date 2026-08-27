@@ -1,0 +1,25 @@
+{
+  "bot": "scalp (many small trades)",
+  "live_config": {
+    "entry.strategy": "scalp",
+    "entry.scalp_mode": "ema_cross",
+    "sessions": ["LNDN", "NYAM"],
+    "risk_pct": 1.0,
+    "tp_rr": 2.0,
+    "sl_pct": 0.003,
+    "max_daily_loss_pct": 3.0,
+    "max_drawdown_pct": 6.0,
+    "fee_roundtrip_pct": 0.0004
+  },
+  "backtest_1y_honest": {
+    "without_fee_best_mo_pct": 2.23,
+    "with_fee_0.04pct_best_mo_pct": 0.09,
+    "target_10_to_20_mo": false,
+    "prop_dd_respected": true,
+    "note": "Under Starter 3%/6% caps, ~2%/mo was the ceiling without fees; fees crush small-R scalps."
+  },
+  "prop_challenge_30d": {
+    "best_pass_rate_seen": 0.58,
+    "target_80pct": false
+  }
+}

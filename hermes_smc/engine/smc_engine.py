@@ -28,64 +28,75 @@ DEFAULT_STRATEGY = {
         "currency": "USD",
     },
     "timeframes": {
-        "main": "5m",       # primary trading timeframe
-        "trend_1h": "1h",   # higher timeframe trend filter
-        "trend_15m": "15m", # intermediate trend filter
+        "main": "5m",
+        "trend_1h": "1h",
+        "trend_15m": "15m",
     },
     "trend_filter": {
         "enabled": True,
-        "method": "ema_majority",  # ema_majority | ema_and_structure
+        "method": "ema_majority",
         "ema_period": 50,
+    },
+    "scalp": {
+        "ema_fast": 9,
+        "ema_slow": 21,
+        "ema_trend": 50,
+        "bb_period": 20,
+        "bb_mult": 2.0,
     },
     "fvq_detection": {
         "min_candles_since_fvg": 50,
         "fvg_buffer_pct": 0.001,
     },
     "entry": {
+        "strategy": "scalp",
+        "scalp_mode": "ema_cross",
         "confirmation": "engulfing_or_ifvg",
         "pullback_depth_pct": 0.5,
         "max_open_positions": 1,
-        "cooldown_seconds": 120,
+        "cooldown_seconds": 60,
         "engulf_lookback": 2,
-        "allowed_sides": ["short"],
-        "min_engulf_body_ratio": 1.5,
+        "allowed_sides": ["long", "short"],
+        "min_engulf_body_ratio": 1.0,
         "min_engulf_body_pct": 0.0,
     },
     "rsi": {
         "enabled": True,
         "period": 14,
-        "long_max": 55,
-        "short_min": 45,
+        "long_max": 75,
+        "short_min": 25,
     },
     "sessions": {
         "timezone": "America/New_York",
         "filter_entries": True,
         "windows": [
-            {"name": "ASIA", "start": "20:00", "end": "02:00", "enabled": True},
+            {"name": "ASIA", "start": "20:00", "end": "02:00", "enabled": False},
             {"name": "LNDN", "start": "02:00", "end": "09:30", "enabled": True},
-            {"name": "NYAM", "start": "09:30", "end": "13:30", "enabled": False},
+            {"name": "NYAM", "start": "09:30", "end": "13:30", "enabled": True},
             {"name": "NYPM", "start": "13:30", "end": "20:00", "enabled": False},
         ],
     },
-    # Prop-oriented: fixed TP + short-only ASIA/LNDN (see strategy.yaml)
     "exits": {
         "structure_break": False,
         "mode": "fixed_tp",
-        "be_at_rr": 0.55,
+        "be_at_rr": 0.5,
         "trail_after_be": False,
         "trail_rr": 1.0,
-        "tp_rr": 1.2,
+        "tp_rr": 2.0,
         "be_buffer_pct": 0.0001,
     },
     "risk": {
-        "risk_pct_per_trade": 1.35,
-        "rr_target": 1.2,
-        "rr_alternative": 1.5,
+        "risk_pct_per_trade": 1.0,
+        "rr_target": 2.0,
+        "rr_alternative": 1.2,
+        "sl_pct": 0.003,
         "sl_buffer_pct": 0.0003,
-        "max_daily_loss_pct": 2.0,
+        "max_daily_loss_pct": 3.0,
         "max_drawdown_pct": 6.0,
+        "fee_roundtrip_pct": 0.0004,
     },
 }
+
 
 
 class SMCConfig:

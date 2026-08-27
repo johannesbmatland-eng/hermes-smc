@@ -1,0 +1,2038 @@
+{
+  "goal": "pass_rate>=80% and multiple payouts",
+  "tested": 19440,
+  "elapsed_sec": 693.4,
+  "best": {
+    "family": "ema_cross",
+    "params": {
+      "sides": "both",
+      "rsi_os": 30,
+      "rsi_ob": 70,
+      "trend_filter": false,
+      "tol": 0.0015,
+      "sessions": [
+        "LNDN"
+      ]
+    },
+    "risk_pct": 1.0,
+    "tp_rr": 1.25,
+    "sl_pct": 0.003,
+    "cooldown_bars": 12,
+    "max_day": 2,
+    "n_signals": 1249,
+    "n_trades": 549,
+    "passes": 5,
+    "fails": 2,
+    "attempts": 7,
+    "pass_rate": 0.7143,
+    "ok": false,
+    "robust_ok": false,
+    "skipped": 80,
+    "pass_dates": [
+      "2026-01-12",
+      "2026-04-20",
+      "2026-06-08",
+      "2026-06-19",
+      "2026-07-24"
+    ],
+    "fail_dates": [
+      "2025-11-16:stuck",
+      "2026-02-19:stuck"
+    ],
+    "rolling_pass_rate": 1.0,
+    "rolling_resolved": 17,
+    "rolling_wins": 17,
+    "train_pass_rate": 0.5,
+    "train_attempts": 4,
+    "holdout_pass_rate": 1.0,
+    "holdout_attempts": 3,
+    "holdout_passes": 3,
+    "holdout_fails": 0,
+    "_score": [
+      0,
+      0.7143,
+      0.7143,
+      1.0,
+      5,
+      -2
+    ]
+  },
+  "hits": [],
+  "top": [
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 4076,
+      "n_trades": 731,
+      "passes": 6,
+      "fails": 1,
+      "attempts": 7,
+      "pass_rate": 0.8571,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 40,
+      "pass_dates": [
+        "2025-10-09",
+        "2025-11-02",
+        "2026-02-26",
+        "2026-06-11",
+        "2026-07-18",
+        "2026-08-18"
+      ],
+      "fail_dates": [
+        "2025-12-02:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 38,
+      "rolling_wins": 38,
+      "train_pass_rate": 0.75,
+      "train_attempts": 4,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 2,
+      "holdout_fails": 0
+    },
+    {
+      "family": "ema_pullback",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.25,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 10471,
+      "n_trades": 732,
+      "passes": 5,
+      "fails": 1,
+      "attempts": 6,
+      "pass_rate": 0.8333,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 40,
+      "pass_dates": [
+        "2025-11-17",
+        "2025-12-17",
+        "2026-01-12",
+        "2026-02-21",
+        "2026-03-26"
+      ],
+      "fail_dates": [
+        "2025-12-13:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 21,
+      "rolling_wins": 21,
+      "train_pass_rate": 0.8333,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 0,
+      "holdout_fails": 2
+    },
+    {
+      "family": "smc_fvg",
+      "params": {
+        "trend_filter": true,
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 10915,
+      "n_trades": 711,
+      "passes": 7,
+      "fails": 2,
+      "attempts": 9,
+      "pass_rate": 0.7778,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-11-12",
+        "2025-11-21",
+        "2026-01-25",
+        "2026-02-26",
+        "2026-03-19",
+        "2026-06-06",
+        "2026-08-26"
+      ],
+      "fail_dates": [
+        "2026-04-27:stuck",
+        "2026-07-03:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 22,
+      "rolling_wins": 22,
+      "train_pass_rate": 0.8333,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 0,
+      "holdout_fails": 2
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 4076,
+      "n_trades": 731,
+      "passes": 7,
+      "fails": 2,
+      "attempts": 9,
+      "pass_rate": 0.7778,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-26",
+        "2026-02-21",
+        "2026-03-30",
+        "2026-04-22",
+        "2026-07-15",
+        "2026-08-13",
+        "2026-08-23"
+      ],
+      "fail_dates": [
+        "2025-12-11:stuck",
+        "2026-02-12:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 32,
+      "rolling_wins": 32,
+      "train_pass_rate": 0.6667,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.6667,
+      "holdout_attempts": 3,
+      "holdout_passes": 2,
+      "holdout_fails": 1
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 2319,
+      "n_trades": 692,
+      "passes": 6,
+      "fails": 2,
+      "attempts": 8,
+      "pass_rate": 0.75,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-18",
+        "2025-11-02",
+        "2026-02-19",
+        "2026-05-27",
+        "2026-08-13",
+        "2026-08-24"
+      ],
+      "fail_dates": [
+        "2025-11-30:stuck",
+        "2026-06-25:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 38,
+      "rolling_wins": 38,
+      "train_pass_rate": 0.8,
+      "train_attempts": 5,
+      "holdout_pass_rate": 0.5,
+      "holdout_attempts": 2,
+      "holdout_passes": 1,
+      "holdout_fails": 1
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 1,
+      "n_signals": 4076,
+      "n_trades": 366,
+      "passes": 6,
+      "fails": 2,
+      "attempts": 8,
+      "pass_rate": 0.75,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-07",
+        "2025-10-31",
+        "2026-02-26",
+        "2026-06-25",
+        "2026-08-07",
+        "2026-08-24"
+      ],
+      "fail_dates": [
+        "2025-12-22:stuck",
+        "2026-04-29:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 17,
+      "rolling_wins": 17,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 2,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 1,
+      "n_signals": 4076,
+      "n_trades": 366,
+      "passes": 6,
+      "fails": 2,
+      "attempts": 8,
+      "pass_rate": 0.75,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-07",
+        "2025-10-31",
+        "2026-02-26",
+        "2026-06-25",
+        "2026-08-07",
+        "2026-08-24"
+      ],
+      "fail_dates": [
+        "2025-12-22:stuck",
+        "2026-04-29:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 17,
+      "rolling_wins": 17,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 2,
+      "holdout_fails": 0
+    },
+    {
+      "family": "ema_pullback",
+      "params": {
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 2,
+      "n_signals": 4110,
+      "n_trades": 618,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-09",
+        "2025-10-24",
+        "2025-11-07",
+        "2026-03-29",
+        "2026-06-06"
+      ],
+      "fail_dates": [
+        "2025-12-26:stuck",
+        "2026-04-28:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 17,
+      "rolling_wins": 17,
+      "train_pass_rate": 0.6667,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.5,
+      "holdout_attempts": 2,
+      "holdout_passes": 1,
+      "holdout_fails": 1
+    },
+    {
+      "family": "smc_fvg",
+      "params": {
+        "trend_filter": true,
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.0,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 10915,
+      "n_trades": 714,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-11-23",
+        "2026-02-02",
+        "2026-03-12",
+        "2026-03-23",
+        "2026-08-25"
+      ],
+      "fail_dates": [
+        "2025-10-21:stuck",
+        "2026-05-02:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 24,
+      "rolling_wins": 24,
+      "train_pass_rate": 0.6667,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "smc_fvg",
+      "params": {
+        "trend_filter": true,
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 2,
+      "n_signals": 10915,
+      "n_trades": 725,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 86,
+      "pass_dates": [
+        "2025-11-25",
+        "2026-02-09",
+        "2026-02-28",
+        "2026-03-19",
+        "2026-08-02"
+      ],
+      "fail_dates": [
+        "2025-12-27:stuck",
+        "2026-01-22:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 26,
+      "rolling_wins": 26,
+      "train_pass_rate": 0.6667,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "smc_fvg",
+      "params": {
+        "trend_filter": true,
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 19173,
+      "n_trades": 732,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2026-02-01",
+        "2026-03-02",
+        "2026-03-20",
+        "2026-07-01",
+        "2026-08-16"
+      ],
+      "fail_dates": [
+        "2025-09-28:stuck",
+        "2026-01-07:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 24,
+      "rolling_wins": 24,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 1,
+      "holdout_passes": 1,
+      "holdout_fails": 0
+    },
+    {
+      "family": "ema_cross",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.25,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 2,
+      "n_signals": 1249,
+      "n_trades": 549,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2026-01-12",
+        "2026-04-20",
+        "2026-06-08",
+        "2026-06-19",
+        "2026-07-24"
+      ],
+      "fail_dates": [
+        "2025-11-16:stuck",
+        "2026-02-19:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 17,
+      "rolling_wins": 17,
+      "train_pass_rate": 0.5,
+      "train_attempts": 4,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 3,
+      "holdout_passes": 3,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 1,
+      "n_signals": 4670,
+      "n_trades": 366,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 105,
+      "pass_dates": [
+        "2025-09-25",
+        "2025-10-31",
+        "2026-01-27",
+        "2026-02-11",
+        "2026-04-01"
+      ],
+      "fail_dates": [
+        "2026-05-17:stuck",
+        "2026-07-15:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 13,
+      "rolling_wins": 13,
+      "train_pass_rate": 0.8333,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 1,
+      "n_signals": 4670,
+      "n_trades": 366,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 105,
+      "pass_dates": [
+        "2025-09-25",
+        "2025-10-31",
+        "2026-01-27",
+        "2026-02-11",
+        "2026-04-01"
+      ],
+      "fail_dates": [
+        "2026-05-17:stuck",
+        "2026-07-15:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 13,
+      "rolling_wins": 13,
+      "train_pass_rate": 0.8333,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 1,
+      "n_signals": 6784,
+      "n_trades": 366,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 105,
+      "pass_dates": [
+        "2025-09-25",
+        "2025-10-31",
+        "2026-01-27",
+        "2026-02-11",
+        "2026-04-01"
+      ],
+      "fail_dates": [
+        "2026-05-17:stuck",
+        "2026-07-15:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 13,
+      "rolling_wins": 13,
+      "train_pass_rate": 0.8333,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 1,
+      "n_signals": 6784,
+      "n_trades": 366,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 105,
+      "pass_dates": [
+        "2025-09-25",
+        "2025-10-31",
+        "2026-01-27",
+        "2026-02-11",
+        "2026-04-01"
+      ],
+      "fail_dates": [
+        "2026-05-17:stuck",
+        "2026-07-15:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 13,
+      "rolling_wins": 13,
+      "train_pass_rate": 0.8333,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 1,
+      "n_signals": 3404,
+      "n_trades": 366,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-07",
+        "2025-10-31",
+        "2026-02-12",
+        "2026-07-05",
+        "2026-08-11"
+      ],
+      "fail_dates": [
+        "2025-12-20:stuck",
+        "2026-04-30:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 16,
+      "rolling_wins": 16,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 2,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 1,
+      "n_signals": 3404,
+      "n_trades": 366,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-07",
+        "2025-10-31",
+        "2026-02-12",
+        "2026-07-05",
+        "2026-08-11"
+      ],
+      "fail_dates": [
+        "2025-12-20:stuck",
+        "2026-04-30:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 16,
+      "rolling_wins": 16,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 2,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 1,
+      "n_signals": 8138,
+      "n_trades": 366,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 105,
+      "pass_dates": [
+        "2025-09-25",
+        "2025-10-31",
+        "2026-01-27",
+        "2026-02-11",
+        "2026-04-01"
+      ],
+      "fail_dates": [
+        "2026-05-17:stuck",
+        "2026-07-15:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 13,
+      "rolling_wins": 13,
+      "train_pass_rate": 0.8333,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 1,
+      "n_signals": 8138,
+      "n_trades": 366,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 105,
+      "pass_dates": [
+        "2025-09-25",
+        "2025-10-31",
+        "2026-01-27",
+        "2026-02-11",
+        "2026-04-01"
+      ],
+      "fail_dates": [
+        "2026-05-17:stuck",
+        "2026-07-15:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 13,
+      "rolling_wins": 13,
+      "train_pass_rate": 0.8333,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.5,
+      "tp_rr": 1.25,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 4076,
+      "n_trades": 731,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-11-04",
+        "2026-02-26",
+        "2026-05-11",
+        "2026-08-09",
+        "2026-08-24"
+      ],
+      "fail_dates": [
+        "2025-12-01:stuck",
+        "2026-01-30:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 31,
+      "rolling_wins": 31,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 2,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.5,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 4076,
+      "n_trades": 731,
+      "passes": 5,
+      "fails": 2,
+      "attempts": 7,
+      "pass_rate": 0.7143,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-31",
+        "2026-03-25",
+        "2026-05-03",
+        "2026-08-12",
+        "2026-08-24"
+      ],
+      "fail_dates": [
+        "2025-12-04:stuck",
+        "2026-02-17:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 36,
+      "rolling_wins": 36,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 0.5,
+      "holdout_attempts": 2,
+      "holdout_passes": 1,
+      "holdout_fails": 1
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.25,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 4076,
+      "n_trades": 731,
+      "passes": 7,
+      "fails": 3,
+      "attempts": 10,
+      "pass_rate": 0.7,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 120,
+      "pass_dates": [
+        "2025-10-29",
+        "2026-02-20",
+        "2026-04-14",
+        "2026-06-14",
+        "2026-08-02",
+        "2026-08-15",
+        "2026-08-27"
+      ],
+      "fail_dates": [
+        "2025-12-02:stuck",
+        "2026-01-03:stuck",
+        "2026-02-01:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 32,
+      "rolling_wins": 32,
+      "train_pass_rate": 0.5,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.75,
+      "holdout_attempts": 4,
+      "holdout_passes": 3,
+      "holdout_fails": 1
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 2,
+      "n_signals": 4076,
+      "n_trades": 732,
+      "passes": 7,
+      "fails": 3,
+      "attempts": 10,
+      "pass_rate": 0.7,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 120,
+      "pass_dates": [
+        "2025-09-14",
+        "2025-10-24",
+        "2025-11-02",
+        "2026-06-14",
+        "2026-07-12",
+        "2026-08-10",
+        "2026-08-24"
+      ],
+      "fail_dates": [
+        "2025-12-01:stuck",
+        "2025-12-25:stuck",
+        "2026-04-03:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 28,
+      "rolling_wins": 28,
+      "train_pass_rate": 0.5,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.6667,
+      "holdout_attempts": 3,
+      "holdout_passes": 2,
+      "holdout_fails": 1
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.25,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 4076,
+      "n_trades": 731,
+      "passes": 10,
+      "fails": 5,
+      "attempts": 15,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 200,
+      "pass_dates": [
+        "2025-10-17",
+        "2025-11-04",
+        "2026-02-14",
+        "2026-02-26",
+        "2026-04-14",
+        "2026-05-11",
+        "2026-06-14",
+        "2026-07-20",
+        "2026-08-10",
+        "2026-08-20"
+      ],
+      "fail_dates": [
+        "2025-09-22:stuck",
+        "2025-11-28:stuck",
+        "2026-01-03:stuck",
+        "2026-01-29:stuck",
+        "2026-06-06:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 30,
+      "rolling_wins": 30,
+      "train_pass_rate": 0.6,
+      "train_attempts": 10,
+      "holdout_pass_rate": 0.75,
+      "holdout_attempts": 4,
+      "holdout_passes": 3,
+      "holdout_fails": 1
+    },
+    {
+      "family": "rsi_trend",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 8790,
+      "n_trades": 727,
+      "passes": 6,
+      "fails": 3,
+      "attempts": 9,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 120,
+      "pass_dates": [
+        "2025-11-05",
+        "2025-12-19",
+        "2026-01-21",
+        "2026-03-10",
+        "2026-04-08",
+        "2026-08-02"
+      ],
+      "fail_dates": [
+        "2026-06-11:stuck",
+        "2026-07-09:stuck",
+        "2026-08-25:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 33,
+      "rolling_wins": 33,
+      "train_pass_rate": 1.0,
+      "train_attempts": 5,
+      "holdout_pass_rate": 0.5,
+      "holdout_attempts": 2,
+      "holdout_passes": 1,
+      "holdout_fails": 1
+    },
+    {
+      "family": "smc_fvg",
+      "params": {
+        "trend_filter": true,
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.0,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 16109,
+      "n_trades": 732,
+      "passes": 6,
+      "fails": 3,
+      "attempts": 9,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 120,
+      "pass_dates": [
+        "2025-11-23",
+        "2026-02-01",
+        "2026-03-06",
+        "2026-03-22",
+        "2026-05-23",
+        "2026-08-26"
+      ],
+      "fail_dates": [
+        "2025-09-30:stuck",
+        "2026-05-07:stuck",
+        "2026-06-19:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 30,
+      "rolling_wins": 30,
+      "train_pass_rate": 0.7143,
+      "train_attempts": 7,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 1,
+      "holdout_passes": 0,
+      "holdout_fails": 1
+    },
+    {
+      "family": "smc_fvg",
+      "params": {
+        "trend_filter": false,
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 2,
+      "n_signals": 52731,
+      "n_trades": 732,
+      "passes": 6,
+      "fails": 3,
+      "attempts": 9,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 140,
+      "pass_dates": [
+        "2025-11-16",
+        "2026-01-22",
+        "2026-02-06",
+        "2026-07-07",
+        "2026-07-25",
+        "2026-08-10"
+      ],
+      "fail_dates": [
+        "2025-10-02:stuck",
+        "2025-12-22:stuck",
+        "2026-05-17:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 30,
+      "rolling_wins": 30,
+      "train_pass_rate": 0.5,
+      "train_attempts": 6,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 2,
+      "holdout_fails": 0
+    },
+    {
+      "family": "smc_fvg",
+      "params": {
+        "trend_filter": false,
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 27168,
+      "n_trades": 730,
+      "passes": 6,
+      "fails": 3,
+      "attempts": 9,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 152,
+      "pass_dates": [
+        "2025-09-19",
+        "2025-11-13",
+        "2026-02-06",
+        "2026-04-14",
+        "2026-06-19",
+        "2026-07-27"
+      ],
+      "fail_dates": [
+        "2025-12-12:stuck",
+        "2026-01-11:stuck",
+        "2026-03-13:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 32,
+      "rolling_wins": 32,
+      "train_pass_rate": 0.5714,
+      "train_attempts": 7,
+      "holdout_pass_rate": 0.6667,
+      "holdout_attempts": 3,
+      "holdout_passes": 2,
+      "holdout_fails": 1
+    },
+    {
+      "family": "smc_fvg",
+      "params": {
+        "trend_filter": false,
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 2,
+      "n_signals": 62392,
+      "n_trades": 732,
+      "passes": 6,
+      "fails": 3,
+      "attempts": 9,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 140,
+      "pass_dates": [
+        "2025-11-16",
+        "2026-01-22",
+        "2026-02-06",
+        "2026-07-07",
+        "2026-07-25",
+        "2026-08-10"
+      ],
+      "fail_dates": [
+        "2025-10-02:stuck",
+        "2025-12-22:stuck",
+        "2026-05-17:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 30,
+      "rolling_wins": 30,
+      "train_pass_rate": 0.5,
+      "train_attempts": 6,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 2,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_break",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 3404,
+      "n_trades": 726,
+      "passes": 6,
+      "fails": 3,
+      "attempts": 9,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 120,
+      "pass_dates": [
+        "2025-10-11",
+        "2026-02-25",
+        "2026-04-04",
+        "2026-04-29",
+        "2026-08-11",
+        "2026-08-24"
+      ],
+      "fail_dates": [
+        "2025-09-22:stuck",
+        "2025-12-14:stuck",
+        "2026-06-21:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 28,
+      "rolling_wins": 28,
+      "train_pass_rate": 0.6667,
+      "train_attempts": 6,
+      "holdout_pass_rate": 0.6667,
+      "holdout_attempts": 3,
+      "holdout_passes": 2,
+      "holdout_fails": 1
+    },
+    {
+      "family": "sr_bounce",
+      "params": {
+        "tol": 0.001,
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "sessions": [
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.25,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 4922,
+      "n_trades": 721,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-09-25",
+        "2026-03-01",
+        "2026-03-24",
+        "2026-06-19"
+      ],
+      "fail_dates": [
+        "2026-05-01:stuck",
+        "2026-08-23:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 29,
+      "rolling_wins": 29,
+      "train_pass_rate": 0.75,
+      "train_attempts": 4,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 1,
+      "holdout_passes": 1,
+      "holdout_fails": 0
+    },
+    {
+      "family": "sr_bounce",
+      "params": {
+        "tol": 0.002,
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "sessions": [
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.0,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 8195,
+      "n_trades": 729,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-11-03",
+        "2026-03-14",
+        "2026-06-15",
+        "2026-06-29"
+      ],
+      "fail_dates": [
+        "2026-04-06:stuck",
+        "2026-08-25:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 19,
+      "rolling_wins": 19,
+      "train_pass_rate": 0.6667,
+      "train_attempts": 3,
+      "holdout_pass_rate": 0.6667,
+      "holdout_attempts": 3,
+      "holdout_passes": 2,
+      "holdout_fails": 1
+    },
+    {
+      "family": "ema_pullback",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 10471,
+      "n_trades": 732,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 108,
+      "pass_dates": [
+        "2025-09-10",
+        "2026-03-13",
+        "2026-03-31",
+        "2026-08-04"
+      ],
+      "fail_dates": [
+        "2025-10-05:stuck",
+        "2025-12-22:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 19,
+      "rolling_wins": 19,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 2,
+      "holdout_passes": 0,
+      "holdout_fails": 2
+    },
+    {
+      "family": "ema_pullback",
+      "params": {
+        "sides": "short",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.0,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 4110,
+      "n_trades": 599,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 81,
+      "pass_dates": [
+        "2025-10-15",
+        "2025-11-13",
+        "2026-03-27",
+        "2026-06-05"
+      ],
+      "fail_dates": [
+        "2026-01-06:stuck",
+        "2026-05-10:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 23,
+      "rolling_wins": 23,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 0,
+      "holdout_passes": 0,
+      "holdout_fails": 0
+    },
+    {
+      "family": "bb_bounce",
+      "params": {
+        "trend_filter": true,
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 1,
+      "n_signals": 572,
+      "n_trades": 281,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-03",
+        "2026-02-21",
+        "2026-04-06",
+        "2026-05-07"
+      ],
+      "fail_dates": [
+        "2025-12-13:stuck",
+        "2026-07-31:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 6,
+      "rolling_wins": 6,
+      "train_pass_rate": 0.8,
+      "train_attempts": 5,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 1,
+      "holdout_passes": 0,
+      "holdout_fails": 1
+    },
+    {
+      "family": "bb_bounce",
+      "params": {
+        "trend_filter": true,
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "tol": 0.0015,
+        "sessions": [
+          "LNDN",
+          "NYAM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 541,
+      "n_trades": 338,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-12-05",
+        "2026-03-11",
+        "2026-04-22",
+        "2026-08-26"
+      ],
+      "fail_dates": [
+        "2025-10-26:stuck",
+        "2026-02-08:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 12,
+      "rolling_wins": 12,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 0.0,
+      "holdout_attempts": 1,
+      "holdout_passes": 0,
+      "holdout_fails": 1
+    },
+    {
+      "family": "rsi_trend",
+      "params": {
+        "sides": "both",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "ASIA",
+          "LNDN"
+        ]
+      },
+      "risk_pct": 0.75,
+      "tp_rr": 1.5,
+      "sl_pct": 0.005,
+      "cooldown_bars": 24,
+      "max_day": 2,
+      "n_signals": 8790,
+      "n_trades": 727,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-11-20",
+        "2026-01-08",
+        "2026-03-10",
+        "2026-04-12"
+      ],
+      "fail_dates": [
+        "2026-06-11:stuck",
+        "2026-07-11:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 30,
+      "rolling_wins": 30,
+      "train_pass_rate": 1.0,
+      "train_attempts": 4,
+      "holdout_pass_rate": 0.5,
+      "holdout_attempts": 2,
+      "holdout_passes": 1,
+      "holdout_fails": 1
+    },
+    {
+      "family": "rsi_trend",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 12,
+      "max_day": 1,
+      "n_signals": 3671,
+      "n_trades": 355,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-31",
+        "2026-04-30",
+        "2026-05-21",
+        "2026-07-09"
+      ],
+      "fail_dates": [
+        "2026-02-04:stuck",
+        "2026-04-05:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 12,
+      "rolling_wins": 12,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 1,
+      "holdout_passes": 1,
+      "holdout_fails": 0
+    },
+    {
+      "family": "rsi_trend",
+      "params": {
+        "sides": "long",
+        "rsi_os": 30,
+        "rsi_ob": 70,
+        "trend_filter": false,
+        "tol": 0.0015,
+        "sessions": [
+          "NYAM",
+          "NYPM"
+        ]
+      },
+      "risk_pct": 1.0,
+      "tp_rr": 1.5,
+      "sl_pct": 0.003,
+      "cooldown_bars": 24,
+      "max_day": 1,
+      "n_signals": 3671,
+      "n_trades": 355,
+      "passes": 4,
+      "fails": 2,
+      "attempts": 6,
+      "pass_rate": 0.6667,
+      "ok": false,
+      "robust_ok": false,
+      "skipped": 80,
+      "pass_dates": [
+        "2025-10-31",
+        "2026-04-30",
+        "2026-05-21",
+        "2026-07-09"
+      ],
+      "fail_dates": [
+        "2026-02-04:stuck",
+        "2026-04-05:stuck"
+      ],
+      "rolling_pass_rate": 1.0,
+      "rolling_resolved": 12,
+      "rolling_wins": 12,
+      "train_pass_rate": 0.6,
+      "train_attempts": 5,
+      "holdout_pass_rate": 1.0,
+      "holdout_attempts": 1,
+      "holdout_passes": 1,
+      "holdout_fails": 0
+    }
+  ]
+}
