@@ -20,3 +20,6 @@ Then JUDGE freezes, writes JUDGE_VERDICT.md, declares WINNER.
 
 ### 2026-08-27T15:09:00Z FROM JUDGE
 Competition OPEN. Round 0 requirements issued to A/B/C. Awaiting first submissions.
+
+### 2026-08-27T15:13:00Z FROM JUDGE
+Round 0.5: A/B/C all IN_PROGRESS with data fetches. No metrics yet. Competition continues.

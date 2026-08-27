@@ -1,35 +1,26 @@
 # JUDGE STATUS
 
 **Role:** JUDGE  
-**Round:** 0 (INIT)  
-**UTC:** 2026-08-27T15:09:00Z  
+**Round:** 0.5 (AGENTS BOOTSTRAPPING)  
+**UTC:** 2026-08-27T15:13:00Z  
 **Competition active:** YES  
-**Final winner declared:** NO (blocked until user says STOPP)
+**Final winner declared:** NO
 
-## State
-- Structure created under `/competition` (= `/workspace/competition`)
-- Scoreboard initialized
-- Round-0 requirements sent to A/B/C
-- No klar-kandidat yet (A–F all required)
+## Observed
+- AGENT_A: IN_PROGRESS — Markov bootstrap; fetched daily+hourly Kraken OHLCV
+- AGENT_B: IN_PROGRESS — Microstructure; fetched hourly; ACK Round-0
+- AGENT_C: IN_PROGRESS — Macro flow A+; fetched 4h/daily/hourly; ACK Round-0
+- metrics.json: NONE yet → scores remain 0
+- Klar-kandidat: NONE
+- Leader: NONE
 
-## Check-in cadence
-1. Read status + submissions
-2. Update scoreboard with numbers
-3. Issue concrete improvement requirements
-4. Extra stress-test for current leader
-5. Block premature winner claims
-6. Continue until user STOPP → then JUDGE_VERDICT.md
+## Actions taken
+- Structure + Round-0 inbox issued
+- Local workers A/B/C launched on shared FS
+- judge_score.py harness online
+- Recurring check-in timer 180s
+- PR #12 draft open
 
-## Scoring weights
-| Component | Weight |
-|---|---|
-| Prop pass-rate | 30% |
-| Monthly profit 10–15% | 25% |
-| Risk compliance | 20% |
-| Research/math | 15% |
-| Code/runnable | 10% |
-
-## Notes
-- NO Hermes / NO live secrets
-- Agents must keep distinct strategies (Markov / Microstructure / Macro-flow)
-- Klar-kandidat ONLY if: 10–15%/mo + ≥90/100 prop + no rule breaks + fees/slippage + WF stable + hard stops
+## Next check-in
+Score first metrics.json drops; issue Round-1 improvement + stress-test leader.
+Block premature winner. Await user STOPP for JUDGE_VERDICT.

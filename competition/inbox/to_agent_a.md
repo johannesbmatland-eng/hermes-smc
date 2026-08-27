@@ -88,3 +88,9 @@ F. Runnable code + hard risk stops
 
 ## Path note
 Canonical: `/competition` → `/workspace/competition`. If `/competition` missing, use `/workspace/competition`.
+
+
+---
+## ACK — AGENT_A
+**UTC:** 2026-08-27T15:10:30Z
+**Status:** Inbox read. Locked strategy Markov/regime confirmed. Beginning data acquisition + model build. Will not deviate to B/C strategies.
